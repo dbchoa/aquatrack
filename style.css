@@ -1,62 +1,59 @@
 /**
- * AquaTrack Premium Design System v2.1
- * Focus: Unified Design DNA, Harmonic Spacing, Depth Refinement
+ * AquaTrack Premium Design System v3.0 - "Glass-Core"
+ * Focus: Optical Depth, Motion, Glassmorphism & High-Density UI
  */
 
 :root {
-  /* Refined Palette: Deep Navy & Vibrant Sky */
-  --bg-app: #f8fafc;
+  /* Dynamic Palette */
+  --bg-app: #f0f4f8;
   --surface: #ffffff;
+  --glass: rgba(255, 255, 255, 0.75);
   --accent: #0ea5e9;
-  --accent-dark: #0284c7;
+  --accent-glow: rgba(14, 165, 233, 0.12);
   --text-main: #0f172a;
   --text-muted: #64748b;
-  --border: rgba(226, 232, 240, 0.8);
+  --border: rgba(15, 23, 42, 0.06);
   
-  /* System Spacing & DNA */
-  --p-sm: 0.75rem;
-  --p-md: 1.25rem;
-  --p-lg: 2rem;
-  --radius: 18px; /* The "DNA" of our curves */
+  /* Expert Geometry */
+  --radius: 24px; /* Professional Squircle */
+  --radius-sm: 14px;
+  --p-md: 1.5rem;
   
-  /* Depth Layers */
-  --shadow-float: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-  --shadow-btn: 0 4px 14px 0 rgba(14, 165, 233, 0.3);
+  /* Layered Shadows (Depth Stack) */
+  --shadow-premium: 0 20px 25px -5px rgba(0, 0, 0, 0.03), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+  --shadow-lift: 0 25px 50px -12px rgba(14, 165, 233, 0.15);
 }
 
 [data-theme="dark"] {
   --bg-app: #020617;
   --surface: #0f172a;
+  --glass: rgba(15, 23, 42, 0.7);
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
-  --border: rgba(30, 41, 59, 0.5);
-  --shadow-float: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  --border: rgba(255, 255, 255, 0.08);
+  --accent-glow: rgba(56, 189, 248, 0.1);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: 'Inter', -apple-system, sans-serif;
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
   background-color: var(--bg-app);
   color: var(--text-main);
   line-height: 1.5;
   -webkit-tap-highlight-color: transparent;
-  transition: background-color 0.3s ease;
+  /* Expert Touch: Subtle background texture & light source */
+  background-image: radial-gradient(circle at 100% 0%, var(--accent-glow), transparent 40%);
+  min-height: 100vh;
+  transition: background 0.4s ease;
 }
 
-/* --- Layout Structure --- */
-.container {
-  width: 100%;
-  max-width: 440px; 
-  margin: 0 auto;
-  padding: var(--p-md);
-}
-
+/* --- Navigation & Header --- */
 header {
-  background: var(--surface);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  padding: 0.75rem var(--p-md); /* Reduced padding for sleeker look */
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 1.25rem var(--p-md);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -66,131 +63,161 @@ header {
   border-bottom: 1px solid var(--border);
 }
 
-/* --- Component Hierarchy --- */
+/* --- Layout --- */
+.container {
+  width: 100%;
+  max-width: 440px; 
+  margin: 0 auto;
+  padding: var(--p-md);
+}
+
+/* --- Expert Component: Glass Cards --- */
 .card {
   background: var(--surface);
   border-radius: var(--radius);
-  padding: var(--p-md);
-  margin-bottom: var(--p-md);
+  padding: 1.75rem;
+  margin-bottom: 1.5rem;
   border: 1px solid var(--border);
-  box-shadow: var(--shadow-float);
+  box-shadow: var(--shadow-premium);
+  position: relative;
+  overflow: hidden; /* For inner glow effects */
 }
 
 .welcome-card {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  padding: var(--p-sm) 0 var(--p-md) 0;
+  padding: 1rem 0 2.5rem 0;
 }
 
-.welcome-card h2 { font-weight: 800; font-size: 1.75rem; letter-spacing: -0.025em; }
+.welcome-card h2 { 
+  font-weight: 900; 
+  font-size: 2.25rem; 
+  letter-spacing: -0.04em; 
+  line-height: 1.1;
+}
 
-/* --- Dash-Row (Balanced) --- */
+/* --- High-Density Dashboard Items --- */
 .dash-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px; /* Increased gap for visual breath */
-  margin-bottom: var(--p-md);
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
 }
 
 .dash-item {
   background: var(--surface);
-  padding: 1.25rem;
+  padding: 1.5rem;
   border-radius: var(--radius);
   border: 1px solid var(--border);
-  box-shadow: var(--shadow-float);
+  box-shadow: var(--shadow-premium);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+.dash-item:active { transform: scale(0.95); }
+
 .dash-label {
-  font-size: 0.65rem;
-  font-weight: 700;
+  font-size: 0.7rem;
+  font-weight: 800;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
+  display: block;
+  margin-bottom: 0.5rem;
 }
 
 .dash-value {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--accent);
-  margin-top: 4px;
+  font-size: 2rem;
+  font-weight: 900;
+  /* Gradient Text for Primary Data */
+  background: linear-gradient(135deg, var(--accent), #2dd4bf);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-/* --- Interactive Elements --- */
+/* --- Expert Interactive Elements --- */
 .btn {
   width: 100%;
-  padding: 0.875rem 1.5rem;
-  border-radius: var(--radius); /* Unified with Design DNA */
-  font-weight: 700;
-  font-size: 0.95rem;
+  padding: 1.1rem 1.5rem;
+  border-radius: var(--radius-sm);
+  font-weight: 800;
+  font-size: 1rem;
   cursor: pointer;
   border: none;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .btn-primary {
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent), #0284c7);
   color: white;
-  box-shadow: var(--shadow-btn);
+  box-shadow: var(--shadow-lift);
 }
 
-.btn-primary:hover { background: var(--accent-dark); transform: translateY(-1px); }
-.btn-primary:active { transform: translateY(0) scale(0.98); }
+.btn-primary:hover { transform: translateY(-2px); filter: brightness(1.1); }
+.btn-primary:active { transform: translateY(0) scale(0.97); }
 
 .btn-secondary {
-  background: var(--bg-app);
+  background: var(--glass);
   color: var(--text-main);
   border: 1px solid var(--border);
-  font-weight: 600;
+  backdrop-filter: blur(10px);
 }
 
-/* Unified Icon Button Fix */
 .btn-icon {
-  width: 42px;
-  height: 42px;
-  padding: 0;
-  border-radius: 50%; /* Circles always feel more "premium" for toggles */
-  background: var(--bg-app);
-  color: var(--text-main);
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--surface);
   border: 1px solid var(--border);
+  box-shadow: var(--shadow-premium);
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.btn-icon:hover { background: var(--border); transform: rotate(15deg); }
-.btn-icon:active { transform: scale(0.92); }
+.btn-icon:hover { transform: rotate(12deg) scale(1.1); }
 
-/* --- Form Fields --- */
-.form-group { margin-bottom: 1.25rem; }
-.form-group label { 
-  display: block; 
-  font-size: 0.85rem; 
-  font-weight: 600; 
+/* --- Form Aesthetics --- */
+.form-group label {
+  font-size: 0.8rem;
+  font-weight: 700;
   color: var(--text-muted);
-  margin-bottom: 6px;
-  margin-left: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+  display: block;
 }
 
 input {
   width: 100%;
-  padding: 0.875rem 1rem;
-  border-radius: 14px;
+  padding: 1.1rem 1.25rem;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text-main);
   font-size: 1rem;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
 }
 
-input:focus { outline: none; border-color: var(--accent); background: var(--bg-app); }
+input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: 0 0 0 4px var(--accent-glow);
+}
 
-/* --- Utils --- */
-.text-muted { color: var(--text-muted); font-size: 0.9rem; }
+/* --- Feedback System --- */
+.toast {
+  background: var(--text-main);
+  color: var(--surface);
+  padding: 1rem 1.5rem;
+  border-radius: 100px;
+  font-weight: 700;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+}
+
 .mt-1 { margin-top: 1rem; }
+.text-muted { color: var(--text-muted); font-size: 0.95rem; }
