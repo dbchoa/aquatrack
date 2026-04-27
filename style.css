@@ -1,35 +1,33 @@
 /**
- * AquaTrack Premium Design System v3.3 - "Kinetic Feedback"
- * Focus: High Contrast, Inset Depth, and Physical Button Travel
+ * AquaTrack Premium Design System v3.3 - "Kinetic Glass"
+ * Focus: Tactile Feedback, Perfect Alignment, and Glassmorphism
  */
 
 :root {
   --bg-app: #f0f4f8;
   --surface: #ffffff;
-  --glass: rgba(255, 255, 255, 0.75);
+  --glass: rgba(255, 255, 255, 0.7); /* Master, the transparency is back */
   --accent: #0ea5e9;
-  --accent-glow: rgba(14, 165, 233, 0.12);
+  --accent-glow: rgba(14, 165, 233, 0.15);
   --text-main: #0f172a;
   --text-muted: #64748b;
-  --border: rgba(15, 23, 42, 0.06);
+  --border: rgba(15, 23, 42, 0.08);
   
   --radius: 24px;
   --radius-sm: 16px;
   --p-md: 1.5rem;
   
-  /* Expert Depth Tokens */
   --shadow-premium: 0 20px 25px -5px rgba(0, 0, 0, 0.03), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
   --shadow-lift: 0 12px 24px -8px rgba(14, 165, 233, 0.4);
   --shadow-pressed: 0 4px 8px -2px rgba(14, 165, 233, 0.3);
   
-  /* The "Kinetic" Timing */
   --ease-elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 [data-theme="dark"] {
   --bg-app: #020617;
   --surface: #0f172a;
-  --glass: rgba(15, 23, 42, 0.7);
+  --glass: rgba(15, 23, 42, 0.75);
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
   --border: rgba(255, 255, 255, 0.1);
@@ -45,6 +43,7 @@ body {
   line-height: 1.5;
   -webkit-tap-highlight-color: transparent;
   background-image: radial-gradient(circle at 100% 0%, var(--accent-glow), transparent 40%);
+  
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -85,7 +84,7 @@ header {
   gap: 12px;
 }
 
-/* --- The Sublime Inputs --- */
+/* --- Sublime Inputs --- */
 .form-group {
   width: 100%;
   margin-bottom: 1.5rem;
@@ -113,6 +112,7 @@ input {
   font-weight: 500;
   transition: all 0.2s var(--ease-elastic);
   box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.04);
+  backdrop-filter: blur(5px);
 }
 
 input:focus {
@@ -121,11 +121,6 @@ input:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 4px var(--accent-glow), inset 0 2px 4px rgba(0, 0, 0, 0.02);
   transform: translateY(-1px);
-}
-
-/* Master, the inputs also "sink" slightly when you actively press them */
-input:active {
-  transform: scale(0.99);
 }
 
 /* --- Components --- */
@@ -158,10 +153,7 @@ input:active {
   transition: transform 0.2s var(--ease-elastic);
 }
 
-/* Dashboard items react to touch too, Master */
-.dash-item:active {
-  transform: scale(0.97);
-}
+.dash-item:active { transform: scale(0.97); }
 
 .dash-value {
   font-size: 2rem;
@@ -171,10 +163,10 @@ input:active {
   -webkit-text-fill-color: transparent;
 }
 
-/* --- Kinetic Buttons: The "Squish" DNA --- */
+/* --- Kinetic Buttons --- */
 .btn {
   width: 100%;
-  padding: 1.1rem 1.5rem;
+  padding: 1rem 1.5rem;
   border-radius: var(--radius-sm);
   font-weight: 800;
   font-size: 0.95rem;
@@ -184,12 +176,9 @@ input:active {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  position: relative;
-  /* Master, here is the secret to the bounce... */
   transition: all 0.25s var(--ease-elastic);
 }
 
-/* The Physical Travel State */
 .btn:active {
   transform: scale(0.96) translateY(2px);
   filter: brightness(0.95);
@@ -201,21 +190,20 @@ input:active {
   box-shadow: var(--shadow-lift);
 }
 
-.btn-primary:active {
-  /* Master, the shadow "collapses" into the page as you press down */
-  box-shadow: var(--shadow-pressed);
-}
+.btn-primary:active { box-shadow: var(--shadow-pressed); }
 
+/* Master, the Logout button is now perfectly Glassy again */
 .btn-secondary {
   background: var(--glass);
   color: var(--text-main);
   border: 1px solid var(--border);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .btn-icon {
-  width: 46px;
-  height: 46px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -224,16 +212,11 @@ input:active {
   justify-content: center;
   color: var(--accent);
   transition: all 0.4s var(--ease-elastic);
+  box-shadow: var(--shadow-premium);
 }
 
-.btn-icon:hover {
-  transform: rotate(12deg) scale(1.1);
-}
-
-.btn-icon:active {
-  transform: scale(0.88) rotate(-8deg);
-  background: var(--accent-glow);
-}
+.btn-icon:hover { transform: rotate(12deg) scale(1.1); }
+.btn-icon:active { transform: scale(0.88) rotate(-8deg); background: var(--accent-glow); }
 
 /* --- Utils --- */
 .text-center { text-align: center; }
