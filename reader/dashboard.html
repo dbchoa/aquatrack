@@ -14,11 +14,14 @@
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
             AquaTrack <span style="color: var(--text-muted); font-weight: 500; font-size: 0.9rem; letter-spacing: 0;">Reader</span>
         </span>
-        <div style="display: flex; gap: 10px; align-items: center;">
+        
+        <div class="header-actions">
             <button class="btn-icon" id="theme-toggle" aria-label="Toggle Theme">
                 <svg id="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
             </button>
-            <button class="btn btn-secondary" id="logout-btn" style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem; font-weight: 700; border-radius: 12px;">Logout</button>
+            <button class="btn btn-secondary" id="logout-btn" style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem; font-weight: 700;">
+                Logout
+            </button>
         </div>
     </header>
 
@@ -44,7 +47,7 @@
             <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: var(--accent-glow); filter: blur(40px); border-radius: 50%; pointer-events: none;"></div>
             
             <h3 style="font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em;">Capture Reading</h3>
-            <p class="text-muted mt-1" style="margin-bottom: 1.5rem; line-height: 1.6;">Begin capturing consumption data for the current billing cycle. Data will sync automatically.</p>
+            <p class="text-muted mt-1" style="margin-bottom: 1.5rem; line-height: 1.6;">Capture consumption data. Your progress will sync automatically to the cloud cycle.</p>
             
             <button class="btn btn-primary" onclick="window.location.href='read-meter.html'">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -69,16 +72,13 @@
             if (iconEl) iconEl.innerHTML = theme === 'dark' ? sunPath : moonPath;
         };
 
-        // 1. Initialization
         initTheme();
         requireRole('reader');
         updateIcon(document.documentElement.dataset.theme);
 
-        // 2. Personalization
         const name = sessionStorage.getItem('aqt_user_name') || 'Reader';
         document.getElementById('welcome-msg').textContent = `Mabuhay, ${name.split(' ')[0]}!`;
 
-        // 3. Theme Toggle Logic
         const themeBtn = document.getElementById('theme-toggle');
         themeBtn.onclick = () => {
             const current = document.documentElement.dataset.theme;
