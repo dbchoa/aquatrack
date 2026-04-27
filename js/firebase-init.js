@@ -6,13 +6,13 @@
 // 1. Your unique Firebase project configuration
 // IMPORTANT: Replace these placeholders with your actual Firebase project settings!
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyBxnQXgKO0K5qC522nrecoQsAb1G9uBwFU",
+  authDomain: "dbc-aquatrack.firebaseapp.com",
+  databaseURL: "https://dbc-aquatrack-default-rtdb.asia-southeast1.firebasedatabase.app/",
+  projectId: "dbc-aquatrack",
+  storageBucket: "dbc-aquatrack.firebasestorage.app",
+  messagingSenderId: "656106085568",
+  appId: "1:656106085568:web:bf80ba725e6df317d66125"
 };
 
 // 2. Initialize Firebase
