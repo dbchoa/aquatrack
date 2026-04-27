@@ -1,274 +1,210 @@
-/* * AquaTrack Global Stylesheet
- * Constraints: Mobile-first, Vanilla CSS, Data-theme support
- * Source: PROJECT_CONTEXT.md Section 9 & 10
+/* * AquaTrack Premium Design System 
+ * Aesthetic: Modern, Fluid, Deep Depth
  */
 
-/* --- 1. Variable Definitions --- */
 :root {
-  /* Colors - Light Mode (Default) */
-  --bg-primary: #ffffff;
-  --bg-secondary: #f4f7f9;
+  /* Colors - Light Mode (Refined) */
+  --bg-primary: #f0f4f8;
+  --bg-secondary: #e2e8f0;
   --surface: #ffffff;
-  --text-primary: #1a1a1b;
-  --text-secondary: #65676b;
-  --accent-primary: #007bff; /* Water Blue */
-  --accent-secondary: #0056b3;
-  --border-color: #e4e6eb;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --accent-primary: #0ea5e9; /* Electric Cyan */
+  --accent-secondary: #0284c7;
+  --border-color: rgba(226, 232, 240, 0.8);
   
   /* Status Colors */
-  --status-success: #28a745;
-  --status-warning: #ffc107;
-  --status-error: #dc3545;
-  --status-info: #17a2b8;
+  --status-success: #10b981;
+  --status-error: #ef4444;
+  --status-info: #3b82f6;
 
-  /* Typography */
-  --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --base-size: 16px;
-  
   /* Spacing & Borders */
-  --space-xs: 0.25rem;
-  --space-sm: 0.5rem;
-  --space-md: 1rem;
-  --space-lg: 1.5rem;
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --shadow: 0 2px 4px rgba(0,0,0,0.1);
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
   
-  /* Z-index */
-  --z-toast: 1000;
-  --z-nav: 500;
+  --font-main: 'Inter', -apple-system, system-ui, sans-serif;
+  --space-md: 1.25rem;
 }
 
 [data-theme="dark"] {
-  --bg-primary: #121212;
-  --bg-secondary: #1e1e1e;
-  --surface: #242424;
-  --text-primary: #e4e6eb;
-  --text-secondary: #b0b3b8;
-  --accent-primary: #3391ff;
-  --border-color: #3e4042;
-  --shadow: 0 4px 12px rgba(0,0,0,0.5);
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --surface: #1e293b;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --accent-primary: #38bdf8;
+  --border-color: rgba(51, 65, 85, 0.5);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
 }
 
-/* --- 2. Base Reset --- */
+/* --- Base Reset --- */
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
 }
 
-html, body {
+body {
   font-family: var(--font-main);
-  font-size: var(--base-size);
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-primary);
   color: var(--text-primary);
-  line-height: 1.5;
-  min-height: 100vh;
+  line-height: 1.6;
+  transition: background 0.3s ease;
 }
 
-/* --- 3. Layout Components --- */
+/* --- Layout Components --- */
 .container {
   width: 100%;
-  max-width: 600px; /* Constrained for mobile-first feel on desktop */
+  max-width: 500px; /* Slightly tighter for better mobile focus */
   margin: 0 auto;
   padding: var(--space-md);
 }
 
-.card {
-  background: var(--surface);
-  border-radius: var(--radius-md);
-  padding: var(--space-md);
-  margin-bottom: var(--space-md);
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border-color);
-}
-
 header {
-  background: var(--surface);
-  padding: var(--space-md);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px); /* Glassmorphism */
+  -webkit-backdrop-filter: blur(12px);
+  padding: 1.25rem var(--space-md);
   border-bottom: 1px solid var(--border-color);
   position: sticky;
   top: 0;
-  z-index: var(--z-nav);
+  z-index: 100;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-/* --- 4. Forms & Inputs --- */
-.form-group {
-  margin-bottom: var(--space-lg);
+[data-theme="dark"] header {
+  background: rgba(15, 23, 42, 0.8);
 }
 
-label {
-  display: block;
-  font-weight: 600;
-  margin-bottom: var(--space-xs);
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-}
-
-input[type="text"],
-input[type="number"],
-input[type="password"],
-input[type="email"],
-select,
-textarea {
-  width: 100%;
-  padding: 0.75rem;
+.card {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  margin-bottom: var(--space-md);
+  box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
+  transition: transform 0.2s ease;
+}
+
+/* --- Dash-Row Aesthetic (Premium Version) --- */
+.dash-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: var(--space-md);
+}
+
+.dash-item {
+  flex: 1;
+  background: var(--surface);
+  padding: 1.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  text-align: left; /* Alignment change for professional look */
+  box-shadow: var(--shadow-sm);
+}
+
+.dash-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  display: block;
+}
+
+.dash-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--accent-primary);
+  margin-top: 4px;
+}
+
+/* --- Forms & Buttons --- */
+input[type="email"], input[type="password"], input[type="number"], select {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 12px;
+  border: 2px solid var(--border-color);
   background: var(--bg-primary);
   color: var(--text-primary);
   font-size: 1rem;
+  transition: border-color 0.2s;
 }
 
 input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
-/* --- 5. Buttons --- */
 .btn {
-  display: inline-flex;
+  padding: 1rem;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.75rem 1.5rem;
-  border-radius: var(--radius-md);
-  border: none;
-  font-weight: 600;
-  cursor: pointer;
-  width: 100%;
-  transition: opacity 0.2s;
-}
-
-.btn:active {
-  opacity: 0.8;
+  gap: 8px;
 }
 
 .btn-primary {
-  background: var(--accent-primary);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  color: white;
+  box-shadow: 0 10px 15px -3px rgba(14, 165, 233, 0.3);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
 }
 
 .btn-secondary {
   background: var(--bg-secondary);
   color: var(--text-primary);
-  border: 1px solid var(--border-color);
 }
 
-/* --- 6. Toasts (User Feedback) --- */
-#toast-container {
-  position: fixed;
-  bottom: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: var(--z-toast);
-  width: 90%;
-  max-width: 400px;
-}
-
-.toast {
-  padding: 1rem;
-  border-radius: var(--radius-md);
-  margin-top: var(--space-sm);
-  color: white;
-  animation: slideUp 0.3s ease-out;
-  box-shadow: var(--shadow);
-}
-
-.toast-success { background: var(--status-success); }
-.toast-error { background: var(--status-error); }
-.toast-info { background: var(--status-info); }
-
-@keyframes slideUp {
-  from { transform: translateY(100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-/* --- 7. Utility Classes --- */
-.text-center { text-align: center; }
-.mt-1 { margin-top: var(--space-md); }
-.hidden { display: none !important; }
-
-/* Inline SVG Icon Sizing */
-.icon {
-  width: 24px;
-  height: 24px;
-  fill: currentColor;
-  vertical-align: middle;
-}
-
-/* --- 8. Custom Modals --- */
+/* --- Modals & Toasts (Premium) --- */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5); /* Dims the background */
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-end; /* Mobile native drawer style */
   z-index: 1000;
-  padding: var(--space-md);
 }
 
 .modal-content {
   background: var(--surface);
-  padding: var(--space-lg);
-  border-radius: var(--radius-md);
   width: 100%;
-  max-width: 400px;
-  box-shadow: var(--shadow);
-  text-align: center;
-  animation: slideUp 0.3s ease-out; /* Uses the same animation as toasts */
+  max-width: 500px;
+  padding: 2rem;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.modal-actions {
-  display: flex;
-  gap: var(--space-sm);
-  margin-top: var(--space-lg);
+.toast {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  padding: 1rem 1.5rem;
+  border-radius: 100px; /* Pill shape */
+  box-shadow: var(--shadow-lg);
+  font-weight: 600;
 }
 
-/* Ensure buttons in modals take up equal space */
-.modal-actions .btn {
-  flex: 1;
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
 
-/* --- 9. Dashboard Rows --- */
-.dash-row {
-  display: flex;
-  gap: var(--space-md);
-  margin-bottom: var(--space-md);
-  overflow-x: auto; /* Allows swiping if items are too wide */
-  padding-bottom: var(--space-xs);
-}
-
-.dash-item {
-  flex: 1;
-  min-width: 120px; /* Ensures items don't get too squished */
-  background: var(--surface);
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow);
-  text-align: center;
-}
-
-.dash-label {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  display: block;
-  margin-bottom: var(--space-xs);
-}
-
-.dash-value {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--accent-primary);
-}
+.mt-1 { margin-top: 1rem; }
+.text-center { text-align: center; }
+.text-secondary { color: var(--text-secondary); font-size: 0.9rem; }
