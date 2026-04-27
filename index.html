@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AquaTrack - Login</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="toast-container"></div>
+
+    <div class="container" style="display: flex; flex-direction: column; justify-content: center; min-height: 100vh;">
+        <div class="text-center">
+            <h1 style="color: var(--accent-primary); margin-bottom: var(--space-lg);">AquaTrack</h1>
+        </div>
+
+        <div class="card">
+            <h2 class="text-center" style="margin-bottom: var(--space-md);">Sign In</h2>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" placeholder="name@example.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="••••••••" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="login-btn">
+                    Login to Dashboard
+                </button>
+            </form>
+        </div>
+
+        <p class="text-center" style="font-size: 0.875rem; color: var(--text-secondary);">
+            Digitizing Water Management
+        </p>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+
+    <script type="module">
+        import { login } from './js/auth.js';
+        import { toast } from './js/utils.js';
+
+        const loginForm = document.getElementById('login-form');
+        const loginBtn = document.getElementById('login-btn');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault(); // Prevents page reload
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            // Visual feedback: disable button while waiting
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Authenticating...';
+
+            await login(email, password);
+
+            // Re-enable if login failed (if successful, the page will redirect)
+            loginBtn.disabled = false;
+            loginBtn.textContent = 'Login to Dashboard';
+        });
+    </script>
+</body>
+</html>
