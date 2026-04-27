@@ -3,55 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - AquaTrack Reader</title>
+    <title>Dashboard - AquaTrack</title>
     <link rel="stylesheet" href="../style.css">
 </head>
 <body>
     <div id="toast-container"></div>
-
-    <header>
-        <span style="font-weight: 900; letter-spacing: -0.04em; display: flex; align-items: center; gap: 10px; font-size: 1.1rem;">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
-            AquaTrack <span style="color: var(--text-muted); font-weight: 500; font-size: 0.9rem; letter-spacing: 0;">Reader</span>
-        </span>
-        
-        <div class="header-actions">
-            <button class="btn-icon" id="theme-toggle" aria-label="Toggle Theme">
-                <svg id="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
-            </button>
-            <button class="btn btn-secondary" id="logout-btn" style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem; font-weight: 700;">
-                Logout
-            </button>
-        </div>
-    </header>
+    <header></header>
 
     <div class="container">
         <div class="welcome-card">
-            <span style="text-transform: uppercase; font-size: 0.7rem; font-weight: 800; color: var(--accent); letter-spacing: 0.15em; display: block; margin-bottom: 4px;">Operational Hub</span>
-            <h2 id="welcome-msg" style="font-size: 2.25rem;">Mabuhay!</h2>
-            <p class="text-muted" style="margin-top: 4px;">You have <strong style="color: var(--text-main);">12 assignments</strong> remaining for today.</p>
+            <span style="text-transform: uppercase; font-size: 0.75rem; font-weight: 800; color: var(--accent); letter-spacing: 0.2em; display: block; margin-bottom: 8px;">Field Operations</span>
+            <h2 id="welcome-msg" style="font-size: 2.5rem; font-weight: 900; letter-spacing: -0.05em; line-height: 1;">Mabuhay!</h2>
+            <p class="text-muted" style="margin-top: 10px; font-weight: 500;">You have <strong style="color: var(--text-main); font-weight: 800;">12 assignments</strong> remaining.</p>
         </div>
 
         <div class="dash-row">
             <div class="dash-item">
-                <span class="dash-label">Pending</span>
+                <span class="dash-label">To Read</span>
                 <div class="dash-value" id="count-pending">12</div>
             </div>
             <div class="dash-item">
-                <span class="dash-label">Synced</span>
+                <span class="dash-label">Completed</span>
                 <div class="dash-value" id="count-done" style="background: linear-gradient(135deg, #10b981, #059669); -webkit-background-clip: text;">48</div>
             </div>
         </div>
 
         <div class="card">
-            <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: var(--accent-glow); filter: blur(40px); border-radius: 50%; pointer-events: none;"></div>
+            <div style="position: absolute; top: -30px; right: -30px; width: 150px; height: 150px; background: var(--accent-glow); filter: blur(50px); border-radius: 50%; pointer-events: none;"></div>
             
-            <h3 style="font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em;">Capture Reading</h3>
-            <p class="text-muted mt-1" style="margin-bottom: 1.5rem; line-height: 1.6;">Capture consumption data. Your progress will sync automatically to the cloud cycle.</p>
+            <h3 style="font-size: 1.5rem; font-weight: 900; letter-spacing: -0.02em;">Capture Reading</h3>
+            <p class="text-muted" style="margin-top: 12px; margin-bottom: 2rem; line-height: 1.6; font-weight: 500;">
+                Sync current water consumption data. Progress updates are reflected in real-time across the infrastructure.
+            </p>
             
             <button class="btn btn-primary" onclick="window.location.href='read-meter.html'">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                Start Capture
+                <span>Begin Scanning</span>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                </svg>
             </button>
         </div>
     </div>
@@ -61,33 +51,14 @@
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
 
     <script type="module">
-        import { logout } from '../js/auth.js';
-        import { requireRole, setTheme, initTheme } from '../js/utils.js';
+        import { requireRole } from '../js/utils.js';
+        import { injectHeader } from '../js/header-component.js';
 
-        const sunPath = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
-        const moonPath = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
-
-        const updateIcon = (theme) => {
-            const iconEl = document.getElementById('theme-icon');
-            if (iconEl) iconEl.innerHTML = theme === 'dark' ? sunPath : moonPath;
-        };
-
-        initTheme();
+        injectHeader('Reader');
         requireRole('reader');
-        updateIcon(document.documentElement.dataset.theme);
 
-        const name = sessionStorage.getItem('aqt_user_name') || 'Reader';
+        const name = sessionStorage.getItem('aqt_user_name') || 'Personnel';
         document.getElementById('welcome-msg').textContent = `Mabuhay, ${name.split(' ')[0]}!`;
-
-        const themeBtn = document.getElementById('theme-toggle');
-        themeBtn.onclick = () => {
-            const current = document.documentElement.dataset.theme;
-            const next = current === 'dark' ? 'light' : 'dark';
-            setTheme(next);
-            updateIcon(next);
-        };
-
-        document.getElementById('logout-btn').onclick = logout;
     </script>
 </body>
 </html>
