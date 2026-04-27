@@ -1,210 +1,184 @@
-/* * AquaTrack Premium Design System 
- * Aesthetic: Modern, Fluid, Deep Depth
+/**
+ * AquaTrack Premium Design System v2.0
+ * Focus: Optical Balance, Native Mobile Flow, Visual Hierarchy
  */
 
 :root {
-  /* Colors - Light Mode (Refined) */
-  --bg-primary: #f0f4f8;
-  --bg-secondary: #e2e8f0;
+  /* Refined Palette: Deep Navy & Vibrant Sky */
+  --bg-app: #f8fafc;
   --surface: #ffffff;
-  --text-primary: #1e293b;
-  --text-secondary: #64748b;
-  --accent-primary: #0ea5e9; /* Electric Cyan */
-  --accent-secondary: #0284c7;
-  --border-color: rgba(226, 232, 240, 0.8);
+  --accent: #0ea5e9;
+  --accent-dark: #0284c7;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border: rgba(226, 232, 240, 0.8);
   
-  /* Status Colors */
-  --status-success: #10b981;
-  --status-error: #ef4444;
-  --status-info: #3b82f6;
-
-  /* Spacing & Borders */
-  --radius-md: 16px;
-  --radius-lg: 24px;
-  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  /* System Spacing (Golden Ratio based) */
+  --p-sm: 0.75rem;
+  --p-md: 1.25rem;
+  --p-lg: 2rem;
+  --radius: 18px;
   
-  --font-main: 'Inter', -apple-system, system-ui, sans-serif;
-  --space-md: 1.25rem;
+  /* Depth Layers */
+  --shadow-float: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  --shadow-btn: 0 4px 14px 0 rgba(14, 165, 233, 0.3);
 }
 
 [data-theme="dark"] {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --surface: #1e293b;
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --accent-primary: #38bdf8;
-  --border-color: rgba(51, 65, 85, 0.5);
-  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  --bg-app: #020617;
+  --surface: #0f172a;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --border: rgba(30, 41, 59, 0.5);
+  --shadow-float: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
 }
 
-/* --- Base Reset --- */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  -webkit-font-smoothing: antialiased;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: var(--font-main);
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  line-height: 1.6;
-  transition: background 0.3s ease;
+  font-family: 'Inter', -apple-system, sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  line-height: 1.5;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* --- Layout Components --- */
+/* --- Layout Structure --- */
 .container {
   width: 100%;
-  max-width: 500px; /* Slightly tighter for better mobile focus */
+  max-width: 440px; /* Optical sweet spot for mobile focus */
   margin: 0 auto;
-  padding: var(--space-md);
+  padding: var(--p-md);
 }
 
 header {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(12px); /* Glassmorphism */
+  background: rgba(var(--bg-app), 0.8);
+  backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  padding: 1.25rem var(--space-md);
-  border-bottom: 1px solid var(--border-color);
+  padding: 1rem var(--p-md);
   position: sticky;
   top: 0;
   z-index: 100;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border-bottom: 1px solid var(--border);
 }
 
-[data-theme="dark"] header {
-  background: rgba(15, 23, 42, 0.8);
-}
-
+/* --- Component Hierarchy --- */
 .card {
   background: var(--surface);
-  border-radius: var(--radius-md);
-  padding: 1.5rem;
-  margin-bottom: var(--space-md);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border-color);
-  transition: transform 0.2s ease;
+  border-radius: var(--radius);
+  padding: var(--p-md);
+  margin-bottom: var(--p-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-float);
 }
 
-/* --- Dash-Row Aesthetic (Premium Version) --- */
+.welcome-card {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: var(--p-sm) 0;
+  margin-bottom: var(--p-md);
+}
+
+.welcome-card h2 { font-weight: 800; font-size: 1.75rem; letter-spacing: -0.025em; }
+
+/* --- Dash-Row (Balanced) --- */
 .dash-row {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: var(--space-md);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: var(--p-md);
 }
 
 .dash-item {
-  flex: 1;
   background: var(--surface);
-  padding: 1.25rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-color);
-  text-align: left; /* Alignment change for professional look */
-  box-shadow: var(--shadow-sm);
+  padding: 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
 }
 
 .dash-label {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 700;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  display: block;
+  letter-spacing: 0.05em;
 }
 
 .dash-value {
   font-size: 1.5rem;
   font-weight: 800;
-  color: var(--accent-primary);
-  margin-top: 4px;
+  color: var(--accent);
 }
 
-/* --- Forms & Buttons --- */
-input[type="email"], input[type="password"], input[type="number"], select {
+/* --- Interactive Elements --- */
+.btn {
   width: 100%;
-  padding: 1rem;
+  padding: 0.875rem 1.5rem;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  box-shadow: var(--shadow-btn);
+}
+
+.btn-primary:hover { background: var(--accent-dark); transform: translateY(-1px); }
+.btn-primary:active { transform: translateY(0) scale(0.98); }
+
+.btn-secondary {
+  background: var(--bg-app);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+}
+
+.btn-icon {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 1.2rem;
+}
+
+/* --- Form Fields --- */
+.form-group { margin-bottom: 1.25rem; }
+.form-group label { 
+  display: block; 
+  font-size: 0.85rem; 
+  font-weight: 600; 
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  margin-left: 4px;
+}
+
+input {
+  width: 100%;
+  padding: 0.875rem 1rem;
   border-radius: 12px;
-  border: 2px solid var(--border-color);
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-main);
   font-size: 1rem;
   transition: border-color 0.2s;
 }
 
-input:focus {
-  outline: none;
-  border-color: var(--accent-primary);
-}
+input:focus { outline: none; border-color: var(--accent); background: var(--bg-app); }
 
-.btn {
-  padding: 1rem;
-  border-radius: 14px;
-  font-weight: 700;
-  font-size: 1rem;
-  cursor: pointer;
-  border: none;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-  color: white;
-  box-shadow: 0 10px 15px -3px rgba(14, 165, 233, 0.3);
-}
-
-.btn-primary:active {
-  transform: scale(0.98);
-}
-
-.btn-secondary {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-}
-
-/* --- Modals & Toasts (Premium) --- */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
-  display: flex;
-  justify-content: center;
-  align-items: flex-end; /* Mobile native drawer style */
-  z-index: 1000;
-}
-
-.modal-content {
-  background: var(--surface);
-  width: 100%;
-  max-width: 500px;
-  padding: 2rem;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.toast {
-  background: var(--text-primary);
-  color: var(--bg-primary);
-  padding: 1rem 1.5rem;
-  border-radius: 100px; /* Pill shape */
-  box-shadow: var(--shadow-lg);
-  font-weight: 600;
-}
-
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-
+/* --- Utils --- */
+.text-muted { color: var(--text-muted); font-size: 0.9rem; }
 .mt-1 { margin-top: 1rem; }
-.text-center { text-align: center; }
-.text-secondary { color: var(--text-secondary); font-size: 0.9rem; }
