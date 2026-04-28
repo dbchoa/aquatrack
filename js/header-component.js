@@ -1,6 +1,6 @@
 /**
- * AquaTrack Global Header Component v5.2
- * DNA: Purified Branding, Anti-Clipping SVG, and Full Horizontal Sovereignty.
+ * AquaTrack Global Header Component v5.3
+ * DNA: Reference-Matched Sticky Structure, Anti-Clipping Brand, and Grouped Controls.
  */
 import { logout } from './auth.js';
 import { setTheme } from './utils.js';
@@ -9,13 +9,13 @@ export const injectHeader = () => {
     const header = document.querySelector('header');
     if (!header) return;
 
-    // Fixed width and glass effect matching your working project structure
+    // Matching reference structure: bg-glass, sticky top, justify-between
     header.className = "bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex justify-between items-center sticky top-0 z-[100] w-full transition-all duration-300";
     
     header.innerHTML = `
         <div class="flex items-center gap-3">
-            <div class="p-1.5 bg-water rounded-lg flex items-center justify-center shadow-lg shadow-water/20">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="white" style="display: block;">
+            <div class="p-2 bg-water rounded-lg flex items-center justify-center shadow-lg shadow-water/20">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="white" style="display: block; flex-shrink: 0;">
                     <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
                 </svg>
             </div>
