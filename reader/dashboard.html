@@ -38,7 +38,7 @@
             border-color: rgba(79, 172, 254, 0.3);
         }
 
-        /* THE GLASS VESSEL - PERMANENT VOID BACKGROUND */
+        /* GLASS VESSEL HUD */
         .glass-vessel {
             position: relative;
             width: 72px;
@@ -139,7 +139,17 @@
         </div>
 
         <div id="readings-feed" class="space-y-4">
+            <div class="dash-row p-6 rounded-32 flex items-center justify-between border border-transparent">
+                <div class="flex flex-col">
+                    <span class="text-[10px] font-bold text-water uppercase tracking-[0.15em] mb-1">ACC-045</span>
+                    <span class="text-[11px] font-medium text-slate-400">Apr 28, 2026</span>
+                </div>
+                <div class="text-right">
+                    <span class="text-xl font-black tracking-tighter dark:text-white text-slate-800">124.5</span>
+                    <span class="text-[10px] font-bold text-slate-400 ml-1 uppercase">m³</span>
+                </div>
             </div>
+        </div>
     </main>
 
     <div class="fixed bottom-0 left-0 right-0 z-[110] bg-white/80 dark:bg-[#020617]/80 backdrop-blur-xl border-t border-slate-200 dark:border-white/5 px-6 py-5">
@@ -175,8 +185,10 @@
                         <input id="input-lot" type="number" placeholder="Lot" class="w-1/2 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl text-sm font-bold outline-none text-center">
                     </div>
                 </div>
-                <button onclick="identifyHomeowner()" class="w-full py-4 bg-water text-white rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all">Identify Unit</button>
-                <button onclick="closeReadingModal()" class="w-full mt-2 py-3 text-slate-400 font-bold uppercase text-[10px] tracking-widest">Cancel</button>
+                <div class="flex flex-col gap-2">
+                    <button onclick="identifyHomeowner()" class="w-full py-4 bg-water text-white rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all">Identify Unit</button>
+                    <button onclick="closeReadingModal()" class="w-full py-3 text-slate-400 font-bold uppercase text-[10px] tracking-widest">Cancel</button>
+                </div>
             </div>
 
             <div id="modal-stage-reading" class="hidden">
@@ -199,7 +211,7 @@
                     </div>
                 </div>
                 <div class="flex gap-3">
-                    <button onclick="resetModal()" class="flex-1 py-4 text-slate-400 font-bold uppercase text-xs">Back</button>
+                    <button onclick="resetModalState()" class="flex-1 py-4 text-slate-400 font-bold uppercase text-xs">Back</button>
                     <button id="submit-reading-btn" onclick="submitReading()" class="flex-1 py-4 bg-water text-white rounded-2xl font-bold uppercase text-xs">Submit</button>
                 </div>
             </div>
@@ -213,21 +225,23 @@
     <script type="module">
         import { injectHeader } from '../js/header-component.js';
         import { db, auth } from '../js/firebase-init.js';
-        import { toast } from '../js/utils.js';
 
         injectHeader();
 
         const BILLING_CONFIG = { threshold: 10, minFee: 300, rate: 35 };
         let activeAccount = null;
 
+        // MODAL TOGGLES
         window.openReadingModal = () => {
             document.getElementById('readingModal').classList.remove('hidden');
-            resetModal();
+            window.resetModalState();
         };
 
-        window.closeReadingModal = () => document.getElementById('readingModal').classList.add('hidden');
+        window.closeReadingModal = () => {
+            document.getElementById('readingModal').classList.add('hidden');
+        };
 
-        window.resetModal = () => {
+        window.resetModalState = () => {
             document.getElementById('modal-stage-locator').classList.remove('hidden');
             document.getElementById('modal-stage-reading').classList.add('hidden');
             document.getElementById('input-block').value = '';
@@ -235,6 +249,7 @@
             document.getElementById('input-reading').value = '';
         };
 
+        // STAGE 1: IDENTIFY
         window.identifyHomeowner = async () => {
             const street = document.getElementById('input-street').value;
             const block = document.getElementById('input-block').value;
@@ -262,10 +277,11 @@
                 document.getElementById('display-prev').innerText = `${activeAccount.lastReading} m³`;
                 calculateLiveCost(0);
             } else {
-                alert("No homeowner found at this location.");
+                alert("Homeowner not found.");
             }
         };
 
+        // STAGE 2: CALCULATION
         const calculateLiveCost = (curr) => {
             const prev = activeAccount ? activeAccount.lastReading : 0;
             const consumption = Math.max(0, curr - prev);
@@ -277,9 +293,11 @@
             calculateLiveCost(parseFloat(e.target.value) || 0);
         });
 
+        // SUBMISSION
         window.submitReading = async () => {
             const reading = parseFloat(document.getElementById('input-reading').value);
-            if(!reading || reading <= activeAccount.lastReading) return alert("Invalid reading");
+            if(!reading || reading <= activeAccount.lastReading) return alert("Invalid entry.");
+            
             const btn = document.getElementById('submit-reading-btn');
             btn.innerText = "Saving..."; btn.disabled = true;
 
@@ -293,13 +311,13 @@
                 };
                 await db.ref('readings').push(readingData);
                 await db.ref(`homeowners/${activeAccount.id}`).update({ lastReading: reading });
-                alert("Reading Saved!");
+                alert("Captured Successfully!");
                 closeReadingModal();
-            } catch (e) { alert("Save Error"); }
+            } catch (e) { alert("Submission error."); }
             finally { btn.innerText = "Submit"; btn.disabled = false; }
         };
 
-        // EXPOSED FOR CONSOLE: seedTestData()
+        // EXPOSED SEEDING TOOL
         window.seedTestData = async () => {
             const testAccounts = {
                 "ACC-001": { name: "Juan Dela Cruz", street: "Acacia", block: 1, lot: 5, lastReading: 120.5 },
@@ -307,8 +325,12 @@
                 "ACC-003": { name: "Jose Rizal", street: "Acacia", block: 1, lot: 8, lastReading: 210.2 }
             };
             await db.ref('homeowners').set(testAccounts);
-            console.log("Database Seeded Successfully, Master.");
+            console.log("Database Seeded Successfully.");
         };
+
+        auth.onAuthStateChanged((user) => {
+            if (!user) window.location.href = '../index.html';
+        });
     </script>
 </body>
 </html>
