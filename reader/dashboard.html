@@ -44,11 +44,11 @@
     
     <header></header>
 
-    <main class="max-w-xl mx-auto p-6 pt-12 pb-32">
+    <main class="max-w-xl mx-auto p-6 pt-10 pb-32">
         
-        <div class="mb-10 text-center">
-            <h2 class="text-3xl font-black tracking-tight text-slate-800 dark:text-white uppercase">Reader Dashboard</h2>
-            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-[0.3em] mt-2 opacity-60">Subdivision Telemetry Access</p>
+        <div class="mb-12 text-center">
+            <h2 class="text-3xl font-black tracking-tighter text-slate-800 dark:text-white uppercase">Reader Dashboard</h2>
+            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-[0.4em] mt-2 opacity-60">Field Telemetry Terminal</p>
         </div>
         
         <div class="grid grid-cols-2 gap-4 mb-10">
@@ -63,13 +63,13 @@
         </div>
 
         <div class="flex items-center justify-between mb-8 px-2">
-            <h2 class="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400">Activity Log</h2>
+            <h2 class="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400">Capture History</h2>
             <div class="h-[1px] flex-1 bg-slate-200 dark:bg-slate-800 ml-6 opacity-40"></div>
         </div>
 
         <div id="readings-feed" class="space-y-4">
             <div class="text-center py-20 text-slate-400 animate-pulse uppercase text-[10px] tracking-widest font-bold">
-                Fetching Telemetry...
+                Syncing Telemetry...
             </div>
         </div>
     </main>
@@ -77,7 +77,7 @@
     <div class="fixed bottom-10 left-0 w-full flex justify-center z-50">
         <button onclick="window.location.href='read-meter.html'" 
             class="btn-droplet px-12 py-5 rounded-full text-white text-xs font-bold uppercase tracking-[0.25em] shadow-2xl shadow-water/40 hover:scale-105 active:scale-95 transition-all">
-            New Reading
+            Initialize Reading
         </button>
     </div>
 
@@ -90,7 +90,7 @@
         import { db, auth } from '../js/firebase-init.js';
         import '../js/utils.js'; 
 
-        injectHeader(); // No longer passing roleName here
+        injectHeader(); 
 
         auth.onAuthStateChanged((user) => {
             if (!user) {
@@ -115,7 +115,7 @@
         function renderLogs(logs) {
             const container = document.getElementById('readings-feed');
             if (!logs) {
-                container.innerHTML = `<div class="text-center py-16 text-slate-400 italic text-xs uppercase tracking-widest opacity-60">No data captured yet.</div>`;
+                container.innerHTML = `<div class="text-center py-16 text-slate-400 italic text-xs uppercase tracking-widest opacity-60">Terminal empty. No readings captured.</div>`;
                 return;
             }
 
