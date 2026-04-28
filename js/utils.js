@@ -1,6 +1,6 @@
 /**
- * AquaTrack Shared Utilities v4.8
- * DNA: High-Fidelity Feedback, Persistent Theming, and Precision Component Alignment.
+ * AquaTrack Shared Utilities v4.9
+ * DNA: High-Fidelity Feedback, Persistent Theming, and Precision Snap Sync.
  */
 
 // 1. Debugging Utility
@@ -82,7 +82,7 @@ export const formatMonth = (yyyy_mm) => {
     return new Date(year, parseInt(month) - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); 
 };
 
-// 6. Theme Management (Calibrated)
+// 6. Theme Management (The Final Solution)
 export const setTheme = (theme, isInitial = false) => { 
     document.documentElement.dataset.theme = theme;
     
@@ -96,14 +96,20 @@ export const setTheme = (theme, isInitial = false) => {
     
     const indicator = document.getElementById('toggle-indicator');
     if (indicator) {
-        // PRECISION CALIBRATION: Changed from 81px to 79px to restore the side padding
         const travelDistance = theme === 'dark' ? '79px' : '0px';
 
         if (isInitial) {
+            // THE KINETIC SNAP: Force a double-frame wait to ensure browser paint
             indicator.style.transition = 'none';
-            indicator.style.transform = `translateX(${travelDistance})`;
-            indicator.offsetHeight; 
-            setTimeout(() => indicator.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', 50);
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    indicator.style.transform = `translateX(${travelDistance})`;
+                    // Force a reflow
+                    indicator.offsetHeight; 
+                    // Re-enable smooth transition for future clicks
+                    indicator.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                });
+            });
         } else {
             indicator.style.transform = `translateX(${travelDistance})`;
         }
@@ -112,6 +118,11 @@ export const setTheme = (theme, isInitial = false) => {
 
 export const initTheme = () => { 
     const savedTheme = localStorage.getItem('aqt_theme') || 'dark'; 
+    // Synchronous data-attribute set to prevent flash
+    document.documentElement.dataset.theme = savedTheme;
+    if (savedTheme === 'dark') document.documentElement.classList.add('dark');
+
+    // Asynchronous element snap
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => setTheme(savedTheme, true));
     } else {
@@ -134,4 +145,5 @@ export const requireRole = (...allowedRoles) => {
     } 
 };
 
+// Launch
 initTheme();
