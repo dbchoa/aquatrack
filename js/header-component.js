@@ -1,11 +1,11 @@
 /**
- * AquaTrack Global Header Component v5.0
- * DNA: Reference-Matched Structure, Horizontal Split, and Kinetic Controls.
+ * AquaTrack Global Header Component v5.1
+ * DNA: Minimalist Branding, Anti-Clipping SVG, and Reference-Matched Split.
  */
 import { logout } from './auth.js';
 import { setTheme } from './utils.js';
 
-export const injectHeader = (roleName) => {
+export const injectHeader = () => {
     const header = document.querySelector('header');
     if (!header) return;
 
@@ -13,18 +13,15 @@ export const injectHeader = (roleName) => {
     header.className = "bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex justify-between items-center sticky top-0 z-[100] w-full transition-all duration-300";
     
     header.innerHTML = `
-        <div class="flex items-center gap-2">
-            <div class="w-10 h-8 bg-water rounded-lg flex items-center justify-center overflow-hidden shadow-lg shadow-water/20">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-8 bg-water rounded-lg flex items-center justify-center shadow-lg shadow-water/20">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="white" style="flex-shrink: 0;">
                     <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
                 </svg>
             </div>
-            <div class="flex flex-col leading-none">
-                <h1 class="text-lg font-bold tracking-tighter dark:text-white">
-                    Aqua<span class="text-water">Track</span>
-                </h1>
-                <span class="text-[8px] uppercase tracking-[0.2em] text-slate-400 font-black">${roleName}</span>
-            </div>
+            <h1 class="text-xl font-bold tracking-tighter dark:text-white leading-none">
+                Aqua<span class="text-water">Track</span>
+            </h1>
         </div>
 
         <div class="flex items-center gap-2">
@@ -44,26 +41,18 @@ export const injectHeader = (roleName) => {
         </div>
     `;
 
-    // 1. Sync Icon Initial State
     const sunIcon = document.getElementById('sun-icon');
     const moonIcon = document.getElementById('moon-icon');
     const isDark = document.documentElement.classList.contains('dark');
     sunIcon.classList.toggle('hidden', !isDark);
     moonIcon.classList.toggle('hidden', isDark);
 
-    // 2. Integrated Toggle Logic
     document.getElementById('theme-toggle').onclick = () => {
-        const currentMode = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-        const nextMode = currentMode === 'dark' ? 'light' : 'dark';
-        
-        // Use the global bridge in utils.js
+        const nextMode = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
         window.toggleDarkMode(nextMode);
-        
-        // Sync these local icons
         sunIcon.classList.toggle('hidden', nextMode !== 'dark');
         moonIcon.classList.toggle('hidden', nextMode === 'dark');
     };
 
-    // 3. Logout Logic
     document.getElementById('logout-btn').onclick = () => logout();
 };
