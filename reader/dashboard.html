@@ -37,13 +37,18 @@
             background: rgba(30, 41, 59, 0.7);
             border-color: rgba(79, 172, 254, 0.3);
         }
+        /* Custom Button Gradient to match brand */
+        .btn-droplet-glow {
+            background: radial-gradient(circle at 30% 30%, #7dd3fc, #4facfe);
+            box-shadow: 0 10px 25px -5px rgba(79, 172, 254, 0.5);
+        }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-[#020617] font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300">
     
     <header></header>
 
-    <main class="max-w-xl mx-auto p-6 pt-12 pb-32">
+    <main class="max-w-xl mx-auto p-6 pt-12 pb-40">
         
         <div class="mb-10 text-center">
             <h2 class="text-3xl font-black tracking-tighter text-slate-800 dark:text-white uppercase">Reader Dashboard</h2>
@@ -77,7 +82,7 @@
         </div>
 
         <div class="flex items-center justify-between mb-8 px-2">
-            <div class="h-[1px] flex-1 bg-slate-200 dark:bg-slate-800 ml-6 opacity-40"></div>
+            <div class="h-[1px] flex-1 bg-slate-200 dark:bg-slate-800 mr-6 opacity-40"></div>
             <h2 class="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400">Activity Log</h2>
             <div class="h-[1px] flex-1 bg-slate-200 dark:bg-slate-800 ml-6 opacity-40"></div>
         </div>
@@ -89,12 +94,14 @@
         </div>
     </main>
 
-    <div class="fixed bottom-10 left-0 w-full flex justify-center z-50">
+    <footer class="fixed bottom-0 left-0 w-full z-50 px-6 pb-8 pt-4 bg-white/30 dark:bg-slate-900/30 backdrop-blur-xl border-t border-white/10 flex justify-center">
         <button onclick="window.location.href='read-meter.html'" 
-            class="px-12 py-5 rounded-full bg-water text-white text-xs font-bold uppercase tracking-[0.25em] shadow-2xl shadow-water/40 hover:scale-105 active:scale-95 transition-all">
-            Initialize Reading
+            class="w-16 h-16 rounded-full btn-droplet-glow text-white flex items-center justify-center transition-all active:scale-90 hover:scale-110">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
         </button>
-    </div>
+    </footer>
 
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
@@ -116,14 +123,10 @@
         });
 
         async function loadTelemetry(uid) {
-            // [Inference] Fetching street progress and summary data
-            // For now, setting mock visual states to show the design intent
-            // Later we will link these to actual Firebase aggregation logic
             updateProgressHUD(168, 200);
             document.getElementById('active-street').innerText = "Acacia St.";
             document.getElementById('remaining-units').innerText = "32 Units";
 
-            // Live feed logic (identical to previous setup)
             db.ref('readings').orderByChild('reader_uid').equalTo(uid).limitToLast(10).on('value', snap => {
                 renderFeed(snap.val());
             });
