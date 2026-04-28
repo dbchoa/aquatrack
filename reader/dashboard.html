@@ -20,35 +20,26 @@
     </script>
     <style>
         .stat-glow { text-shadow: 0 0 15px rgba(79, 172, 254, 0.4); }
-        
-        /* High-Contrast Glassmorphism for Dashboard Cards */
-        .glass-card {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            background: rgba(255, 255, 255, 0.9); /* High contrast for light mode */
-            backdrop-blur: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.5);
-        }
-        .dark .glass-card {
-            background: rgba(30, 41, 59, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
         .dash-row {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            background: rgba(255, 255, 255, 0.8) !important;
-            border: 1px solid rgba(15, 23, 42, 0.1) !important;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(15, 23, 42, 0.05);
         }
         .dark .dash-row {
-            background: rgba(30, 41, 59, 0.4) !important;
-            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
         .dash-row:hover {
             transform: translateY(-2px);
-            background: white !important;
-            box-shadow: 0 10px 25px -5px rgba(0, 114, 255, 0.15);
+            background: white;
+            box-shadow: 0 10px 25px -5px rgba(79, 172, 254, 0.15);
+        }
+        .dark .dash-row:hover {
+            background: rgba(30, 41, 59, 0.7);
+            border-color: rgba(79, 172, 254, 0.3);
         }
 
-        /* 1. THE GLASS VESSEL HUD */
+        /* GLASS VESSEL HUD */
         .glass-vessel {
             position: relative; width: 72px; height: 72px;
             background: #011030; border: 2px solid rgba(255, 255, 255, 0.3);
@@ -95,10 +86,10 @@
         
         <div class="mb-10 text-center">
             <h2 class="text-3xl font-black tracking-tighter text-slate-900 dark:text-white uppercase">Reader Dashboard</h2>
-            <p class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-[0.4em] mt-2 opacity-70">Field Telemetry Terminal</p>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-[0.4em] mt-2 opacity-60">Field Telemetry Terminal</p>
         </div>
         
-        <div class="glass-card p-8 rounded-48 border-b-4 border-waterDark dark:border-water mb-8 shadow-xl relative overflow-hidden">
+        <div class="glass-card p-8 rounded-48 border-b-4 border-water mb-8 bg-white/90 dark:bg-slate-900/50 shadow-2xl relative overflow-hidden">
             <div class="flex justify-between items-end relative z-10">
                 <div>
                     <p class="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.3em] mb-1">Cycle Completion</p>
@@ -109,16 +100,16 @@
                 </div>
             </div>
             <div class="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full mt-8 overflow-hidden">
-                <div id="progress-bar" class="h-full bg-waterDark dark:bg-water shadow-[0_0_15px_rgba(0,114,255,0.3)] transition-all duration-1000 ease-out" style="width: 84%"></div>
+                <div id="progress-bar" class="h-full bg-waterDark dark:bg-water shadow-[0_0_15px_#4facfe] transition-all duration-1000 ease-out" style="width: 84%"></div>
             </div>
         </div>
 
         <div class="grid grid-cols-2 gap-4 mb-10">
-            <div class="glass-card p-6 rounded-32 shadow-sm border border-white/40">
+            <div class="glass-card p-6 rounded-32 bg-white/90 dark:bg-slate-900/40 border border-white dark:border-slate-800 shadow-sm">
                 <p class="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Current Sector</p>
                 <h4 id="active-street" class="text-xl font-bold text-slate-900 dark:text-white truncate">Acacia St.</h4>
             </div>
-            <div class="glass-card p-6 rounded-32 shadow-sm border border-white/40">
+            <div class="glass-card p-6 rounded-32 bg-white/90 dark:bg-slate-900/40 border border-white dark:border-slate-800 shadow-sm">
                 <p class="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Remaining</p>
                 <h4 id="remaining-units" class="text-xl font-bold text-waterDark dark:text-water">32 Units</h4>
             </div>
@@ -131,7 +122,7 @@
         </div>
 
         <div id="readings-feed" class="space-y-4">
-            <div class="dash-row p-6 rounded-32 flex items-center justify-between border border-transparent shadow-sm">
+            <div class="dash-row p-6 rounded-32 flex items-center justify-between border border-transparent">
                 <div class="flex flex-col">
                     <span class="text-[10px] font-bold text-waterDark dark:text-water uppercase tracking-[0.15em] mb-1">ACC-045</span>
                     <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400">Apr 28, 2026</span>
@@ -161,7 +152,7 @@
     </div>
 
     <div id="readingModal" class="hidden fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6">
-        <div class="bg-white/95 dark:bg-slate-900/80 backdrop-blur-2xl w-full max-w-sm rounded-[2.5rem] p-8 border border-white dark:border-white/10 shadow-2xl relative">
+        <div class="bg-white/95 dark:bg-slate-900/80 backdrop-blur-2xl w-full max-w-sm rounded-[2.5rem] p-8 border border-white dark:border-white/10 shadow-2xl relative overflow-hidden">
             
             <div id="modal-stage-locator">
                 <h3 class="text-xl font-bold mb-6 text-center text-slate-900 dark:text-white">Locate Unit</h3>
@@ -213,9 +204,37 @@
                 </div>
                 <div class="flex gap-3">
                     <button onclick="resetModalState()" class="flex-1 py-4 text-slate-500 dark:text-slate-400 font-bold uppercase text-xs">Back</button>
-                    <button id="submit-reading-btn" onclick="submitReading()" class="flex-1 py-4 bg-waterDark dark:bg-water text-white rounded-2xl font-bold uppercase text-xs">Submit</button>
+                    <button onclick="showConfirmation()" class="flex-1 py-4 bg-waterDark dark:bg-water text-white rounded-2xl font-bold uppercase text-xs">Submit</button>
                 </div>
             </div>
+
+            <div id="modal-stage-confirm" class="hidden">
+                <h3 class="text-xl font-bold mb-6 text-center text-slate-900 dark:text-white">Confirm Data</h3>
+                <div class="space-y-3 bg-slate-200/50 dark:bg-slate-800/50 p-6 rounded-3xl mb-8">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-500 dark:text-slate-400 font-bold uppercase">Homeowner</span>
+                        <span id="confirm-name" class="text-slate-900 dark:text-white font-black text-right">...</span>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-500 dark:text-slate-400 font-bold uppercase">Street</span>
+                        <span id="confirm-street" class="text-slate-900 dark:text-white font-black">...</span>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-500 dark:text-slate-400 font-bold uppercase">Block / Lot</span>
+                        <span id="confirm-bl" class="text-slate-900 dark:text-white font-black">...</span>
+                    </div>
+                    <div class="border-t border-slate-300 dark:border-slate-700 my-2 pt-2 flex justify-between text-sm">
+                        <span class="text-slate-500 dark:text-slate-400 font-bold uppercase">Reading</span>
+                        <span id="confirm-reading" class="text-waterDark dark:text-water font-black">0.0 m³</span>
+                    </div>
+                </div>
+                <p class="text-[10px] text-center text-slate-400 uppercase font-bold tracking-widest mb-6">Submit above data?</p>
+                <div class="flex gap-3">
+                    <button onclick="backToReading()" class="flex-1 py-4 text-slate-500 dark:text-slate-400 font-bold uppercase text-xs">No</button>
+                    <button id="final-submit-btn" onclick="submitReading()" class="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-bold uppercase text-xs shadow-lg shadow-emerald-500/20">Yes</button>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -233,6 +252,7 @@
         const BILLING_CONFIG = { threshold: 10, minFee: 300, rate: 35 };
         let activeAccount = null;
 
+        // --- NAVIGATION LOGIC ---
         window.openReadingModal = () => {
             document.getElementById('readingModal').classList.remove('hidden');
             window.resetModalState();
@@ -243,11 +263,35 @@
         window.resetModalState = () => {
             document.getElementById('modal-stage-locator').classList.remove('hidden');
             document.getElementById('modal-stage-reading').classList.add('hidden');
+            document.getElementById('modal-stage-confirm').classList.add('hidden');
             document.getElementById('input-block').value = '';
             document.getElementById('input-lot').value = '';
             document.getElementById('input-reading').value = '';
         };
 
+        window.showConfirmation = () => {
+            const readingStr = document.getElementById('input-reading').value;
+            const reading = parseFloat(readingStr);
+            if(!readingStr || isNaN(reading) || reading <= activeAccount.lastReading) {
+                return toast("Reading too low", "info");
+            }
+
+            document.getElementById('modal-stage-reading').classList.add('hidden');
+            document.getElementById('modal-stage-confirm').classList.remove('hidden');
+
+            // Populate Summary
+            document.getElementById('confirm-name').innerText = activeAccount.name;
+            document.getElementById('confirm-street').innerText = activeAccount.street;
+            document.getElementById('confirm-bl').innerText = `${activeAccount.block} / ${activeAccount.lot}`;
+            document.getElementById('confirm-reading').innerText = `${reading.toFixed(1)} m³`;
+        };
+
+        window.backToReading = () => {
+            document.getElementById('modal-stage-confirm').classList.add('hidden');
+            document.getElementById('modal-stage-reading').classList.remove('hidden');
+        };
+
+        // --- CORE LOGIC ---
         window.identifyHomeowner = async () => {
             const street = document.getElementById('input-street').value;
             const block = document.getElementById('input-block').value;
@@ -292,10 +336,8 @@
 
         window.submitReading = async () => {
             const reading = parseFloat(document.getElementById('input-reading').value);
-            if(!reading || reading <= activeAccount.lastReading) return toast("Invalid reading", "error");
-            
-            const btn = document.getElementById('submit-reading-btn');
-            btn.innerText = "Transmitting..."; btn.disabled = true;
+            const btn = document.getElementById('final-submit-btn');
+            btn.innerText = "..."; btn.disabled = true;
 
             try {
                 const readingData = {
@@ -310,7 +352,7 @@
                 toast("Telemetry Captured", "success");
                 closeReadingModal();
             } catch (e) { toast("Transmission Failed", "error"); }
-            finally { btn.innerText = "Submit"; btn.disabled = false; }
+            finally { btn.innerText = "Yes"; btn.disabled = false; }
         };
 
         window.seedTestData = async () => {
