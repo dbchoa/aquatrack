@@ -10,30 +10,35 @@
     <div id="toast-container"></div>
     <header></header>
 
+    <div class="glass-orb orb-1"></div>
+    <div class="glass-orb orb-2"></div>
+
     <div class="container">
         <div class="welcome-card">
-            <span style="text-transform: uppercase; font-size: 0.75rem; font-weight: 800; color: var(--accent); letter-spacing: 0.2em; display: block; margin-bottom: 8px;">Field Operations</span>
-            <h2 id="welcome-msg" style="font-size: 2.5rem; font-weight: 900; letter-spacing: -0.05em; line-height: 1;">Mabuhay!</h2>
-            <p class="text-muted" style="margin-top: 10px; font-weight: 500;">You have <strong style="color: var(--text-main); font-weight: 800;">12 assignments</strong> remaining.</p>
+            <span style="text-transform: uppercase; font-size: 0.75rem; font-weight: 800; color: var(--accent); letter-spacing: 0.25em; display: block; margin-bottom: 8px;">Field Operations Hub</span>
+            <h2 id="welcome-msg" style="font-size: 2.75rem; font-weight: 900; letter-spacing: -0.06em; line-height: 0.9;">Mabuhay!</h2>
+            <p class="text-muted" style="margin-top: 12px; font-weight: 600; font-size: 1rem;">
+                You have <strong style="color: var(--text-main); font-weight: 900;">12 readings</strong> left for today.
+            </p>
         </div>
 
         <div class="dash-row">
             <div class="dash-item">
-                <span class="dash-label">To Read</span>
+                <span class="dash-label">Pending</span>
                 <div class="dash-value" id="count-pending">12</div>
             </div>
             <div class="dash-item">
-                <span class="dash-label">Completed</span>
+                <span class="dash-label">Synced</span>
                 <div class="dash-value" id="count-done" style="background: linear-gradient(135deg, #10b981, #059669); -webkit-background-clip: text;">48</div>
             </div>
         </div>
 
         <div class="card">
-            <div style="position: absolute; top: -30px; right: -30px; width: 150px; height: 150px; background: var(--accent-glow); filter: blur(50px); border-radius: 50%; pointer-events: none;"></div>
+            <div style="position: absolute; top: -30px; right: -30px; width: 160px; height: 160px; background: var(--accent-glow); filter: blur(50px); border-radius: 50%; pointer-events: none;"></div>
             
-            <h3 style="font-size: 1.5rem; font-weight: 900; letter-spacing: -0.02em;">Capture Reading</h3>
-            <p class="text-muted" style="margin-top: 12px; margin-bottom: 2rem; line-height: 1.6; font-weight: 500;">
-                Sync current water consumption data. Progress updates are reflected in real-time across the infrastructure.
+            <h3 style="font-size: 1.6rem; font-weight: 900; letter-spacing: -0.03em;">Capture Reading</h3>
+            <p class="text-muted" style="margin-top: 12px; margin-bottom: 2.5rem; line-height: 1.6; font-weight: 500;">
+                Begin capturing consumption data. All readings are automatically cryptographically synced to the subdivision cloud.
             </p>
             
             <button class="btn btn-primary" onclick="window.location.href='read-meter.html'">
