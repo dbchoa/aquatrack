@@ -41,16 +41,17 @@
         /* SURGICAL ADD: HYDRO-SLOSH ENGINE 
            Creates a liquid sloshing effect inside a container.
         */
+        /* CALIBRATED HIGH-VOLUME HYDRO ENGINE */
         .glass-vessel {
             position: relative;
-            width: 64px;
-            height: 64px;
+            width: 68px;
+            height: 68px;
             background: rgba(255, 255, 255, 0.1);
             border: 2px solid rgba(255, 255, 255, 0.2);
             border-radius: 50%;
             overflow: hidden;
             box-shadow: 0 10px 30px rgba(79, 172, 254, 0.4);
-            transform: translate3d(0, 0, 0); /* Force GPU acceleration */
+            transform: translate3d(0, 0, 0);
         }
 
         .water-fill {
@@ -58,25 +59,25 @@
             bottom: 0;
             left: 0;
             width: 100%;
-            height: 65%; /* Liquid level */
+            height: 85%; /* Visually filling it up properly */
             background: linear-gradient(to bottom, #4facfe, #0072ff);
+            box-shadow: inset 0 5px 15px rgba(255,255,255,0.2);
         }
 
-        /* The Sloshing Wave Illusion */
         .water-fill::before {
             content: "";
             position: absolute;
-            top: -110%; /* Offset to create surface */
+            top: -160%; /* Pushed down to clear the "empty" look */
             left: -50%;
             width: 200%;
             height: 200%;
-            background: rgba(248, 250, 252, 0.9); /* Wave highlight */
-            border-radius: 42%; /* Key for the irregular wave shape */
-            animation: slosh 4s linear infinite;
+            background: rgba(248, 250, 252, 1);
+            border-radius: 38%;
+            animation: slosh 5s linear infinite;
         }
 
         .dark .water-fill::before {
-            background: #020617; /* Matches dark bg to hide the rotation */
+            background: #020617; 
         }
 
         @keyframes slosh {
