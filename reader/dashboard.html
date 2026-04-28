@@ -6,6 +6,7 @@
     <title>Dashboard - AquaTrack</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -38,66 +39,49 @@
             border-color: rgba(79, 172, 254, 0.3);
         }
 
-        /* GLASS VESSEL HUD! */
+        /* GLASS VESSEL HUD */
         .glass-vessel {
-            position: relative;
-            width: 72px;
-            height: 72px;
-            background: #011030; 
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            overflow: hidden;
+            position: relative; width: 72px; height: 72px;
+            background: #011030; border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%; overflow: hidden;
             box-shadow: 0 10px 30px rgba(79, 172, 254, 0.4);
             transform: translate3d(0, 0, 0);
         }
 
         .water-fill {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 85%;
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 85%;
             background: linear-gradient(to bottom, #4facfe 0%, #0072ff 50%, #003366 100%);
         }
 
         .water-fill::before {
-            content: "";
-            position: absolute;
-            top: -165%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: #011030; 
-            border-radius: 38%;
-            animation: slosh 5s linear infinite;
+            content: ""; position: absolute; top: -165%; left: -50%; width: 200%; height: 200%;
+            background: #011030; border-radius: 38%; animation: slosh 5s linear infinite;
         }
 
         .glass-vessel::after {
-            content: "";
-            position: absolute;
-            top: 5px;
-            left: 12px;
-            width: 25px;
-            height: 12px;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            transform: rotate(-15deg);
-            z-index: 25;
-            pointer-events: none;
+            content: ""; position: absolute; top: 5px; left: 12px; width: 25px; height: 12px;
+            background: rgba(255, 255, 255, 0.3); border-radius: 50%;
+            transform: rotate(-15deg); z-index: 25; pointer-events: none;
         }
 
-        @keyframes slosh {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        @keyframes slosh { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { 
+            -webkit-appearance: none; margin: 0; 
         }
 
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        /* SURGICAL FIX: Toast Container positioning */
+        #toast-container {
+            position: fixed; bottom: 110px; left: 50%;
+            transform: translateX(-50%); z-index: 999; pointer-events: none;
+        }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-[#020617] font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300">
     
     <header></header>
+
+    <div id="toast-container"></div>
 
     <main class="max-w-xl mx-auto p-6 pt-12 pb-44">
         
@@ -159,7 +143,7 @@
                 <div class="glass-vessel">
                     <div class="water-fill"></div>
                     <div class="absolute inset-0 flex items-center justify-center z-20">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.4)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-white drop-shadow-lg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                         </svg>
                     </div>
@@ -168,21 +152,21 @@
         </div>
     </div>
 
-    <div id="readingModal" class="hidden fixed inset-0 z-[300] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
-        <div class="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[2.5rem] p-8 border dark:border-slate-800 shadow-2xl relative">
+    <div id="readingModal" class="hidden fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6">
+        <div class="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl w-full max-w-sm rounded-[2.5rem] p-8 border border-white/20 dark:border-white/10 shadow-2xl relative">
             
             <div id="modal-stage-locator">
                 <h3 class="text-xl font-bold mb-6 text-center">Locate Unit</h3>
                 <div class="space-y-4 mb-8">
-                    <select id="input-street" class="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl text-sm font-bold outline-none text-center">
+                    <select id="input-street" class="w-full p-4 bg-white/50 dark:bg-slate-800/50 border-none rounded-2xl text-sm font-bold outline-none text-center">
                         <option value="" disabled selected>Select Street...</option>
                         <option value="Acacia">Acacia St.</option>
                         <option value="Banyan">Banyan St.</option>
                         <option value="Cedar">Cedar St.</option>
                     </select>
                     <div class="flex gap-2">
-                        <input id="input-block" type="number" placeholder="Block" class="w-1/2 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl text-sm font-bold outline-none text-center">
-                        <input id="input-lot" type="number" placeholder="Lot" class="w-1/2 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl text-sm font-bold outline-none text-center">
+                        <input id="input-block" type="number" placeholder="Block" class="w-1/2 p-4 bg-white/50 dark:bg-slate-800/50 border-none rounded-2xl text-sm font-bold outline-none text-center">
+                        <input id="input-lot" type="number" placeholder="Lot" class="w-1/2 p-4 bg-white/50 dark:bg-slate-800/50 border-none rounded-2xl text-sm font-bold outline-none text-center">
                     </div>
                 </div>
                 <div class="flex flex-col gap-2">
@@ -196,7 +180,7 @@
                     <h4 id="display-homeowner" class="text-lg font-black dark:text-white">...</h4>
                     <p id="display-acc-id" class="text-[10px] text-water font-bold tracking-widest uppercase">ACC-000</p>
                 </div>
-                <div class="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl mb-4 text-center">
+                <div class="bg-white/40 dark:bg-slate-800/40 p-6 rounded-3xl mb-4 text-center">
                     <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Current Reading (m³)</label>
                     <input id="input-reading" type="number" step="0.1" placeholder="000.0" class="w-full text-center text-5xl font-light bg-transparent text-water outline-none">
                 </div>
@@ -225,21 +209,19 @@
     <script type="module">
         import { injectHeader } from '../js/header-component.js';
         import { db, auth } from '../js/firebase-init.js';
+        import { toast } from '../js/utils.js'; // SURGICAL: Import toast from utils
 
         injectHeader();
 
         const BILLING_CONFIG = { threshold: 10, minFee: 300, rate: 35 };
         let activeAccount = null;
 
-        // MODAL TOGGLES
         window.openReadingModal = () => {
             document.getElementById('readingModal').classList.remove('hidden');
             window.resetModalState();
         };
 
-        window.closeReadingModal = () => {
-            document.getElementById('readingModal').classList.add('hidden');
-        };
+        window.closeReadingModal = () => document.getElementById('readingModal').classList.add('hidden');
 
         window.resetModalState = () => {
             document.getElementById('modal-stage-locator').classList.remove('hidden');
@@ -249,13 +231,12 @@
             document.getElementById('input-reading').value = '';
         };
 
-        // STAGE 1: IDENTIFY
         window.identifyHomeowner = async () => {
             const street = document.getElementById('input-street').value;
             const block = document.getElementById('input-block').value;
             const lot = document.getElementById('input-lot').value;
 
-            if(!street || !block || !lot) return alert("Fill all fields");
+            if(!street || !block || !lot) return toast("Surgical requirement: Complete location details", "info");
 
             const snapshot = await db.ref('homeowners').once('value');
             const homeowners = snapshot.val();
@@ -277,11 +258,10 @@
                 document.getElementById('display-prev').innerText = `${activeAccount.lastReading} m³`;
                 calculateLiveCost(0);
             } else {
-                alert("Homeowner not found.");
+                toast("Telemetry Error: Homeowner not found", "error");
             }
         };
 
-        // STAGE 2: CALCULATION
         const calculateLiveCost = (curr) => {
             const prev = activeAccount ? activeAccount.lastReading : 0;
             const consumption = Math.max(0, curr - prev);
@@ -293,13 +273,12 @@
             calculateLiveCost(parseFloat(e.target.value) || 0);
         });
 
-        // SUBMISSION
         window.submitReading = async () => {
             const reading = parseFloat(document.getElementById('input-reading').value);
-            if(!reading || reading <= activeAccount.lastReading) return alert("Invalid entry.");
+            if(!reading || reading <= activeAccount.lastReading) return toast("Invalid Telemetry: Reading too low", "error");
             
             const btn = document.getElementById('submit-reading-btn');
-            btn.innerText = "Saving..."; btn.disabled = true;
+            btn.innerText = "Transmitting..."; btn.disabled = true;
 
             try {
                 const readingData = {
@@ -311,13 +290,12 @@
                 };
                 await db.ref('readings').push(readingData);
                 await db.ref(`homeowners/${activeAccount.id}`).update({ lastReading: reading });
-                alert("Captured Successfully!");
+                toast("Transmission Successful, Master", "success");
                 closeReadingModal();
-            } catch (e) { alert("Submission error."); }
+            } catch (e) { toast("Critical Failure: Data lost", "error"); }
             finally { btn.innerText = "Submit"; btn.disabled = false; }
         };
 
-        // EXPOSED SEEDING TOOL
         window.seedTestData = async () => {
             const testAccounts = {
                 "ACC-001": { name: "Juan Dela Cruz", street: "Acacia", block: 1, lot: 5, lastReading: 120.5 },
@@ -325,7 +303,7 @@
                 "ACC-003": { name: "Jose Rizal", street: "Acacia", block: 1, lot: 8, lastReading: 210.2 }
             };
             await db.ref('homeowners').set(testAccounts);
-            console.log("Database Seeded Successfully.");
+            toast("Sovereign Data Seeded", "success");
         };
 
         auth.onAuthStateChanged((user) => {
