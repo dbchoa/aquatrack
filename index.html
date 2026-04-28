@@ -8,16 +8,11 @@
     <link rel="stylesheet" href="style.css">
     <script>
         tailwind.config = {
-            darkMode: ['selector', '[data-theme="dark"]'],
+            darkMode: 'class', // Matches reference project for bulletproof triggering
             theme: {
                 extend: {
-                    colors: {
-                        water: '#4facfe',
-                        waterDark: '#00f2fe',
-                    },
-                    borderRadius: {
-                        '32': '32px',
-                    }
+                    colors: { water: '#4facfe', waterDark: '#00f2fe' },
+                    borderRadius: { '32': '32px' }
                 }
             }
         }
@@ -30,14 +25,9 @@
         .btn-droplet:active { transform: scale(0.98); }
         input:focus, button:focus { outline: none !important; }
 
-        [data-theme="dark"] body {
-            background-color: #0f172a;
-            color: #f8fafc;
-        }
-        [data-theme="dark"] .glass-card {
-            background: rgba(30, 41, 59, 0.7);
-            border-color: rgba(255, 255, 255, 0.05);
-        }
+        /* Dark mode specific backgrounds using the reference pattern */
+        .dark body { background-color: #0f172a; color: #f8fafc; }
+        .dark .glass-card { background: rgba(30, 41, 59, 0.7); border-color: rgba(255, 255, 255, 0.05); }
     </style>
 </head>
 <body class="bg-slate-50 font-sans text-slate-900 transition-colors duration-300">
@@ -46,7 +36,7 @@
     <div class="min-h-screen flex flex-col items-center justify-center p-6">
         
         <div class="flex flex-col items-center mb-10">
-            <div class="w-20 h-20 bg-white dark:bg-slate-800 rounded-3xl shadow-sm flex items-center justify-center border border-slate-100 dark:border-slate-700 mb-6 haptic">
+            <div class="w-20 h-20 bg-white dark:bg-slate-800 rounded-3xl shadow-sm flex items-center justify-center border border-slate-100 dark:border-slate-700 mb-6">
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="#4facfe">
                     <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
                 </svg>
@@ -81,8 +71,8 @@
         </div>
 
         <div class="mt-8 flex bg-slate-200 dark:bg-slate-800 p-1 rounded-full w-40 relative">
-            <button id="btn-light" class="flex-1 text-[10px] font-bold uppercase tracking-widest py-2 rounded-full z-10 transition-colors text-slate-500 dark:text-slate-400">Light</button>
-            <button id="btn-dark" class="flex-1 text-[10px] font-bold uppercase tracking-widest py-2 rounded-full z-10 transition-colors text-slate-900 dark:text-white">Dark</button>
+            <button onclick="updateTheme('light')" type="button" class="flex-1 text-[10px] font-bold uppercase tracking-widest py-2 rounded-full z-10 transition-colors text-slate-500 dark:text-slate-400">Light</button>
+            <button onclick="updateTheme('dark')" type="button" class="flex-1 text-[10px] font-bold uppercase tracking-widest py-2 rounded-full z-10 transition-colors text-slate-900 dark:text-white">Dark</button>
             <div id="toggle-indicator" class="absolute top-1 bottom-1 left-1 w-[76px] bg-white dark:bg-slate-700 rounded-full shadow-sm transition-all duration-300 transform"></div>
         </div>
 
@@ -98,55 +88,37 @@
         import { login } from './js/auth.js';
         import { setTheme, initTheme } from './js/utils.js';
         
-        const indicator = document.getElementById('toggle-indicator');
-        const btnLight = document.getElementById('btn-light');
-        const btnDark = document.getElementById('btn-dark');
-
-        const updateToggleUI = (theme) => {
-            if (theme === 'dark') {
-                indicator.style.transform = 'translateX(81px)';
-                btnDark.classList.add('text-slate-900', 'dark:text-white');
-                btnLight.classList.remove('text-slate-900', 'dark:text-white');
-            } else {
-                indicator.style.transform = 'translateX(0px)';
-                btnLight.classList.add('text-slate-900', 'dark:text-white');
-                btnDark.classList.remove('text-slate-900', 'dark:text-white');
+        // 1. ATTACH TO WINDOW (The Reference Project Golden Thread)
+        window.updateTheme = (theme) => {
+            setTheme(theme);
+            const indicator = document.getElementById('toggle-indicator');
+            if (indicator) {
+                indicator.style.transform = theme === 'dark' ? 'translateX(81px)' : 'translateX(0px)';
             }
         };
 
-        // Event Listeners (Module Style)
-        btnLight.addEventListener('click', () => {
-            setTheme('light');
-            updateToggleUI('light');
-        });
-
-        btnDark.addEventListener('click', () => {
-            setTheme('dark');
-            updateToggleUI('dark');
-        });
-
-        // Initialize Theme Logic
+        // 2. INITIALIZE
         initTheme();
-        const currentTheme = document.documentElement.dataset.theme || 'dark';
-        updateToggleUI(currentTheme);
+        const saved = localStorage.getItem('aqt_theme') || 'dark';
+        window.updateTheme(saved);
 
-        // Login Submission
+        // 3. LOGIN LOGIC
         const loginForm = document.getElementById('login-form');
         const loginBtn = document.getElementById('login-btn');
-
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            loginBtn.disabled = true;
-            const originalText = loginBtn.innerText;
-            loginBtn.innerText = 'VERIFYING...';
-            
-            try {
-                await login(document.getElementById('email').value, document.getElementById('password').value);
-            } catch (err) {
-                loginBtn.disabled = false;
-                loginBtn.innerText = originalText;
-            }
-        });
+        if (loginForm) {
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                loginBtn.disabled = true;
+                const originalText = loginBtn.innerText;
+                loginBtn.innerText = 'VERIFYING...';
+                try {
+                    await login(document.getElementById('email').value, document.getElementById('password').value);
+                } catch (err) {
+                    loginBtn.disabled = false;
+                    loginBtn.innerText = originalText;
+                }
+            });
+        }
     </script>
 </body>
 </html>
