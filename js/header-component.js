@@ -1,6 +1,6 @@
 /**
- * AquaTrack Global Header Component v5.1
- * DNA: Minimalist Branding, Anti-Clipping SVG, and Reference-Matched Split.
+ * AquaTrack Global Header Component v5.2
+ * DNA: Purified Branding, Anti-Clipping SVG, and Full Horizontal Sovereignty.
  */
 import { logout } from './auth.js';
 import { setTheme } from './utils.js';
@@ -14,8 +14,8 @@ export const injectHeader = () => {
     
     header.innerHTML = `
         <div class="flex items-center gap-3">
-            <div class="w-10 h-8 bg-water rounded-lg flex items-center justify-center shadow-lg shadow-water/20">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="white" style="flex-shrink: 0;">
+            <div class="p-1.5 bg-water rounded-lg flex items-center justify-center shadow-lg shadow-water/20">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="white" style="display: block;">
                     <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
                 </svg>
             </div>
@@ -44,14 +44,14 @@ export const injectHeader = () => {
     const sunIcon = document.getElementById('sun-icon');
     const moonIcon = document.getElementById('moon-icon');
     const isDark = document.documentElement.classList.contains('dark');
-    sunIcon.classList.toggle('hidden', !isDark);
-    moonIcon.classList.toggle('hidden', isDark);
+    if (sunIcon) sunIcon.classList.toggle('hidden', !isDark);
+    if (moonIcon) moonIcon.classList.toggle('hidden', isDark);
 
     document.getElementById('theme-toggle').onclick = () => {
         const nextMode = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
         window.toggleDarkMode(nextMode);
-        sunIcon.classList.toggle('hidden', nextMode !== 'dark');
-        moonIcon.classList.toggle('hidden', nextMode === 'dark');
+        if (sunIcon) sunIcon.classList.toggle('hidden', nextMode !== 'dark');
+        if (moonIcon) moonIcon.classList.toggle('hidden', nextMode === 'dark');
     };
 
     document.getElementById('logout-btn').onclick = () => logout();
