@@ -1,54 +1,85 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" id="main-html">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - AquaTrack</title>
+    <title>Reader Dashboard - AquaTrack</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="../style.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { water: '#4facfe', waterDark: '#00f2fe' },
+                    borderRadius: { '32': '32px', '48': '48px' }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Gamer-Water HUD Elements */
+        .stat-glow {
+            text-shadow: 0 0 15px rgba(79, 172, 254, 0.4);
+        }
+        .dash-row {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(15, 23, 42, 0.05);
+        }
+        .dark .dash-row {
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .dash-row:hover {
+            transform: translateY(-2px) scale(1.01);
+            background: white;
+            box-shadow: 0 15px 30px -10px rgba(79, 172, 254, 0.2);
+        }
+        .dark .dash-row:hover {
+            background: rgba(30, 41, 59, 0.7);
+            box-shadow: 0 15px 40px -15px rgba(0, 0, 0, 0.5);
+        }
+        .btn-droplet {
+            background: radial-gradient(circle at 30% 30%, #7dd3fc, #4facfe);
+        }
+    </style>
 </head>
-<body>
-    <div id="toast-container"></div>
+<body class="bg-slate-50 dark:bg-[#020617] font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300">
+    
     <header></header>
 
-    <div class="glass-orb orb-1"></div>
-    <div class="glass-orb orb-2"></div>
-
-    <div class="container">
-        <div class="welcome-card">
-            <span style="text-transform: uppercase; font-size: 0.75rem; font-weight: 800; color: var(--accent); letter-spacing: 0.25em; display: block; margin-bottom: 8px;">Field Operations Hub</span>
-            <h2 id="welcome-msg" style="font-size: 2.75rem; font-weight: 900; letter-spacing: -0.06em; line-height: 0.9;">Mabuhay!</h2>
-            <p class="text-muted" style="margin-top: 12px; font-weight: 600; font-size: 1rem;">
-                You have <strong style="color: var(--text-main); font-weight: 900;">12 readings</strong> left for today.
-            </p>
-        </div>
-
-        <div class="dash-row">
-            <div class="dash-item">
-                <span class="dash-label">Pending</span>
-                <div class="dash-value" id="count-pending">12</div>
+    <main class="max-w-xl mx-auto p-6 pt-24 pb-32">
+        
+        <div class="grid grid-cols-2 gap-4 mb-10">
+            <div class="glass-card p-6 rounded-32 border border-white dark:border-slate-800 shadow-xl bg-white/50 dark:bg-slate-900/50">
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">My Zone</p>
+                <h3 id="display-zone" class="text-2xl font-light tracking-tight text-water stat-glow">---</h3>
             </div>
-            <div class="dash-item">
-                <span class="dash-label">Synced</span>
-                <div class="dash-value" id="count-done" style="background: linear-gradient(135deg, #10b981, #059669); -webkit-background-clip: text;">48</div>
+            <div class="glass-card p-6 rounded-32 border border-white dark:border-slate-800 shadow-xl bg-white/50 dark:bg-slate-900/50">
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Month Logs</p>
+                <h3 id="display-readings" class="text-3xl font-bold tracking-tighter text-slate-800 dark:text-white">0</h3>
             </div>
         </div>
 
-        <div class="card">
-            <div style="position: absolute; top: -30px; right: -30px; width: 160px; height: 160px; background: var(--accent-glow); filter: blur(50px); border-radius: 50%; pointer-events: none;"></div>
-            
-            <h3 style="font-size: 1.6rem; font-weight: 900; letter-spacing: -0.03em;">Capture Reading</h3>
-            <p class="text-muted" style="margin-top: 12px; margin-bottom: 2.5rem; line-height: 1.6; font-weight: 500;">
-                Begin capturing consumption data. All readings are automatically cryptographically synced to the subdivision cloud.
-            </p>
-            
-            <button class="btn btn-primary" onclick="window.location.href='read-meter.html'">
-                <span>Begin Scanning</span>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                    <circle cx="12" cy="13" r="4"/>
-                </svg>
-            </button>
+        <div class="flex items-center justify-between mb-6 px-2">
+            <h2 class="text-sm font-bold uppercase tracking-[0.2em] text-slate-400">Recent Readings</h2>
+            <div class="h-[1px] flex-1 bg-slate-200 dark:bg-slate-800 ml-4 opacity-50"></div>
         </div>
+
+        <div id="readings-feed" class="space-y-4">
+            <div class="text-center py-20 text-slate-400 animate-pulse uppercase text-[10px] tracking-widest font-bold">
+                Synchronizing Meter Data...
+            </div>
+        </div>
+
+    </main>
+
+    <div class="fixed bottom-8 left-0 w-full flex justify-center z-50">
+        <button onclick="window.location.href='read-meter.html'" 
+            class="btn-droplet px-10 py-5 rounded-full text-white text-xs font-bold uppercase tracking-[0.2em] shadow-2xl shadow-water/40 hover:scale-105 active:scale-95 transition-all">
+            Capture New Reading
+        </button>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
@@ -56,14 +87,65 @@
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
 
     <script type="module">
-        import { requireRole } from '../js/utils.js';
         import { injectHeader } from '../js/header-component.js';
+        import { toast, debug } from '../js/utils.js';
+        import { db, auth } from '../js/firebase-init.js';
 
-        injectHeader('Reader');
-        requireRole('reader');
+        // 1. Setup Navigation
+        injectHeader("Reader Dashboard");
 
-        const name = sessionStorage.getItem('aqt_user_name') || 'Personnel';
-        document.getElementById('welcome-msg').textContent = `Mabuhay, ${name.split(' ')[0]}!`;
+        // 2. Fetch Dashboard Data
+        const loadDashboard = async () => {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            // [Inference] Fetching reader profile and logs
+            try {
+                const snapshot = await db.ref(`users/${user.uid}`).once('value');
+                const userData = snapshot.val();
+                
+                if (userData) {
+                    document.getElementById('display-zone').innerText = userData.assignedZone || "Zone A";
+                }
+
+                // Fetch recent logs
+                const logsRef = db.ref('readings').orderByChild('readerId').equalTo(user.uid).limitToLast(10);
+                logsRef.on('value', (snap) => {
+                    const logs = snap.val();
+                    renderLogs(logs);
+                });
+
+            } catch (err) {
+                toast("Sync failed. Check connection.", "error");
+            }
+        };
+
+        const renderLogs = (logs) => {
+            const container = document.getElementById('readings-feed');
+            if (!logs) {
+                container.innerHTML = `<div class="text-center py-20 text-slate-400 italic text-xs">No readings captured this month.</div>`;
+                return;
+            }
+
+            container.innerHTML = Object.entries(logs).reverse().map(([id, data]) => `
+                <div class="dash-row p-6 rounded-32 flex items-center justify-between">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-bold text-water uppercase tracking-widest mb-1">${data.accountName || 'Unnamed Account'}</span>
+                        <span class="text-xs font-medium text-slate-400">${new Date(data.timestamp).toLocaleDateString()}</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xl font-bold tracking-tighter dark:text-white text-slate-800">${data.currentReading} m³</span>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('display-readings').innerText = Object.keys(logs).length;
+        };
+
+        auth.onAuthStateChanged((user) => {
+            if (user) loadDashboard();
+            else window.location.href = '../index.html';
+        });
     </script>
 </body>
 </html>
