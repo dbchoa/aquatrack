@@ -84,27 +84,10 @@
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
     
     <script type="module">
+        import './js/utils.js'; // This now handles window.toggleDarkMode automatically
         import { login } from './js/auth.js';
         import { setTheme, initTheme } from './js/utils.js';
-        
-        // Reference project pattern for global mapping
-        window.toggleDarkMode = (mode) => {
-            const html = document.getElementById('main-html');
-            const indicator = document.getElementById('toggle-indicator');
-            
-            // 1. Logic Update
-            setTheme(mode);
-            
-            // 2. Visual UI Update
-            if (mode === 'dark') {
-                html.classList.add('dark');
-                if (indicator) indicator.style.transform = 'translateX(81px)';
-            } else {
-                html.classList.remove('dark');
-                if (indicator) indicator.style.transform = 'translateX(0px)';
-            }
-        };
-
+       
         // Initialize state
         initTheme();
         const saved = localStorage.getItem('aqt_theme') || 'dark';
