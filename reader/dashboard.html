@@ -12,7 +12,7 @@
             darkMode: 'class',
             theme: {
                 extend: {
-                    colors: { water: '#4facfe' },
+                    colors: { water: '#4facfe', waterDark: '#0072ff' },
                     borderRadius: { '32': '32px', '48': '48px' }
                 }
             }
@@ -20,26 +20,35 @@
     </script>
     <style>
         .stat-glow { text-shadow: 0 0 15px rgba(79, 172, 254, 0.4); }
+        
+        /* High-Contrast Glassmorphism for Dashboard Cards */
+        .glass-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(255, 255, 255, 0.9); /* High contrast for light mode */
+            backdrop-blur: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        .dark .glass-card {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
         .dash-row {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            background: rgba(255, 255, 255, 0.6);
-            border: 1px solid rgba(15, 23, 42, 0.05);
+            background: rgba(255, 255, 255, 0.8) !important;
+            border: 1px solid rgba(15, 23, 42, 0.1) !important;
         }
         .dark .dash-row {
-            background: rgba(30, 41, 59, 0.4);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(30, 41, 59, 0.4) !important;
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
         }
         .dash-row:hover {
             transform: translateY(-2px);
-            background: white;
-            box-shadow: 0 10px 25px -5px rgba(79, 172, 254, 0.15);
-        }
-        .dark .dash-row:hover {
-            background: rgba(30, 41, 59, 0.7);
-            border-color: rgba(79, 172, 254, 0.3);
+            background: white !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 114, 255, 0.15);
         }
 
-        /* GLASS VESSEL HUD */
+        /* 1. THE GLASS VESSEL HUD */
         .glass-vessel {
             position: relative; width: 72px; height: 72px;
             background: #011030; border: 2px solid rgba(255, 255, 255, 0.3);
@@ -70,14 +79,13 @@
             -webkit-appearance: none; margin: 0; 
         }
 
-        /* SURGICAL FIX: Toast Container positioning */
         #toast-container {
             position: fixed; bottom: 110px; left: 50%;
             transform: translateX(-50%); z-index: 999; pointer-events: none;
         }
     </style>
 </head>
-<body class="bg-slate-50 dark:bg-[#020617] font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300">
+<body class="bg-slate-100 dark:bg-[#020617] font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300">
     
     <header></header>
 
@@ -86,60 +94,60 @@
     <main class="max-w-xl mx-auto p-6 pt-12 pb-44">
         
         <div class="mb-10 text-center">
-            <h2 class="text-3xl font-black tracking-tighter text-slate-800 dark:text-white uppercase">Reader Dashboard</h2>
-            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-[0.4em] mt-2 opacity-60">Field Telemetry Terminal</p>
+            <h2 class="text-3xl font-black tracking-tighter text-slate-900 dark:text-white uppercase">Reader Dashboard</h2>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-[0.4em] mt-2 opacity-70">Field Telemetry Terminal</p>
         </div>
         
-        <div class="glass-card p-8 rounded-48 border-b-4 border-water mb-8 bg-white/50 dark:bg-slate-900/50 shadow-2xl relative overflow-hidden">
+        <div class="glass-card p-8 rounded-48 border-b-4 border-waterDark dark:border-water mb-8 shadow-xl relative overflow-hidden">
             <div class="flex justify-between items-end relative z-10">
                 <div>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">Cycle Completion</p>
-                    <h3 id="display-progress-pct" class="text-5xl font-black tracking-tighter dark:text-white stat-glow">84<span class="text-lg opacity-50 text-water ml-1">%</span></h3>
+                    <p class="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.3em] mb-1">Cycle Completion</p>
+                    <h3 id="display-progress-pct" class="text-5xl font-black tracking-tighter text-slate-900 dark:text-white stat-glow">84<span class="text-lg opacity-50 text-waterDark dark:text-water ml-1">%</span></h3>
                 </div>
                 <div class="text-right">
-                    <span id="display-counts" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest text-water">168 / 200 Units</span>
+                    <span id="display-counts" class="text-[10px] font-bold text-waterDark dark:text-water uppercase tracking-widest">168 / 200 Units</span>
                 </div>
             </div>
             <div class="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full mt-8 overflow-hidden">
-                <div id="progress-bar" class="h-full bg-water shadow-[0_0_15px_#4facfe] transition-all duration-1000 ease-out" style="width: 84%"></div>
+                <div id="progress-bar" class="h-full bg-waterDark dark:bg-water shadow-[0_0_15px_rgba(0,114,255,0.3)] transition-all duration-1000 ease-out" style="width: 84%"></div>
             </div>
         </div>
 
         <div class="grid grid-cols-2 gap-4 mb-10">
-            <div class="glass-card p-6 rounded-32 bg-white/40 dark:bg-slate-900/40 border border-white dark:border-slate-800">
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Current Sector</p>
-                <h4 id="active-street" class="text-xl font-bold dark:text-white truncate">Acacia St.</h4>
+            <div class="glass-card p-6 rounded-32 shadow-sm border border-white/40">
+                <p class="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Current Sector</p>
+                <h4 id="active-street" class="text-xl font-bold text-slate-900 dark:text-white truncate">Acacia St.</h4>
             </div>
-            <div class="glass-card p-6 rounded-32 bg-white/40 dark:bg-slate-900/40 border border-white dark:border-slate-800">
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Remaining</p>
-                <h4 id="remaining-units" class="text-xl font-bold text-water">32 Units</h4>
+            <div class="glass-card p-6 rounded-32 shadow-sm border border-white/40">
+                <p class="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Remaining</p>
+                <h4 id="remaining-units" class="text-xl font-bold text-waterDark dark:text-water">32 Units</h4>
             </div>
         </div>
 
         <div class="flex items-center justify-between mb-8 px-2">
-            <div class="h-[1px] flex-1 bg-slate-200 dark:bg-slate-800 mr-6 opacity-40"></div>
-            <h2 class="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400">Activity Log</h2>
-            <div class="h-[1px] flex-1 bg-slate-200 dark:bg-slate-800 ml-6 opacity-40"></div>
+            <div class="h-[1px] flex-1 bg-slate-300 dark:bg-slate-800 mr-6 opacity-40"></div>
+            <h2 class="text-[11px] font-black uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">Activity Log</h2>
+            <div class="h-[1px] flex-1 bg-slate-300 dark:bg-slate-800 ml-6 opacity-40"></div>
         </div>
 
         <div id="readings-feed" class="space-y-4">
-            <div class="dash-row p-6 rounded-32 flex items-center justify-between border border-transparent">
+            <div class="dash-row p-6 rounded-32 flex items-center justify-between border border-transparent shadow-sm">
                 <div class="flex flex-col">
-                    <span class="text-[10px] font-bold text-water uppercase tracking-[0.15em] mb-1">ACC-045</span>
-                    <span class="text-[11px] font-medium text-slate-400">Apr 28, 2026</span>
+                    <span class="text-[10px] font-bold text-waterDark dark:text-water uppercase tracking-[0.15em] mb-1">ACC-045</span>
+                    <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400">Apr 28, 2026</span>
                 </div>
                 <div class="text-right">
-                    <span class="text-xl font-black tracking-tighter dark:text-white text-slate-800">124.5</span>
-                    <span class="text-[10px] font-bold text-slate-400 ml-1 uppercase">m³</span>
+                    <span class="text-xl font-black tracking-tighter text-slate-900 dark:text-white">124.5</span>
+                    <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 ml-1 uppercase">m³</span>
                 </div>
             </div>
         </div>
     </main>
 
-    <div class="fixed bottom-0 left-0 right-0 z-[110] bg-white/80 dark:bg-[#020617]/80 backdrop-blur-xl border-t border-slate-200 dark:border-white/5 px-6 py-5">
+    <div class="fixed bottom-0 left-0 right-0 z-[110] bg-white/90 dark:bg-[#020617]/90 backdrop-blur-xl border-t border-slate-200 dark:border-white/5 px-6 py-5">
         <div class="max-w-xl mx-auto flex justify-center items-center">
             <button onclick="openReadingModal()" class="relative flex items-center justify-center group active:scale-90 transition-all duration-300">
-                <span class="absolute inset-0 rounded-full bg-water animate-ping opacity-20 pointer-events-none"></span>
+                <span class="absolute inset-0 rounded-full bg-waterDark animate-ping opacity-20 pointer-events-none"></span>
                 <div class="glass-vessel">
                     <div class="water-fill"></div>
                     <div class="absolute inset-0 flex items-center justify-center z-20">
@@ -153,50 +161,59 @@
     </div>
 
     <div id="readingModal" class="hidden fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6">
-        <div class="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl w-full max-w-sm rounded-[2.5rem] p-8 border border-white/20 dark:border-white/10 shadow-2xl relative">
+        <div class="bg-white/95 dark:bg-slate-900/80 backdrop-blur-2xl w-full max-w-sm rounded-[2.5rem] p-8 border border-white dark:border-white/10 shadow-2xl relative">
             
             <div id="modal-stage-locator">
-                <h3 class="text-xl font-bold mb-6 text-center">Locate Unit</h3>
+                <h3 class="text-xl font-bold mb-6 text-center text-slate-900 dark:text-white">Locate Unit</h3>
                 <div class="space-y-4 mb-8">
-                    <select id="input-street" class="w-full p-4 bg-white/50 dark:bg-slate-800/50 border-none rounded-2xl text-sm font-bold outline-none text-center">
-                        <option value="" disabled selected>Select Street...</option>
-                        <option value="Acacia">Acacia St.</option>
-                        <option value="Banyan">Banyan St.</option>
-                        <option value="Cedar">Cedar St.</option>
-                    </select>
+                    <div class="relative">
+                        <i class="bi bi-geo-alt-fill absolute left-4 top-1/2 -translate-y-1/2 text-waterDark/60 dark:text-water/50"></i>
+                        <select id="input-street" class="w-full p-4 pl-12 bg-slate-200/50 dark:bg-slate-800/50 border-none rounded-2xl text-sm font-bold outline-none appearance-none text-slate-900 dark:text-white">
+                            <option value="" disabled selected>Select Street...</option>
+                            <option value="Acacia">Acacia St.</option>
+                            <option value="Banyan">Banyan St.</option>
+                            <option value="Cedar">Cedar St.</option>
+                        </select>
+                    </div>
                     <div class="flex gap-2">
-                        <input id="input-block" type="number" placeholder="Block" class="w-1/2 p-4 bg-white/50 dark:bg-slate-800/50 border-none rounded-2xl text-sm font-bold outline-none text-center">
-                        <input id="input-lot" type="number" placeholder="Lot" class="w-1/2 p-4 bg-white/50 dark:bg-slate-800/50 border-none rounded-2xl text-sm font-bold outline-none text-center">
+                        <div class="relative w-1/2">
+                            <i class="bi bi-grid-3x3-gap-fill absolute left-4 top-1/2 -translate-y-1/2 text-waterDark/60 dark:text-water/50"></i>
+                            <input id="input-block" type="number" placeholder="Block" class="w-full p-4 pl-12 bg-slate-200/50 dark:bg-slate-800/50 rounded-2xl text-sm font-bold outline-none text-slate-900 dark:text-white">
+                        </div>
+                        <div class="relative w-1/2">
+                            <i class="bi bi-house-door-fill absolute left-4 top-1/2 -translate-y-1/2 text-waterDark/60 dark:text-water/50"></i>
+                            <input id="input-lot" type="number" placeholder="Lot" class="w-full p-4 pl-12 bg-slate-200/50 dark:bg-slate-800/50 rounded-2xl text-sm font-bold outline-none text-slate-900 dark:text-white">
+                        </div>
                     </div>
                 </div>
                 <div class="flex flex-col gap-2">
-                    <button onclick="identifyHomeowner()" class="w-full py-4 bg-water text-white rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all">Identify Unit</button>
-                    <button onclick="closeReadingModal()" class="w-full py-3 text-slate-400 font-bold uppercase text-[10px] tracking-widest">Cancel</button>
+                    <button onclick="identifyHomeowner()" class="w-full py-4 bg-waterDark dark:bg-water text-white rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all">Identify Unit</button>
+                    <button onclick="closeReadingModal()" class="w-full py-3 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] tracking-widest">Cancel reading</button>
                 </div>
             </div>
 
             <div id="modal-stage-reading" class="hidden">
                 <div class="text-center mb-6">
-                    <h4 id="display-homeowner" class="text-lg font-black dark:text-white">...</h4>
-                    <p id="display-acc-id" class="text-[10px] text-water font-bold tracking-widest uppercase">ACC-000</p>
+                    <h4 id="display-homeowner" class="text-lg font-black text-slate-900 dark:text-white">...</h4>
+                    <p id="display-acc-id" class="text-[10px] text-waterDark dark:text-water font-bold tracking-widest uppercase">ACC-000</p>
                 </div>
-                <div class="bg-white/40 dark:bg-slate-800/40 p-6 rounded-3xl mb-4 text-center">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Current Reading (m³)</label>
-                    <input id="input-reading" type="number" step="0.1" placeholder="000.0" class="w-full text-center text-5xl font-light bg-transparent text-water outline-none">
+                <div class="bg-slate-200/50 dark:bg-slate-800/50 p-6 rounded-3xl mb-4 text-center">
+                    <label class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 block text-center">Current Reading (m³)</label>
+                    <input id="input-reading" type="number" step="0.1" placeholder="000.0" class="w-full text-center text-5xl font-light bg-transparent text-waterDark dark:text-water outline-none">
                 </div>
                 <div class="flex justify-between px-4 mb-8">
                     <div class="text-left">
-                        <span class="text-[9px] text-slate-400 block uppercase font-bold">Previous</span>
-                        <span id="display-prev" class="font-bold text-sm">0.0 m³</span>
+                        <span class="text-[9px] text-slate-500 dark:text-slate-400 block uppercase font-bold">Previous</span>
+                        <span id="display-prev" class="font-bold text-sm text-slate-900 dark:text-white">0.0 m³</span>
                     </div>
                     <div class="text-right">
-                        <span class="text-[9px] text-slate-400 block uppercase font-bold">Estimated PHP</span>
-                        <span id="display-cost" class="font-black text-sm text-emerald-500">₱ 0.00</span>
+                        <span class="text-[9px] text-slate-500 dark:text-slate-400 block uppercase font-bold">Estimated PHP</span>
+                        <span id="display-cost" class="font-black text-sm text-emerald-600 dark:text-emerald-500">₱ 0.00</span>
                     </div>
                 </div>
                 <div class="flex gap-3">
-                    <button onclick="resetModalState()" class="flex-1 py-4 text-slate-400 font-bold uppercase text-xs">Back</button>
-                    <button id="submit-reading-btn" onclick="submitReading()" class="flex-1 py-4 bg-water text-white rounded-2xl font-bold uppercase text-xs">Submit</button>
+                    <button onclick="resetModalState()" class="flex-1 py-4 text-slate-500 dark:text-slate-400 font-bold uppercase text-xs">Back</button>
+                    <button id="submit-reading-btn" onclick="submitReading()" class="flex-1 py-4 bg-waterDark dark:bg-water text-white rounded-2xl font-bold uppercase text-xs">Submit</button>
                 </div>
             </div>
         </div>
@@ -209,7 +226,7 @@
     <script type="module">
         import { injectHeader } from '../js/header-component.js';
         import { db, auth } from '../js/firebase-init.js';
-        import { toast } from '../js/utils.js'; // SURGICAL: Import toast from utils
+        import { toast } from '../js/utils.js';
 
         injectHeader();
 
@@ -236,7 +253,7 @@
             const block = document.getElementById('input-block').value;
             const lot = document.getElementById('input-lot').value;
 
-            if(!street || !block || !lot) return toast("Surgical requirement: Complete location details", "info");
+            if(!street || !block || !lot) return toast("Identity details required", "info");
 
             const snapshot = await db.ref('homeowners').once('value');
             const homeowners = snapshot.val();
@@ -258,7 +275,7 @@
                 document.getElementById('display-prev').innerText = `${activeAccount.lastReading} m³`;
                 calculateLiveCost(0);
             } else {
-                toast("Telemetry Error: Homeowner not found", "error");
+                toast("Homeowner not found", "error");
             }
         };
 
@@ -275,7 +292,7 @@
 
         window.submitReading = async () => {
             const reading = parseFloat(document.getElementById('input-reading').value);
-            if(!reading || reading <= activeAccount.lastReading) return toast("Invalid Telemetry: Reading too low", "error");
+            if(!reading || reading <= activeAccount.lastReading) return toast("Invalid reading", "error");
             
             const btn = document.getElementById('submit-reading-btn');
             btn.innerText = "Transmitting..."; btn.disabled = true;
@@ -290,9 +307,9 @@
                 };
                 await db.ref('readings').push(readingData);
                 await db.ref(`homeowners/${activeAccount.id}`).update({ lastReading: reading });
-                toast("Transmission Successful, Master", "success");
+                toast("Telemetry Captured", "success");
                 closeReadingModal();
-            } catch (e) { toast("Critical Failure: Data lost", "error"); }
+            } catch (e) { toast("Transmission Failed", "error"); }
             finally { btn.innerText = "Submit"; btn.disabled = false; }
         };
 
