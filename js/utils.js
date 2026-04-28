@@ -1,6 +1,6 @@
 /**
- * AquaTrack Shared Utilities v4.7
- * DNA: High-Fidelity Feedback, Persistent Theming, and Lifecycle-Aware Sync.
+ * AquaTrack Shared Utilities v4.8
+ * DNA: High-Fidelity Feedback, Persistent Theming, and Precision Component Alignment.
  */
 
 // 1. Debugging Utility
@@ -13,21 +13,16 @@ export const debug = (msg, data = '') => {
 export const toast = (msg, type = 'info') => { 
     const container = document.getElementById('toast-container');
     if (!container) return;
-
     const toastElement = document.createElement('div');
     toastElement.className = 'glass-card bg-white/90 dark:bg-slate-800/90 backdrop-blur-md p-4 mb-4 rounded-2xl shadow-xl flex items-center border-l-4 z-50 transition-all duration-400 transform translate-x-0';
-    
     let accentColor = '#4facfe'; 
     if (type === 'success') accentColor = '#10b981';
     if (type === 'error') accentColor = '#ef4444';
     if (type === 'warning') accentColor = '#f59e0b';
-
     toastElement.style.borderColor = accentColor;
     toastElement.style.minWidth = '280px';
     toastElement.innerHTML = `<span class="text-sm font-medium dark:text-white">${msg}</span>`;
-    
     container.appendChild(toastElement);
-
     setTimeout(() => { 
         toastElement.style.opacity = '0'; 
         toastElement.style.transform = 'translateX(20px)'; 
@@ -40,7 +35,6 @@ export const confirmModal = (title, message) => {
     return new Promise((resolve) => { 
         const overlay = document.createElement('div');
         overlay.className = 'fixed inset-0 w-full h-full flex items-center justify-center bg-slate-900/40 backdrop-blur-sm z-[100] p-6';
-        
         overlay.innerHTML = `
             <div class="bg-white dark:bg-slate-900 w-full max-w-sm rounded-32 p-8 shadow-2xl border border-white dark:border-slate-800 transform scale-100 transition-transform">
                 <h3 class="text-xl font-bold text-slate-800 dark:text-white mb-2 text-center">${title}</h3>
@@ -51,9 +45,7 @@ export const confirmModal = (title, message) => {
                 </div>
             </div>
         `;
-
         document.body.appendChild(overlay);
-
         document.getElementById('modal-cancel').onclick = () => { overlay.remove(); resolve(false); };
         document.getElementById('modal-confirm').onclick = () => { overlay.remove(); resolve(true); };
     }); 
@@ -65,7 +57,6 @@ export const setCache = (key, data, ttlMinutes = 60) => {
     const cacheObj = { data, expiry };
     sessionStorage.setItem(key, JSON.stringify(cacheObj));
 };
-
 export const getCache = (key) => {
     const cached = sessionStorage.getItem(key);
     if (!cached) return null;
@@ -81,23 +72,20 @@ export const getCache = (key) => {
 export const formatCurrency = (amount) => { 
     return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount); 
 };
-
 export const formatDate = (timestamp) => { 
     if (!timestamp) return 'N/A'; 
     return new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }); 
 };
-
 export const formatMonth = (yyyy_mm) => { 
     if (!yyyy_mm) return ''; 
     const [year, month] = yyyy_mm.split('_'); 
     return new Date(year, parseInt(month) - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); 
 };
 
-// 6. Theme Management (Total Sovereignty)
+// 6. Theme Management (Calibrated)
 export const setTheme = (theme, isInitial = false) => { 
     document.documentElement.dataset.theme = theme;
     
-    // Core Tailwind toggle
     if (theme === 'dark') {
         document.documentElement.classList.add('dark');
     } else {
@@ -106,26 +94,24 @@ export const setTheme = (theme, isInitial = false) => {
     
     localStorage.setItem('aqt_theme', theme); 
     
-    // Physical Toggle Indicator Sync
     const indicator = document.getElementById('toggle-indicator');
     if (indicator) {
+        // PRECISION CALIBRATION: Changed from 81px to 79px to restore the side padding
+        const travelDistance = theme === 'dark' ? '79px' : '0px';
+
         if (isInitial) {
-            indicator.style.transition = 'none'; // Instant snap on load
-            indicator.style.transform = theme === 'dark' ? 'translateX(81px)' : 'translateX(0px)';
-            // Force reflow then restore transition for subsequent clicks
+            indicator.style.transition = 'none';
+            indicator.style.transform = `translateX(${travelDistance})`;
             indicator.offsetHeight; 
-            setTimeout(() => indicator.style.transition = 'all 0.3s transform', 50);
+            setTimeout(() => indicator.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', 50);
         } else {
-            indicator.style.transform = theme === 'dark' ? 'translateX(81px)' : 'translateX(0px)';
+            indicator.style.transform = `translateX(${travelDistance})`;
         }
     }
-    debug(`Theme set to: ${theme}`); 
 };
 
 export const initTheme = () => { 
     const savedTheme = localStorage.getItem('aqt_theme') || 'dark'; 
-    
-    // Lifecycle Guard: Ensure DOM is ready before trying to move the indicator
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => setTheme(savedTheme, true));
     } else {
@@ -133,16 +119,14 @@ export const initTheme = () => {
     }
 };
 
-/**
- * GLOBAL BRIDGE: Linked to onClick in HTML.
- */
 window.toggleDarkMode = (mode) => {
+    const indicator = document.getElementById('toggle-indicator');
+    if (indicator) indicator.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
     setTheme(mode, false);
 };
 
 // 7. Role-Based Access Control
 export const getRole = () => sessionStorage.getItem('aqt_role');
-
 export const requireRole = (...allowedRoles) => { 
     const currentRole = getRole(); 
     if (!allowedRoles.includes(currentRole)) { 
@@ -150,5 +134,4 @@ export const requireRole = (...allowedRoles) => {
     } 
 };
 
-// Auto-run on script load
 initTheme();
