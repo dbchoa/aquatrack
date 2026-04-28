@@ -1,5 +1,5 @@
 /**
- * AquaTrack Shared Utilities v4.4
+ * AquaTrack Shared Utilities v4.6
  * DNA: High-Fidelity Feedback, Persistent Theming, and Spark-Plan Optimization.
  */
 
@@ -59,7 +59,7 @@ export const confirmModal = (title, message) => {
     }); 
 };
 
-// 4. Cache Management (Spark Plan Optimization)
+// 4. Cache Management
 export const setCache = (key, data, ttlMinutes = 60) => {
     const expiry = new Date().getTime() + (ttlMinutes * 60 * 1000);
     const cacheObj = { data, expiry };
@@ -93,16 +93,27 @@ export const formatMonth = (yyyy_mm) => {
     return new Date(year, parseInt(month) - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); 
 };
 
-// 6. Theme Management (Tailwind + Vanilla Hybrid)
+// 6. Theme Management (Total Sovereignty)
 export const setTheme = (theme) => { 
     document.documentElement.dataset.theme = theme;
+    
+    // Core Tailwind toggle
     if (theme === 'dark') {
         document.documentElement.classList.add('dark');
     } else {
         document.documentElement.classList.remove('dark');
     }
+    
     localStorage.setItem('aqt_theme', theme); 
-    debug(`Theme set to: ${theme}`); 
+    
+    // Snap toggle indicator if it exists (on Login Page)
+    const indicator = document.getElementById('toggle-indicator');
+    if (indicator) {
+        indicator.style.transition = 'none'; // Snap instantly on load/init
+        indicator.style.transform = theme === 'dark' ? 'translateX(81px)' : 'translateX(0px)';
+        // Re-enable transition after snap
+        setTimeout(() => indicator.style.transition = 'all 0.3s transform', 50);
+    }
 };
 
 export const initTheme = () => { 
@@ -111,16 +122,13 @@ export const initTheme = () => {
 };
 
 /**
- * GLOBAL BRIDGE: Exposes theme switching to HTML onclick events.
- * DNA: Direct mapping to window object to bypass module scoping.
+ * GLOBAL BRIDGE: Linked to onClick in HTML.
  */
 window.toggleDarkMode = (mode) => {
-    setTheme(mode);
-    // Login-specific indicator handling
+    // For manual clicks, we want the smooth transition
     const indicator = document.getElementById('toggle-indicator');
-    if (indicator) {
-        indicator.style.transform = mode === 'dark' ? 'translateX(81px)' : 'translateX(0px)';
-    }
+    if (indicator) indicator.style.transition = 'all 0.3s transform';
+    setTheme(mode);
 };
 
 // 7. Role-Based Access Control
@@ -133,5 +141,5 @@ export const requireRole = (...allowedRoles) => {
     } 
 };
 
-// Initialize immediately on load
+// Auto-run on script load
 initTheme();
