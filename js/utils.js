@@ -1,6 +1,6 @@
 /**
- * AquaTrack Shared Utilities v4.6
- * DNA: High-Fidelity Feedback, Persistent Theming, and Spark-Plan Optimization.
+ * AquaTrack Shared Utilities v4.7
+ * DNA: High-Fidelity Feedback, Persistent Theming, and Lifecycle-Aware Sync.
  */
 
 // 1. Debugging Utility
@@ -94,7 +94,7 @@ export const formatMonth = (yyyy_mm) => {
 };
 
 // 6. Theme Management (Total Sovereignty)
-export const setTheme = (theme) => { 
+export const setTheme = (theme, isInitial = false) => { 
     document.documentElement.dataset.theme = theme;
     
     // Core Tailwind toggle
@@ -106,29 +106,38 @@ export const setTheme = (theme) => {
     
     localStorage.setItem('aqt_theme', theme); 
     
-    // Snap toggle indicator if it exists (on Login Page)
+    // Physical Toggle Indicator Sync
     const indicator = document.getElementById('toggle-indicator');
     if (indicator) {
-        indicator.style.transition = 'none'; // Snap instantly on load/init
-        indicator.style.transform = theme === 'dark' ? 'translateX(81px)' : 'translateX(0px)';
-        // Re-enable transition after snap
-        setTimeout(() => indicator.style.transition = 'all 0.3s transform', 50);
+        if (isInitial) {
+            indicator.style.transition = 'none'; // Instant snap on load
+            indicator.style.transform = theme === 'dark' ? 'translateX(81px)' : 'translateX(0px)';
+            // Force reflow then restore transition for subsequent clicks
+            indicator.offsetHeight; 
+            setTimeout(() => indicator.style.transition = 'all 0.3s transform', 50);
+        } else {
+            indicator.style.transform = theme === 'dark' ? 'translateX(81px)' : 'translateX(0px)';
+        }
     }
+    debug(`Theme set to: ${theme}`); 
 };
 
 export const initTheme = () => { 
     const savedTheme = localStorage.getItem('aqt_theme') || 'dark'; 
-    setTheme(savedTheme); 
+    
+    // Lifecycle Guard: Ensure DOM is ready before trying to move the indicator
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => setTheme(savedTheme, true));
+    } else {
+        setTheme(savedTheme, true);
+    }
 };
 
 /**
  * GLOBAL BRIDGE: Linked to onClick in HTML.
  */
 window.toggleDarkMode = (mode) => {
-    // For manual clicks, we want the smooth transition
-    const indicator = document.getElementById('toggle-indicator');
-    if (indicator) indicator.style.transition = 'all 0.3s transform';
-    setTheme(mode);
+    setTheme(mode, false);
 };
 
 // 7. Role-Based Access Control
