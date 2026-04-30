@@ -386,6 +386,18 @@
             if(snap.exists()) renderFeed(snap.val());
         });
 
+        // Seed Helper (Run once in console if needed)
+        window.seedConfig = () => {
+            db.ref('config/billing').set({
+                threshold: 15,
+                minFee: 200,
+                excessRate: 15,
+                setBy: "INITIAL_SETUP",
+                updatedAt: Date.now()
+            });
+            toast("Billing Config Seeded", "success");
+        };
+        
         auth.onAuthStateChanged(user => { if (!user) window.location.href = '../index.html'; });
     </script>
 </body>
