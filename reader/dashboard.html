@@ -15,7 +15,7 @@
                     colors: { 
                         water: '#4facfe', 
                         waterDark: '#0072ff',
-                        electric: '#4facfe' // Added for easy utility use
+                        electric: '#4facfe'
                     },
                     borderRadius: { '32': '32px', '48': '48px' }
                 }
@@ -30,7 +30,6 @@
             backdrop-blur: 12px;
             border: 1px solid rgba(255, 255, 255, 0.5);
         }
-        /* RESTORED & ENHANCED: Electric Blue HUD */
         .dark .glass-card {
             background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(79, 172, 254, 0.4);
@@ -112,8 +111,8 @@
 
         <div class="grid grid-cols-2 gap-4 mb-4">
             <div class="glass-card p-6 rounded-xl shadow-sm border-water/40 dark:border-water/40">
-                <p class="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Current Sector</p>
-                <h4 id="active-street" class="text-xl font-bold text-slate-900 dark:text-white truncate">Acacia St.</h4>
+                <p class="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Current Street</p>
+                <h4 id="active-street" class="text-xl font-bold text-slate-900 dark:text-white truncate">---</h4>
             </div>
             <div class="glass-card p-6 rounded-xl shadow-sm border-water/40 dark:border-water/40">
                 <p class="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Remaining</p>
@@ -133,7 +132,7 @@
             </div>
             <div class="text-right">
                 <p class="text-[8px] font-bold uppercase opacity-50 mb-2">Base Fee</p>
-                <p id="rate-min-fee" class="text-sm font-black text-waterDark dark:text-water \">₱ --</p>
+                <p id="rate-min-fee" class="text-sm font-black text-waterDark dark:text-water">₱ --</p>
             </div>
         </div>
 
@@ -275,7 +274,18 @@
         const renderFeed = (readings) => {
             const container = document.getElementById('readings-feed');
             container.innerHTML = '';
-            const latest = Object.values(readings).reverse().slice(0, 6);
+            
+            // Strictly last 5 entries
+            const latest = Object.values(readings).reverse().slice(0, 5);
+            
+            // Dynamic Street Card: Update based on very last entry
+            if(latest.length > 0 && latest[0].locationAddress) {
+                const streetName = latest[0].locationAddress.split(' ')[0];
+                document.getElementById('active-street').innerText = streetName + ' St.';
+            } else {
+                document.getElementById('active-street').innerText = '---';
+            }
+
             latest.forEach((r, idx) => {
                 const opacity = Math.max(0.1, 1 - (idx * 0.18));
                 const div = document.createElement('div');
@@ -283,7 +293,7 @@
                 div.style.opacity = opacity;
                 div.innerHTML = `
                     <div class="flex flex-col">
-                        <span class="text-[10px] font-black uppercase text-slate-900 dark:text-white">${r.accountId}</span>
+                        <span class="text-[10px] font-black uppercase text-slate-900 dark:text-white">${r.locationAddress || 'Unit'}</span>
                         <span class="text-[9px] text-slate-500 font-bold">${new Date(r.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
                     </div>
                     <div class="font-mono text-sm font-black text-waterDark dark:text-water">
@@ -369,6 +379,8 @@
                     consumption: reading - activeAccount.lastReading,
                     timestamp: Date.now(),
                     status: 'pending',
+                    // Save enriched location string for fast Activity Log rendering
+                    locationAddress: `${activeAccount.street} B${activeAccount.block} L${activeAccount.lot}`,
                     appliedRates: { ...billingConfig },
                     estimatedAmount: calculateAmount(reading, activeAccount.lastReading)
                 };
@@ -386,18 +398,6 @@
             if(snap.exists()) renderFeed(snap.val());
         });
 
-        // Seed Helper (Run once in console if needed)
-        window.seedConfig = () => {
-            db.ref('config/billing').set({
-                threshold: 15,
-                minFee: 200,
-                excessRate: 15,
-                setBy: "INITIAL_SETUP",
-                updatedAt: Date.now()
-            });
-            toast("Billing Config Seeded", "success");
-        };
-        
         auth.onAuthStateChanged(user => { if (!user) window.location.href = '../index.html'; });
     </script>
 </body>
