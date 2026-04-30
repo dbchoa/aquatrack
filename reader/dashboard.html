@@ -185,15 +185,15 @@
             </div>
 
             <div id="modal-stage-reading" class="hidden">
-                <div class="text-center mb-4">
+                <div class="text-center mb-6">
                     <h4 id="display-homeowner" class="text-lg font-black text-slate-900 dark:text-white">...</h4>
-                    <p id="display-acc-id" class="text-[10px] text-waterDark font-bold tracking-widest uppercase">ACC-000</p>
+                    <p id="display-acc-id" class="text-[10px] text-waterDark font-bold tracking-widest uppercase">---</p>
                 </div>
-                <div class="bg-slate-200/50 dark:bg-slate-800/50 p-3 rounded-3xl mb-4 text-center">
+                <div class="bg-slate-200/50 dark:bg-slate-800/50 p-6 rounded-3xl mb-4 text-center">
                     <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Current Reading (m³)</label>
                     <input id="input-reading" type="number" step="0.1" placeholder="000.0" class="w-full text-center text-5xl font-black bg-transparent text-waterDark outline-none">
                 </div>
-                <div class="flex justify-between px-4 mb-6">
+                <div class="flex justify-between px-4 mb-8">
                     <div class="text-left">
                         <span class="text-[9px] text-slate-500 block uppercase font-bold">Previous</span>
                         <span id="display-prev" class="font-bold text-sm text-slate-900 dark:text-white">0.0 m³</span>
@@ -275,10 +275,10 @@
             const container = document.getElementById('readings-feed');
             container.innerHTML = '';
             
-            // Strictly last 5 entries
+            // Limit strictly to last 5 entries for field synergy
             const latest = Object.values(readings).reverse().slice(0, 5);
             
-            // Dynamic Street Card Logic
+            // Dynamic Street Card: Update based on very last activity in the field
             if(latest.length > 0 && latest[0].locationAddress) {
                 const streetName = latest[0].locationAddress.split(' ')[0];
                 document.getElementById('active-street').innerText = streetName + ' St.';
@@ -340,7 +340,10 @@
                 document.getElementById('modal-stage-locator').classList.add('hidden');
                 document.getElementById('modal-stage-reading').classList.remove('hidden');
                 document.getElementById('display-homeowner').innerText = activeAccount.name;
-                document.getElementById('display-acc-id').innerText = activeAccount.id;
+                
+                // RESTORED UI Logic: Use location combination instead of raw ID
+                document.getElementById('display-acc-id').innerText = `${activeAccount.street} B${activeAccount.block} L${activeAccount.lot}`;
+                
                 document.getElementById('display-prev').innerText = `${activeAccount.lastReading} m³`;
             } else { toast("Unit not found", "error"); }
         };
@@ -375,11 +378,13 @@
             const btn = document.getElementById('final-submit-btn');
             btn.innerText = "..."; btn.disabled = true;
             try {
+                // Reader Info from Session Storage (handled by auth.js)
                 const readerName = sessionStorage.getItem('aqt_user_name') || 'Staff';
+                
                 const readingData = {
                     accountId: activeAccount.id,
                     readerId: auth.currentUser.uid,
-                    readerName: readerName,
+                    readerName: readerName, // Captured for shared field visibility
                     reading: reading,
                     prevReading: activeAccount.lastReading,
                     consumption: reading - activeAccount.lastReading,
