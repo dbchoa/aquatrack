@@ -85,31 +85,81 @@
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>         
     
     <script type="module">
-        import './js/utils.js'; // This now handles window.toggleDarkMode automatically
+        import './js/utils.js'; 
         import { login } from './js/auth.js';
         import { setTheme, initTheme } from './js/utils.js';
+        import { auth, db } from './js/firebase-init.js';
        
-        // Initialize state
         initTheme();
         const saved = localStorage.getItem('aqt_theme') || 'dark';
         window.toggleDarkMode(saved);
 
         const loginForm = document.getElementById('login-form');
+        const loginBtn = document.getElementById('login-btn');
+
         if (loginForm) {
             loginForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const loginBtn = document.getElementById('login-btn');
+                
+                // Lock UI
                 loginBtn.disabled = true;
                 const originalText = loginBtn.innerText;
                 loginBtn.innerText = 'VERIFYING...';
+                
                 try {
                     await login(document.getElementById('email').value, document.getElementById('password').value);
                 } catch (err) {
-                    loginBtn.disabled = false;
-                    loginBtn.innerText = originalText;
+                    // Logic handled in auth.js, but caught here for safety
+                    console.error("Login process error:", err);
+                } finally {
+                    // SURGICAL FIX: Reset button state on failure so user can try again
+                    if (loginBtn) {
+                        loginBtn.disabled = false;
+                        loginBtn.innerText = originalText;
+                    }
                 }
             });
         }
+
+        /**
+         * AUTO-LOGIN RECOVERY LOGIC
+         * Heals sessionStorage if Firebase session persists but cache is cleared.
+         */
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                const cachedRole = sessionStorage.getItem('aqt_user_role');
+                
+                if (!cachedRole) {
+                    console.log("Orphan session detected. Synchronizing metadata...");
+                    try {
+                        const snapshot = await db.ref(`users/${user.uid}`).once('value');
+                        const userData = snapshot.val();
+                        
+                        if (userData) {
+                            sessionStorage.setItem('aqt_user_name', userData.name);
+                            sessionStorage.setItem('aqt_user_role', userData.role);
+                            
+                            const paths = {
+                                reader: 'reader/dashboard.html',
+                                billing: 'billing/dashboard.html',
+                                admin: 'admin/dashboard.html'
+                            };
+                            window.location.replace(paths[userData.role] || 'index.html');
+                        }
+                    } catch (e) {
+                        console.error("Recovery sync failed:", e);
+                    }
+                } else {
+                    // Cache exists, immediate jump to dashboard
+                    const paths = {
+                        reader: 'reader/dashboard.html',
+                        billing: 'billing/dashboard.html',
+                        admin: 'admin/dashboard.html'
+                    };
+                    window.location.replace(paths[cachedRole] || 'index.html');
+                }
+            }
+        });
     </script>
 </body>
 </html>
