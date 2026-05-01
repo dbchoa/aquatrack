@@ -35,7 +35,6 @@
             border: 1px solid rgba(79, 172, 254, 0.4);
             box-shadow: inset 0 0 12px rgba(79, 172, 254, 0.05);
         }
-
         .console-entry {
             display: flex;
             justify-content: space-between;
@@ -45,7 +44,6 @@
             margin-bottom: 0.25rem;
             transition: opacity 0.3s ease;
         }
-
         .glass-vessel {
             position: relative; width: 72px; height: 72px;
             background: #011030; border: 2px solid rgba(79, 172, 254, 0.5);
@@ -53,29 +51,23 @@
             box-shadow: 0 10px 30px rgba(79, 172, 254, 0.4);
             transform: translate3d(0, 0, 0);
         }
-
         .water-fill {
             position: absolute; bottom: 0; left: 0; width: 100%; height: 85%;
             background: linear-gradient(to bottom, #4facfe 0%, #0072ff 50%, #003366 100%);
         }
-
         .water-fill::before {
             content: ""; position: absolute; top: -165%; left: -50%; width: 200%; height: 200%;
             background: #011030; border-radius: 38%; animation: slosh 5s linear infinite;
         }
-
         .glass-vessel::after {
             content: ""; position: absolute; top: 5px; left: 12px; width: 25px; height: 12px;
             background: rgba(255, 255, 255, 0.3); border-radius: 50%;
             transform: rotate(-15deg); z-index: 25; pointer-events: none;
         }
-
         @keyframes slosh { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { 
             -webkit-appearance: none; margin: 0; 
         }
-
         #toast-container {
             position: fixed; bottom: 110px; left: 50%;
             transform: translateX(-50%); z-index: 999; pointer-events: none;
@@ -161,26 +153,26 @@
         <div class="bg-white/95 dark:bg-slate-900/80 backdrop-blur-2xl w-full max-w-sm rounded-[2.5rem] p-8 border border-white dark:border-white/10 shadow-2xl relative overflow-hidden">
             
             <div id="modal-stage-locator">
-                <h3 class="text-xl font-bold mb-6 text-center text-slate-900 dark:text-white">Locate Unit</h3>
+                <h3 class="text-xl font-bold mb-6 text-center text-slate-900 dark:text-white">Locate Property</h3>
                 <div class="space-y-4 mb-8">
                     <select id="input-street" class="w-full p-4 bg-slate-200/50 dark:bg-slate-800/50 border-none rounded-2xl text-sm font-bold outline-none text-slate-900 dark:text-white">
                         <option value="" disabled selected>Loading Streets...</option>
                     </select>
                     <div class="flex gap-2">
                         <input id="input-block" type="number" placeholder="Block" class="w-1/2 p-4 bg-slate-200/50 dark:bg-slate-800/50 rounded-2xl text-sm font-bold outline-none text-slate-900 dark:text-white text-center">
-                        <input id="input-lot" type="number" placeholder="Lot" class="w-1/2 p-4 bg-slate-200/50 dark:bg-slate-800/50 rounded-2xl text-sm font-bold outline-none text-slate-900 dark:text-white text-center">
+                        <input id="input-lot" type="text" placeholder="Lot" class="w-1/2 p-4 bg-slate-200/50 dark:bg-slate-800/50 rounded-2xl text-sm font-bold outline-none text-slate-900 dark:text-white text-center">
                     </div>
                 </div>
                 <div class="flex flex-col gap-2">
-                    <button onclick="identifyHomeowner()" class="w-full py-4 bg-waterDark text-white rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all">Identify Unit</button>
+                    <button onclick="identifyProperty()" class="w-full py-4 bg-waterDark text-white rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all">Identify Unit</button>
                     <button onclick="closeReadingModal()" class="w-full py-3 text-slate-500 font-bold uppercase text-[10px] tracking-widest text-center">Cancel reading</button>
                 </div>
             </div>
 
             <div id="modal-stage-reading" class="hidden">
                 <div class="text-center mb-6">
-                    <h4 id="display-homeowner" class="text-lg font-black text-slate-900 dark:text-white">...</h4>
-                    <p id="display-acc-id" class="text-[12px] text-waterDark font-bold tracking-widest uppercase">---</p>
+                    <h4 id="display-owner" class="text-lg font-black text-slate-900 dark:text-white">...</h4>
+                    <p id="display-prop-id" class="text-[12px] text-waterDark font-bold tracking-widest uppercase">---</p>
                 </div>
                 <div class="bg-slate-200/50 dark:bg-slate-800/50 p-6 rounded-3xl mb-4 text-center">
                     <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Current Reading (m³)</label>
@@ -224,10 +216,9 @@
 
         injectHeader();
 
-        let activeAccount = null;
+        let activeProperty = null;
         let billingConfig = { threshold: 15, minFee: 200, excessRate: 15 };
 
-        // --- NEW: FETCH STREETS FROM CONFIG ---
         const fetchStreets = async () => {
             try {
                 const snap = await db.ref('config/streets').once('value');
@@ -235,8 +226,6 @@
                 if (snap.exists() && select) {
                     const streets = snap.val();
                     select.innerHTML = '<option value="" disabled selected>Select Street...</option>';
-                    
-                    // Since it's an object from Firebase, we use Object.values
                     Object.values(streets).forEach(st => {
                         const opt = document.createElement('option');
                         opt.value = st.name;
@@ -245,7 +234,6 @@
                     });
                 }
             } catch (e) {
-                console.error("Failed to sync street telemetry:", e);
                 toast("Street sync failed", "error");
             }
         };
@@ -264,24 +252,24 @@
         };
 
         const updateHUDStats = async () => {
-            const hSnap = await db.ref('homeowners').once('value');
+            const pSnap = await db.ref('properties').once('value');
             const rSnap = await db.ref('readings').once('value');
             
-            const totalUnits = hSnap.exists() ? Object.keys(hSnap.val()).length : 0;
-            const uniqueCapturedAccounts = new Set();
+            const totalUnits = pSnap.exists() ? Object.keys(pSnap.val()).length : 0;
+            const uniqueCaptured = new Set();
 
             if (rSnap.exists()) {
                 const now = new Date();
-                const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+                const currentCycle = now.toISOString().slice(0, 7); // YYYY-MM
                 
                 Object.values(rSnap.val()).forEach(r => {
-                    if (r.timestamp >= startOfMonth) {
-                        uniqueCapturedAccounts.add(r.accountId);
+                    if (r.billingCycle === currentCycle) {
+                        uniqueCaptured.add(r.propertyId);
                     }
                 });
             }
 
-            const capturedCount = uniqueCapturedAccounts.size;
+            const capturedCount = uniqueCaptured.size;
             const pct = totalUnits > 0 ? Math.round((capturedCount / totalUnits) * 100) : 0;
 
             document.getElementById('display-progress-pct').innerHTML = `${pct}<span class="text-lg opacity-50 ml-1">%</span>`;
@@ -299,7 +287,6 @@
         const renderFeed = (readings) => {
             const container = document.getElementById('readings-feed');
             container.innerHTML = '';
-            
             const latest = Object.values(readings).reverse().slice(0, 5);
             
             if(latest.length > 0 && latest[0].locationAddress) {
@@ -327,7 +314,6 @@
             });
         };
 
-        // UI & Modal Handlers
         window.openReadingModal = () => {
             document.getElementById('readingModal').classList.remove('hidden');
             window.resetModalState();
@@ -340,45 +326,54 @@
             document.getElementById('input-reading').value = '';
         };
 
-        window.identifyHomeowner = async () => {
+        window.identifyProperty = async () => {
             const street = document.getElementById('input-street').value;
             const block = document.getElementById('input-block').value;
-            const lot = document.getElementById('input-lot').value;
-            if(!street || !block || !lot) return toast("Complete location details", "info");
+            const lotInput = document.getElementById('input-lot').value.trim().toLowerCase();
 
-            const snapshot = await db.ref('homeowners').once('value');
-            const homeowners = snapshot.val();
-            activeAccount = null;
-            for(let id in homeowners) {
-                const h = homeowners[id];
-                if(h.street === street && h.block == block && h.lot == lot) {
-                    activeAccount = { id, ...h };
+            if(!street || !block || !lotInput) return toast("Complete location details", "info");
+
+            const snapshot = await db.ref('properties').once('value');
+            const properties = snapshot.val();
+            activeProperty = null;
+
+            for(let id in properties) {
+                const p = properties[id];
+                if(p.street === street && 
+                   p.block.toString() === block.toString() && 
+                   p.lot.toString().toLowerCase() === lotInput) {
+                    activeProperty = { id, ...p };
                     break;
                 }
             }
-            if(activeAccount) {
+
+            if(activeProperty) {
                 document.getElementById('modal-stage-locator').classList.add('hidden');
                 document.getElementById('modal-stage-reading').classList.remove('hidden');
-                document.getElementById('display-homeowner').innerText = activeAccount.name;
-                document.getElementById('display-acc-id').innerText = `${activeAccount.street} B${activeAccount.block} L${activeAccount.lot}`;
-                document.getElementById('display-prev').innerText = `${activeAccount.lastReading} m³`;
-            } else { toast("Unit not found", "error"); }
+                document.getElementById('display-owner').innerText = activeProperty.ownerName || activeProperty.name;
+                
+                let lotDisplay = `B${activeProperty.block} L${activeProperty.lot}`;
+                if(activeProperty.additionalLots) lotDisplay += ` (+${activeProperty.additionalLots})`;
+                
+                document.getElementById('display-prop-id').innerText = lotDisplay;
+                document.getElementById('display-prev').innerText = `${activeProperty.lastReading} m³`;
+            } else { toast("Property not found", "error"); }
         };
 
         document.getElementById('input-reading').addEventListener('input', (e) => {
-            const amount = calculateAmount(parseFloat(e.target.value) || 0, activeAccount?.lastReading || 0);
+            const amount = calculateAmount(parseFloat(e.target.value) || 0, activeProperty?.lastReading || 0);
             document.getElementById('display-cost').innerText = formatCurrency(amount);
         });
 
         window.showConfirmation = () => {
             const reading = parseFloat(document.getElementById('input-reading').value);
-            if(isNaN(reading) || reading <= activeAccount.lastReading) return toast("Reading must be higher than previous", "info");
+            if(isNaN(reading) || reading <= activeProperty.lastReading) return toast("Reading must be higher than previous", "info");
             document.getElementById('modal-stage-reading').classList.add('hidden');
             document.getElementById('modal-stage-confirm').classList.remove('hidden');
             document.getElementById('confirm-summary').innerHTML = `
-                <div class="flex justify-between"><span>Homeowner</span><span class="font-black text-right">${activeAccount.name}</span></div>
-                <div class="flex justify-between"><span>Street</span><span class="font-black">${activeAccount.street}</span></div>
-                <div class="flex justify-between"><span>Block / Lot</span><span class="font-black">B${activeAccount.block} L${activeAccount.lot}</span></div>
+                <div class="flex justify-between"><span>Owner</span><span class="font-black text-right">${activeProperty.ownerName || activeProperty.name}</span></div>
+                <div class="flex justify-between"><span>Street</span><span class="font-black">${activeProperty.street}</span></div>
+                <div class="flex justify-between"><span>Block / Lot</span><span class="font-black">B${activeProperty.block} L${activeProperty.lot}</span></div>
                 <div class="border-t border-slate-300 dark:border-slate-700 mt-2 pt-2 flex justify-between text-sm">
                     <span class="font-bold">Reading</span><span class="text-waterDark dark:text-water font-black">${reading.toFixed(1)} m³</span>
                 </div>
@@ -396,27 +391,29 @@
             btn.innerText = "..."; btn.disabled = true;
             try {
                 const readerName = sessionStorage.getItem('aqt_user_name');
-                if(!readerName) {
-                     toast("Session loss. Re-logging...", "error");
-                     setTimeout(() => window.location.href = '../index.html', 1500);
-                     return;
-                }
+                const now = new Date();
                 
                 const readingData = {
-                    accountId: activeAccount.id,
+                    propertyId: activeProperty.id,
+                    ownerUid: activeProperty.ownerUid || null,
+                    billingCycle: now.toISOString().slice(0, 7), // "2026-05"
                     readerId: auth.currentUser.uid,
                     readerName: readerName,
                     reading: reading,
-                    prevReading: activeAccount.lastReading,
-                    consumption: reading - activeAccount.lastReading,
+                    prevReading: activeProperty.lastReading,
+                    consumption: reading - activeProperty.lastReading,
                     timestamp: Date.now(),
                     status: 'pending',
-                    locationAddress: `${activeAccount.street} B${activeAccount.block} L${activeAccount.lot}`,
+                    locationAddress: `${activeProperty.street} B${activeProperty.block} L${activeProperty.lot}`,
                     appliedRates: { ...billingConfig },
-                    estimatedAmount: calculateAmount(reading, activeAccount.lastReading)
+                    estimatedAmount: calculateAmount(reading, activeProperty.lastReading)
                 };
+                
                 await db.ref('readings').push(readingData);
-                await db.ref(`homeowners/${activeAccount.id}`).update({ lastReading: reading });
+                // Note: properties/lastReading is only updated upon STAFF APPROVAL in the new Relational Graph plan.
+                // For now, we update it to maintain dashboard functionality during transition.
+                await db.ref(`properties/${activeProperty.id}`).update({ lastReading: reading });
+                
                 toast("Telemetry Captured", "success");
                 updateHUDStats();
                 closeReadingModal();
@@ -424,22 +421,18 @@
             finally { btn.innerText = "Yes, Upload"; btn.disabled = false; }
         };
 
-        // Real-time listener for the feed
         db.ref('readings').limitToLast(10).on('value', (snap) => {
             updateHUDStats();
             if(snap.exists()) renderFeed(snap.val());
         });
 
-        // AUTH GUARD & INITIALIZATION
         auth.onAuthStateChanged(async (user) => { 
             if (!user) {
                 sessionStorage.clear();
                 window.location.replace('../index.html');
                 return;
             } 
-        
             let userRole = sessionStorage.getItem('aqt_user_role');
-        
             if (!userRole) {
                 try {
                     const snap = await db.ref(`users/${user.uid}`).once('value');
@@ -454,15 +447,13 @@
                     return;
                 }
             }
-        
             if (userRole !== 'reader') {
                 window.location.replace('../index.html?error=unauthorized');
                 return;
             }
-        
             updateHUDStats();
             fetchConfig();
-            fetchStreets(); // POPULATE MODAL ON AUTH SUCCESS
+            fetchStreets();
         });
     </script>
 </body>
