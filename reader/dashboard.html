@@ -126,13 +126,9 @@
                     <i class="bi bi-info-circle-fill text-lg"></i>
                 </div>
                 <div>
-                    <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Prevailing Rate</p>
+                    <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Prevailing Rate</p>
                     <h4 id="rate-summary-text" class="text-xs font-bold text-slate-700 dark:text-slate-300">Syncing rates...</h4>
                 </div>
-            </div>
-            <div class="text-right">
-                <p class="text-[8px] font-bold uppercase opacity-50 mb-2">Base Fee</p>
-                <p id="rate-min-fee" class="text-sm font-black text-waterDark dark:text-water">₱ --</p>
             </div>
         </div>
 
@@ -243,8 +239,8 @@
         };
 
         const updateRateUI = () => {
-            document.getElementById('rate-summary-text').innerText = `1st ${billingConfig.threshold}m³ @ ₱${billingConfig.minFee} + ₱${billingConfig.excessRate}/m³ excess`;
-            document.getElementById('rate-min-fee').innerText = formatCurrency(billingConfig.minFee);
+            // Updated string to provide comprehensive info in the summary line
+            document.getElementById('rate-summary-text').innerText = `₱${billingConfig.minFee} base up to ${billingConfig.threshold}m³ + ₱${billingConfig.excessRate}/m³ excess`;
         };
 
         const updateHUDStats = async () => {
@@ -255,7 +251,6 @@
             const uniqueCapturedAccounts = new Set();
 
             if (rSnap.exists()) {
-                // FIXED: Filter for UNIQUE accounts within the current month
                 const now = new Date();
                 const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
                 
@@ -417,28 +412,22 @@
             if(snap.exists()) renderFeed(snap.val());
         });
 
-        // REFINED SECURITY & ROLE-BASED ACCESS CONTROL (RBAC)
         auth.onAuthStateChanged(async (user) => { 
             if (!user) {
-                // No Firebase session: clear local cache and move to login
                 sessionStorage.clear();
                 window.location.replace('../index.html');
                 return;
             } 
         
-            // 1. Check local session cache
             let userName = sessionStorage.getItem('aqt_user_name');
             let userRole = sessionStorage.getItem('aqt_user_role');
         
-            // 2. Recovery Logic: If cache is empty, fetch from Database
             if (!userName || !userRole) {
-                console.warn("Session cache missing. Attempting surgical recovery...");
                 try {
                     const snap = await db.ref(`users/${user.uid}`).once('value');
                     const userData = snap.val();
         
                     if (userData) {
-                        // Re-populate cache
                         sessionStorage.setItem('aqt_user_name', userData.name);
                         sessionStorage.setItem('aqt_user_role', userData.role);
                         userName = userData.name;
@@ -447,22 +436,16 @@
                         throw new Error("No database profile found.");
                     }
                 } catch (e) {
-                    console.error("Recovery failed. Forcing re-authentication.");
                     auth.signOut().then(() => window.location.replace('../index.html?error=session_loss'));
                     return;
                 }
             }
         
-            // 3. Strict Role Enforcement (The Pastor Pattern)
             if (userRole !== 'reader') {
-                console.error(`Unauthorized access: Role [${userRole}] cannot access Reader Dashboard.`);
-                // Redirect to their correct home or login
                 window.location.replace('../index.html?error=unauthorized');
                 return;
             }
         
-            // 4. Session Confirmed: Initialize UI components
-            console.log(`Session Audited: ${userName} (${userRole})`);
             updateHUDStats();
             fetchConfig();
         });
