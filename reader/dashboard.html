@@ -402,7 +402,7 @@
                     reading: reading,
                     prevReading: activeProperty.lastReading,
                     consumption: reading - activeProperty.lastReading,
-                    timestamp: Date.now(),
+                    timestamp: firebase.database.ServerValue.TIMESTAMP, // TAMPER PROOF SERVER TIME
                     status: 'pending',
                     locationAddress: `${activeProperty.street} B${activeProperty.block} L${activeProperty.lot}`,
                     appliedRates: { ...billingConfig },
@@ -410,8 +410,7 @@
                 };
                 
                 await db.ref('readings').push(readingData);
-                // Note: properties/lastReading is only updated upon STAFF APPROVAL in the new Relational Graph plan.
-                // For now, we update it to maintain dashboard functionality during transition.
+                // LastReading update remains here to keep HUD progress moving until Phase 3 approval logic is live
                 await db.ref(`properties/${activeProperty.id}`).update({ lastReading: reading });
                 
                 toast("Telemetry Captured", "success");
