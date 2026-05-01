@@ -16,13 +16,12 @@ export const login = async (email, password) => {
     const user = userCredential.user;
 
     // Fetch the user's role and preference from the database
-    // We use .once('value') to keep database costs low 
     const snapshot = await db.ref(`users/${user.uid}`).once('value');
     const userData = snapshot.val();
 
     if (userData) {
-      // Store role and settings in session for quick access [cite: 518]
-      sessionStorage.setItem('aqt_role', userData.role);
+      // FIXED: Standardized keys to match Dashboard security checks
+      sessionStorage.setItem('aqt_user_role', userData.role);
       sessionStorage.setItem('aqt_user_name', userData.name);
       
       // Apply saved theme preference
@@ -30,8 +29,11 @@ export const login = async (email, password) => {
 
       toast(`Welcome back, ${userData.name}!`, 'success');
       
-      // Redirect based on the role assigned in the database
-      redirectByRole(userData.role);
+      // SURGICAL ADJUSTMENT: Small delay to ensure Storage write is complete before redirect
+      setTimeout(() => {
+        redirectByRole(userData.role);
+      }, 100);
+
     } else {
       throw new Error("User profile not found.");
     }
@@ -43,7 +45,6 @@ export const login = async (email, password) => {
 
 /**
  * 2. Role-Based Redirector
- * Sends users to their specific starting page.
  */
 const redirectByRole = (role) => {
   switch (role) {
@@ -66,12 +67,11 @@ const redirectByRole = (role) => {
 
 /**
  * 3. Logout
- * Clears local data and ends the Firebase session.
  */
 export const logout = async () => {
   try {
     await auth.signOut();
-    sessionStorage.clear(); // Important: Remove role and sensitive data
+    sessionStorage.clear(); 
     window.location.href = '../index.html';
   } catch (error) {
     toast("Logout failed", 'error');
@@ -80,11 +80,10 @@ export const logout = async () => {
 
 /**
  * 4. Auth State Observer
- * This runs automatically to check if a user is still logged in.
  */
 auth.onAuthStateChanged((user) => {
   if (user) {
-    debug("User is active:", user.email);
+    debug("User session detected:", user.email);
   } else {
     debug("No active session.");
   }
