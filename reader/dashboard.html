@@ -403,46 +403,55 @@
             return div;
         };
 
-        window.submitReading = () => {
+        window.submitReading = async () => {
             const reading = parseFloat(document.getElementById('input-reading').value);
             const btn = document.getElementById('final-submit-btn');
             btn.innerText = "..."; btn.disabled = true;
             
             const newRef = db.ref('readings').push();
             const readingId = newRef.key;
-
+        
             const readingData = {
-                propertyId: activeProperty.id,
-                // [Surgical Addition]: Restoring owner link
+                accountId: activeProperty.accountId, // Using spec v1.2 accountId
                 ownerUid: activeProperty.ownerUid || null,
                 billingCycle: new Date().toISOString().slice(0, 7),
                 readerId: auth.currentUser.uid,
                 readerName: sessionStorage.getItem('aqt_user_name'),
                 reading: reading,
-                // [Surgical Addition]: Baseline for historical integrity
                 prevReading: activeProperty.lastReading || 0,
                 timestamp: firebase.database.ServerValue.TIMESTAMP,
                 locationAddress: `${activeProperty.street} B${activeProperty.block} L${activeProperty.lot}`,
                 status: 'pending',
-                // [Surgical Audit Trail]: Record origin state
                 fromOffline: isDeviceOffline,
-                // [Surgical Addition]: Lock the rates at the time of reading
                 appliedRates: { ...billingConfig }
             };
-
+        
+            // 1. Always save to Outbox first for safety
             let outbox = getOutbox();
             outbox.push({ id: readingId, ...readingData });
             setOutbox(outbox);
-
-            newRef.set(readingData);
-            db.ref(`properties/${activeProperty.id}`).update({ lastReading: reading });
-            
-            toast(`Captured (${isDeviceOffline ? 'Offline' : 'Online'})`, "warning");
-            closeReadingModal();
-            updateHUDStats();
-            renderOutboxOnly();
-            
-            setTimeout(() => { btn.innerText = "Yes, Upload"; btn.disabled = false; }, 1000);
+            renderOutboxOnly(); // Show it immediately in "Waiting"
+        
+            try {
+                // 2. Attempt the upload
+                await newRef.set(readingData);
+                await db.ref(`homeowners/${activeProperty.accountId}`).update({ lastReading: reading });
+        
+                // 3. SURGICAL FIX: If we reach here, upload succeeded. 
+                // Immediately remove from outbox so it transfers to Activity Log without refresh.
+                let updatedOutbox = getOutbox().filter(item => item.id !== readingId);
+                setOutbox(updatedOutbox);
+                
+                toast(`Synced: ${activeProperty.street}`, "success");
+            } catch (e) {
+                console.error("Sync failed, keeping in outbox:", e);
+                toast("Saved to Outbox (Offline)", "warning");
+            } finally {
+                closeReadingModal();
+                updateHUDStats();
+                renderOutboxOnly(); // Refresh the list to show it's gone from "Waiting"
+                setTimeout(() => { btn.innerText = "Yes, Upload"; btn.disabled = false; }, 1000);
+            }
         };
 
         window.identifyProperty = () => {
