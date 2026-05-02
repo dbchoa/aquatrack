@@ -107,20 +107,7 @@
             </div>
         </div>
 
-        <!-- Terminal Outbox -->
-        <div id="outbox-section" class="hidden mb-10">
-            <div class="flex items-center justify-between mb-4 px-2">
-                <h2 class="text-[11px] font-black uppercase tracking-[0.25em] text-amber-600 dark:text-amber-500 flex items-center gap-2">
-                    <span class="relative flex h-2 w-2">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                    </span>
-                    Waiting for Sync
-                </h2>
-                <span id="outbox-count" class="text-[10px] font-bold bg-amber-500 text-white px-2 py-0.5 rounded-full">0</span>
-            </div>
-            <div id="outbox-feed" class="flex flex-col space-y-1"></div>
-        </div>
+        
 
         <div class="grid grid-cols-2 gap-4 mb-4">
             <div class="glass-card p-6 rounded-xl shadow-sm border-water/40 dark:border-water/40">
@@ -145,6 +132,23 @@
             </div>
         </div>
 
+        <!-- Terminal Outbox -->
+        <div id="outbox-section" class="hidden mb-10">
+            <div class="flex items-center justify-between mb-4 px-2">
+                <div class="h-[1px] flex-1 bg-slate-300 dark:bg-slate-800 mr-6 opacity-40"></div>
+                <h2 class="text-[11px] font-black uppercase tracking-[0.25em] text-amber-600 dark:text-amber-500 flex items-center gap-2">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                    </span>
+                    Waiting for Sync
+                </h2>
+                <span id="outbox-count" class="text-[10px] font-bold bg-amber-500 text-white px-2 py-0.5 rounded-full">0</span>
+                <div class="h-[1px] flex-1 bg-slate-300 dark:bg-slate-800 ml-6 opacity-40"></div>
+            </div>
+            <div id="outbox-feed" class="flex flex-col space-y-1"></div>
+        </div>
+        
         <div class="flex items-center justify-between mb-4 px-2">
             <div class="h-[1px] flex-1 bg-slate-300 dark:bg-slate-800 mr-6 opacity-40"></div>
             <h2 class="text-[11px] font-black uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">Activity Log</h2>
