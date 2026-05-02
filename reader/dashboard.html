@@ -305,13 +305,13 @@
             }
         });
 
-        // --- SURGICAL ADDITION: Heartbeat Sync ---
+        // --- SURGICAL ADDITION: background Heartbeat ---
         setInterval(() => {
             if (!isDeviceOffline) {
                 processSyncCleanup();
-                updateHUDStats();
+                updateHUDStats(); 
             }
-        }, 30000);
+        }, 30000); 
 
         const primePropertyCache = () => {
             db.ref('properties').on('value', (snap) => {
@@ -346,25 +346,40 @@
             if(bar) bar.style.width = `${pct}%`;
         };
 
+        // --- ENHANCED: renderFeeds (Supplement from Outbox) ---
         const renderFeeds = (snapshot) => {
             const activityContainer = document.getElementById('readings-feed');
             activityContainer.innerHTML = '';
             
             const outbox = getOutbox();
-            const outboxIds = new Set(outbox.map(item => item.id));
+            let displayItems = [];
 
-            let syncedItems = [];
+            // 1. Add Synced items from Firebase
             snapshot.forEach(child => {
-                if (!outboxIds.has(child.key)) {
-                    syncedItems.push(child.val());
+                displayItems.push({ ...child.val(), isSynced: true });
+            });
+
+            // 2. Supplement with Outbox items that haven't hit the server listener yet
+            outbox.forEach(item => {
+                const alreadySynced = displayItems.some(synced => synced.id === item.id);
+                if (!alreadySynced) {
+                    displayItems.push({ ...item, isSynced: false });
                 }
             });
 
-            const latestSynced = syncedItems.reverse().slice(0, 5);
-            if(latestSynced.length > 0 && latestSynced[0].locationAddress) {
-                document.getElementById('active-street').innerText = latestSynced[0].locationAddress.split(' ')[0] + ' St.';
+            // Descending Sort by timestamp
+            displayItems.sort((a, b) => b.timestamp - a.timestamp);
+
+            // Enforce Strict Limit to 5
+            const latestItems = displayItems.slice(0, 5);
+
+            if(latestItems.length > 0 && latestItems[0].locationAddress) {
+                document.getElementById('active-street').innerText = latestItems[0].locationAddress.split(' ')[0] + ' St.';
             }
-            latestSynced.forEach(r => activityContainer.appendChild(createLogEntry(r, true)));
+
+            latestItems.forEach(item => {
+                activityContainer.appendChild(createLogEntry(item, item.isSynced));
+            });
             
             renderOutboxOnly();
         };
@@ -403,6 +418,7 @@
             
             const newRef = db.ref('readings').push();
             const readingId = newRef.key;
+            const now = Date.now();
 
             const readingData = {
                 id: readingId,
@@ -412,7 +428,7 @@
                 readerName: sessionStorage.getItem('aqt_user_name'),
                 reading: reading,
                 prevReading: activeProperty.lastReading || 0,
-                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                timestamp: now,
                 locationAddress: `${activeProperty.street} B${activeProperty.block} L${activeProperty.lot}`,
                 status: 'pending',
                 fromOffline: isDeviceOffline,
@@ -424,7 +440,9 @@
             setOutbox(outbox);
             renderOutboxOnly();
 
-            newRef.set(readingData).then(() => {
+            const firebaseData = { ...readingData, timestamp: firebase.database.ServerValue.TIMESTAMP };
+            
+            newRef.set(firebaseData).then(() => {
                 let current = getOutbox().filter(item => item.id !== readingId);
                 setOutbox(current);
                 renderOutboxOnly();
