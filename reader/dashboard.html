@@ -130,7 +130,6 @@
             </div>
         </div>
 
-        <!-- Terminal Outbox (Strategically relocated above Activity Log) -->
         <div id="outbox-section" class="hidden mb-10">
             <div class="flex items-center justify-between mb-4 px-2">
                 <div class="h-[1px] flex-1 bg-slate-300 dark:bg-slate-800 mr-6 opacity-40"></div>
@@ -156,7 +155,6 @@
         <div id="readings-feed" class="flex flex-col space-y-1"></div>
     </main>
 
-    <!-- FAB -->
     <div class="fixed bottom-0 left-0 right-0 z-[110] bg-white/90 dark:bg-[#020617]/90 backdrop-blur-xl border-t border-slate-200 dark:border-white/5 px-6 py-5">
         <div class="max-w-xl mx-auto flex justify-center items-center">
             <button id="fab-container" onclick="openReadingModal()" class="relative flex items-center justify-center group active:scale-95 transition-all duration-300">
@@ -173,7 +171,6 @@
         </div>
     </div>
 
-    <!-- Modals -->
     <div id="readingModal" class="hidden fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-start md:items-center justify-center p-6 pt-19 md:pt-6">
         <div class="bg-white/95 dark:bg-slate-900/80 backdrop-blur-2xl w-full max-w-sm rounded-[2.5rem] p-8 border border-white dark:border-white/10 shadow-2xl relative overflow-hidden">
             <div id="modal-stage-locator">
@@ -245,27 +242,23 @@
         let localPropertiesCache = null;
         let isDeviceOffline = false;
 
-        // --- [Surgical]: Offline Outbox & Traceability Logic ---
-
         const getOutbox = () => JSON.parse(localStorage.getItem('aqt_outbox') || '[]');
         const setOutbox = (data) => localStorage.setItem('aqt_outbox', JSON.stringify(data));
 
+        // --- FIXED: Aggressive State-Verification Cleanup ---
         const processSyncCleanup = async () => {
             let outbox = getOutbox();
             if (outbox.length === 0) return;
 
-            let changed = false;
-            for (let i = outbox.length - 1; i >= 0; i--) {
-                const item = outbox[i];
-                const snap = await db.ref(`readings/${item.id}`).once('value');
-                if (snap.exists()) {
-                    outbox.splice(i, 1);
-                    changed = true;
-                }
-            }
+            const snapshot = await db.ref('readings').once('value');
+            if (!snapshot.exists()) return;
 
-            if (changed) {
-                setOutbox(outbox);
+            const remoteData = snapshot.val();
+            // SURGICAL FIX: Only keep items that do NOT exist in the remote DB keys
+            const remainingOutbox = outbox.filter(localItem => !remoteData[localItem.id]);
+
+            if (remainingOutbox.length !== outbox.length) {
+                setOutbox(remainingOutbox);
                 renderOutboxOnly();
             }
         };
@@ -281,13 +274,11 @@
             if (outbox.length > 0) {
                 outboxSection.classList.remove('hidden');
                 outboxCountEl.innerText = outbox.length;
-                outbox.reverse().forEach(r => outboxContainer.appendChild(createLogEntry(r, false)));
+                [...outbox].reverse().forEach(r => outboxContainer.appendChild(createLogEntry(r, false)));
             } else {
                 outboxSection.classList.add('hidden');
             }
         };
-
-        // --- [Standard]: Listeners & Database Functions ---
 
         db.ref(".info/connected").on("value", (snap) => {
             isDeviceOffline = (snap.val() === false);
@@ -314,7 +305,7 @@
         });
 
         const primePropertyCache = () => {
-            db.ref('properties').on('value', (snap) => {
+            db.ref('homeowners').on('value', (snap) => {
                 if(snap.exists()) {
                     localPropertiesCache = snap.val();
                     updateHUDStats();
@@ -331,7 +322,7 @@
             if (rSnap.exists()) {
                 const currentCycle = new Date().toISOString().slice(0, 7);
                 Object.values(rSnap.val()).forEach(r => {
-                    if (r.billingCycle === currentCycle) uniqueCaptured.add(r.propertyId);
+                    if (r.billingCycle === currentCycle) uniqueCaptured.add(r.accountId);
                 });
             }
 
@@ -345,19 +336,13 @@
             document.getElementById('progress-bar').style.width = `${pct}%`;
         };
 
+        // --- FIXED: Simplified Feed Logic to prevent ghosting ---
         const renderFeeds = (snapshot) => {
             const activityContainer = document.getElementById('readings-feed');
             activityContainer.innerHTML = '';
             
-            const outbox = getOutbox();
-            const outboxIds = new Set(outbox.map(item => item.id));
-
             let syncedItems = [];
-            snapshot.forEach(child => {
-                if (!outboxIds.has(child.key)) {
-                    syncedItems.push(child.val());
-                }
-            });
+            snapshot.forEach(child => { syncedItems.push(child.val()); });
 
             const latestSynced = syncedItems.reverse().slice(0, 5);
             if(latestSynced.length > 0 && latestSynced[0].locationAddress) {
@@ -377,7 +362,6 @@
                 ? new Date(r.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
                 : ''; 
 
-            // [Surgical Traceability]: Detect origin mode for dispute resolution
             const originBadge = r.fromOffline === true 
                 ? '<span class="text-[7px] bg-slate-200 dark:bg-slate-800 px-1 rounded text-slate-500 font-black">OFFLINE-ORIGIN</span>' 
                 : '';
@@ -410,9 +394,10 @@
             
             const newRef = db.ref('readings').push();
             const readingId = newRef.key;
-        
+
             const readingData = {
-                accountId: activeProperty.accountId, // Using spec v1.2 accountId
+                readingId: readingId,
+                accountId: activeProperty.accountId,
                 ownerUid: activeProperty.ownerUid || null,
                 billingCycle: new Date().toISOString().slice(0, 7),
                 readerId: auth.currentUser.uid,
@@ -425,31 +410,30 @@
                 fromOffline: isDeviceOffline,
                 appliedRates: { ...billingConfig }
             };
-        
-            // 1. Always save to Outbox first for safety
+
+            // 1. Save to Outbox first
             let outbox = getOutbox();
             outbox.push({ id: readingId, ...readingData });
             setOutbox(outbox);
-            renderOutboxOnly(); // Show it immediately in "Waiting"
-        
+            renderOutboxOnly();
+
             try {
-                // 2. Attempt the upload
+                // 2. Attempt upload
                 await newRef.set(readingData);
                 await db.ref(`homeowners/${activeProperty.accountId}`).update({ lastReading: reading });
-        
-                // 3. SURGICAL FIX: If we reach here, upload succeeded. 
-                // Immediately remove from outbox so it transfers to Activity Log without refresh.
+
+                // 3. SURGICAL FIX: Fast-track removal on success
                 let updatedOutbox = getOutbox().filter(item => item.id !== readingId);
                 setOutbox(updatedOutbox);
                 
                 toast(`Synced: ${activeProperty.street}`, "success");
             } catch (e) {
-                console.error("Sync failed, keeping in outbox:", e);
-                toast("Saved to Outbox (Offline)", "warning");
+                console.error("Sync failed:", e);
+                toast("Saved to Outbox", "warning");
             } finally {
                 closeReadingModal();
                 updateHUDStats();
-                renderOutboxOnly(); // Refresh the list to show it's gone from "Waiting"
+                renderOutboxOnly();
                 setTimeout(() => { btn.innerText = "Yes, Upload"; btn.disabled = false; }, 1000);
             }
         };
@@ -466,7 +450,7 @@
             for(let id in localPropertiesCache) {
                 const p = localPropertiesCache[id];
                 if(p.street === street && p.block.toString() === block.toString() && p.lot.toString().toLowerCase() === lotInput) {
-                    activeProperty = { id, ...p };
+                    activeProperty = { accountId: id, ...p };
                     break;
                 }
             }
