@@ -511,6 +511,14 @@
             if(snap.exists()) renderFeeds(snap);
         });
 
+        // --- SURGICAL ONE-TIME PURGE ---
+const purgeOutbox = () => {
+    localStorage.removeItem('aqt_outbox');
+    alert("Outbox Cleared surgically. You may now remove this function.");
+};
+purgeOutbox(); 
+// -------------------------------
+        
         auth.onAuthStateChanged(async (user) => { 
             if (!user) return window.location.replace('../index.html');
             primePropertyCache();
