@@ -88,8 +88,9 @@
 
     <main class="max-w-xl mx-auto p-6 pt-12 pb-44">
         <div class="mb-10 text-center">
+            <p id="connection-status" class="text-[10px] text-emerald-500 font-bold uppercase tracking-[0.4em] mb-2 opacity-60">● Online</p>
             <h2 class="text-3xl font-black tracking-tighter text-slate-900 dark:text-white uppercase">Reader Dashboard</h2>
-            <p id="connection-status" class="text-[10px] text-emerald-500 font-bold uppercase tracking-[0.4em] mt-2 opacity-60">● Online</p>
+            <p class="text-[11px] font-bold text-waterDark dark:text-water uppercase tracking-widest mt-1">Hello, <span id="reader-name-display">...</span></p>
         </div>
         
         <div class="glass-card p-8 rounded-32 border-b-4 border-water mb-8 bg-white/90 dark:bg-slate-900/50 shadow-2xl relative overflow-hidden">
@@ -291,7 +292,7 @@
                 if(fab) fab.classList.remove('is-offline');
                 if(statusText) {
                     statusText.innerText = "● Online";
-                    statusText.className = "text-[10px] text-emerald-500 font-bold uppercase tracking-[0.4em] mt-2 opacity-60";
+                    statusText.className = "text-[10px] text-emerald-500 font-bold uppercase tracking-[0.4em] mb-2 opacity-60";
                 }
                 if(ping) ping.className = "absolute inset-0 rounded-full bg-waterDark animate-ping opacity-20 pointer-events-none";
                 processSyncCleanup();
@@ -466,8 +467,6 @@
             if(activeProperty) {
                 document.getElementById('modal-stage-locator').classList.add('hidden');
                 document.getElementById('modal-stage-reading').classList.remove('hidden');
-                
-                // REORDERED UI LABELS
                 document.getElementById('display-prop-id').innerText = `${activeProperty.street} B${activeProperty.block} L${activeProperty.lot}`;
                 document.getElementById('display-owner').innerText = activeProperty.ownerName || activeProperty.name;
                 document.getElementById('display-prev').innerText = `${activeProperty.lastReading || 0} m³`;
@@ -522,6 +521,11 @@
 
         auth.onAuthStateChanged(async (user) => { 
             if (!user) return window.location.replace('../index.html');
+            
+            // POPULATE READER NAME FROM SESSION
+            const readerName = sessionStorage.getItem('aqt_user_name') || "Staff";
+            document.getElementById('reader-name-display').innerText = readerName;
+
             primePropertyCache();
             processSyncCleanup();
             const snap = await db.ref('config/billing').once('value');
