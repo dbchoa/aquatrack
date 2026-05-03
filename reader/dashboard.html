@@ -251,9 +251,9 @@
 
             let changed = false;
             for (const item of outbox) {
-                const snap = await db.ref(`readings/${item.id}`).once('value');
+                const snap = await db.ref(`readings/${item.readingId}`).once('value');
                 if (snap.exists()) {
-                    outbox = outbox.filter(o => o.id !== item.id);
+                    outbox = outbox.filter(o => o.readingId !== item.readingId);
                     changed = true;
                 }
             }
@@ -275,7 +275,7 @@
             if (outbox.length > 0) {
                 outboxSection.classList.remove('hidden');
                 outboxCountEl.innerText = outbox.length;
-                outbox.reverse().forEach(r => outboxContainer.appendChild(createLogEntry(r, false)));
+                [...outbox].reverse().forEach(r => outboxContainer.appendChild(createLogEntry(r, false)));
             } else {
                 outboxSection.classList.add('hidden');
             }
@@ -305,7 +305,6 @@
             }
         });
 
-        // --- SURGICAL ADDITION: background Heartbeat ---
         setInterval(() => {
             if (!isDeviceOffline) {
                 processSyncCleanup();
@@ -327,13 +326,19 @@
             const rSnap = await db.ref('readings').once('value');
             const totalUnits = Object.keys(localPropertiesCache).length;
             const uniqueCaptured = new Set();
+            const currentCycle = new Date().toISOString().slice(0, 7);
 
+            // 1. Scan Synced Readings (per v1.5 propertyId anchor)
             if (rSnap.exists()) {
-                const currentCycle = new Date().toISOString().slice(0, 7);
                 Object.values(rSnap.val()).forEach(r => {
-                    if (r.billingCycle === currentCycle && r.accountId) uniqueCaptured.add(r.accountId);
+                    if (r.billingCycle === currentCycle && r.propertyId) uniqueCaptured.add(r.propertyId);
                 });
             }
+
+            // 2. Scan Local Outbox
+            getOutbox().forEach(item => {
+                if (item.billingCycle === currentCycle && item.propertyId) uniqueCaptured.add(item.propertyId);
+            });
 
             const capturedCount = uniqueCaptured.size;
             const remaining = Math.max(0, totalUnits - capturedCount);
@@ -346,7 +351,6 @@
             if(bar) bar.style.width = `${pct}%`;
         };
 
-        // --- ENHANCED: renderFeeds (Supplement from Outbox) ---
         const renderFeeds = (snapshot) => {
             const activityContainer = document.getElementById('readings-feed');
             activityContainer.innerHTML = '';
@@ -354,23 +358,21 @@
             const outbox = getOutbox();
             let displayItems = [];
 
-            // 1. Add Synced items from Firebase
+            // Add Synced
             snapshot.forEach(child => {
                 displayItems.push({ ...child.val(), isSynced: true });
             });
 
-            // 2. Supplement with Outbox items that haven't hit the server listener yet
+            // Add Pending (filtering Synced)
             outbox.forEach(item => {
-                const alreadySynced = displayItems.some(synced => synced.id === item.id);
+                const alreadySynced = displayItems.some(synced => synced.readingId === item.readingId);
                 if (!alreadySynced) {
                     displayItems.push({ ...item, isSynced: false });
                 }
             });
 
-            // Descending Sort by timestamp
-            displayItems.sort((a, b) => b.timestamp - a.timestamp);
+            displayItems.sort((a, b) => (b.timestamp?.seconds || b.timestamp) - (a.timestamp?.seconds || a.timestamp));
 
-            // Enforce Strict Limit to 5
             const latestItems = displayItems.slice(0, 5);
 
             if(latestItems.length > 0 && latestItems[0].locationAddress) {
@@ -387,7 +389,8 @@
         const createLogEntry = (r, isSynced) => {
             const div = document.createElement('div');
             div.className = `console-entry ${isSynced ? 'border-water' : 'outbox-entry animate-pulse'}`;
-            const timeDisplay = (typeof r.timestamp === 'number') ? new Date(r.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'Pending';
+            const ts = r.timestamp?.seconds ? r.timestamp.seconds * 1000 : r.timestamp;
+            const timeDisplay = (typeof ts === 'number') ? new Date(ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'Pending';
             const originBadge = r.fromOffline === true ? '<span class="text-[7px] bg-slate-200 dark:bg-slate-800 px-1 rounded text-slate-500 font-black">OFFLINE-ORIGIN</span>' : '';
 
             div.innerHTML = `
@@ -410,7 +413,6 @@
             return div;
         };
 
-        // --- NON-BLOCKING SUBMISSION ---
         window.submitReading = () => {
             const reading = parseFloat(document.getElementById('input-reading').value);
             const btn = document.getElementById('final-submit-btn');
@@ -421,15 +423,15 @@
             const now = Date.now();
 
             const readingData = {
-                id: readingId,
-                accountId: activeProperty.accountId || activeProperty.id,
-                billingCycle: new Date().toISOString().slice(0, 7),
+                readingId: readingId,
+                propertyId: activeProperty.propertyId,
+                locationAddress: `${activeProperty.street} B${activeProperty.block} L${activeProperty.lot}`,
                 readerId: auth.currentUser.uid,
                 readerName: sessionStorage.getItem('aqt_user_name'),
+                billingCycle: new Date().toISOString().slice(0, 7),
                 reading: reading,
                 prevReading: activeProperty.lastReading || 0,
                 timestamp: now,
-                locationAddress: `${activeProperty.street} B${activeProperty.block} L${activeProperty.lot}`,
                 status: 'pending',
                 fromOffline: isDeviceOffline,
                 appliedRates: { ...billingConfig }
@@ -443,12 +445,12 @@
             const firebaseData = { ...readingData, timestamp: firebase.database.ServerValue.TIMESTAMP };
             
             newRef.set(firebaseData).then(() => {
-                let current = getOutbox().filter(item => item.id !== readingId);
+                let current = getOutbox().filter(item => item.readingId !== readingId);
                 setOutbox(current);
                 renderOutboxOnly();
             });
 
-            db.ref(`properties/${activeProperty.id}`).update({ lastReading: reading });
+            db.ref(`properties/${activeProperty.propertyId}`).update({ lastReading: reading });
             
             toast(`Captured (${isDeviceOffline ? 'Offline' : 'Online'})`, isDeviceOffline ? "warning" : "success");
             closeReadingModal();
@@ -469,7 +471,7 @@
             for(let id in localPropertiesCache) {
                 const p = localPropertiesCache[id];
                 if(p.street === street && p.block.toString() === block.toString() && p.lot.toString().toLowerCase() === lotInput) {
-                    activeProperty = { id, ...p, accountId: id };
+                    activeProperty = { propertyId: id, ...p };
                     break;
                 }
             }
@@ -478,7 +480,7 @@
                 document.getElementById('modal-stage-locator').classList.add('hidden');
                 document.getElementById('modal-stage-reading').classList.remove('hidden');
                 document.getElementById('display-owner').innerText = activeProperty.ownerName || activeProperty.name;
-                document.getElementById('display-prop-id').innerText = activeProperty.accountId;
+                document.getElementById('display-prop-id').innerText = activeProperty.propertyId;
                 document.getElementById('display-prev').innerText = `${activeProperty.lastReading || 0} m³`;
             } else toast("Unit not found", "error");
         };
