@@ -88,12 +88,11 @@
 
     <main class="max-w-xl mx-auto p-6 pt-12 pb-44">
         <div class="mb-10 text-center">
-            <p id="connection-status" class="text-[10px] text-emerald-500 font-bold uppercase tracking-[0.4em] mb-2 opacity-60">● Online</p>
             <h2 class="text-3xl font-black tracking-tighter text-slate-900 dark:text-white uppercase">Reader Dashboard</h2>
-            <p class="text-[11px] font-bold text-waterDark dark:text-water uppercase tracking-widest mt-1">Hello, <span id="reader-name-display">...</span></p>
+            <p id="connection-status" class="text-[10px] text-emerald-500 font-bold uppercase tracking-[0.4em] mt-2 opacity-60">● Online</p>
         </div>
         
-        <div class="glass-card p-8 rounded-32 border-b-4 border-water mb-4 bg-white/90 dark:bg-slate-900/50 shadow-2xl relative overflow-hidden">
+        <div class="glass-card p-8 rounded-32 border-b-4 border-water mb-8 bg-white/90 dark:bg-slate-900/50 shadow-2xl relative overflow-hidden">
             <div class="flex justify-between items-end relative z-10">
                 <div>
                     <p class="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.3em] mb-1">Cycle Completion</p>
@@ -108,13 +107,13 @@
             </div>
         </div>
 
-        <div class="glass-card p-6 rounded-2xl mb-4 border-water/20 bg-white/50 dark:bg-slate-900/30 flex justify-between items-center shadow-sm">
-            <div class="flex flex-col">
-                <p class="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Current Focus</p>
+        <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="glass-card p-6 rounded-xl shadow-sm border-water/40 dark:border-water/40">
+                <p class="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Current Street</p>
                 <h4 id="active-street" class="text-xl font-bold text-slate-900 dark:text-white truncate">---</h4>
             </div>
-            <div class="text-right">
-                <p class="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-1">Street Remaining</p>
+            <div class="glass-card p-6 rounded-xl shadow-sm border-water/40 dark:border-water/40">
+                <p class="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Remaining</p>
                 <h4 id="remaining-units" class="text-xl font-bold text-waterDark dark:text-water">-- Units</h4>
             </div>
         </div>
@@ -156,7 +155,7 @@
         <div id="readings-feed" class="flex flex-col space-y-1"></div>
     </main>
 
-    <div class="fixed bottom-0 left-0 right-0 z-[110] bg-white/40 dark:bg-[#020617]/40 backdrop-blur-xl border-t border-white/20 dark:border-white/10 px-6 py-5">
+    <div class="fixed bottom-0 left-0 right-0 z-[110] bg-white/90 dark:bg-[#020617]/90 backdrop-blur-xl border-t border-slate-200 dark:border-white/5 px-6 py-5">
         <div class="max-w-xl mx-auto flex justify-center items-center">
             <button id="fab-container" onclick="openReadingModal()" class="relative flex items-center justify-center group active:scale-95 transition-all duration-300">
                 <span id="fab-ping" class="absolute inset-0 rounded-full bg-waterDark animate-ping opacity-20 pointer-events-none"></span>
@@ -284,26 +283,24 @@
 
         db.ref(".info/connected").on("value", (snap) => {
             isDeviceOffline = (snap.val() === false);
-            const statusText = document.getElementById('connection-status');
             const fab = document.getElementById('fab-container');
+            const statusText = document.getElementById('connection-status');
             const ping = document.getElementById('fab-ping');
 
             if (!isDeviceOffline) {
+                if(fab) fab.classList.remove('is-offline');
                 if(statusText) {
                     statusText.innerText = "● Online";
-                    statusText.className = "text-[10px] text-emerald-500 font-bold uppercase tracking-[0.4em] mb-2 opacity-60";
+                    statusText.className = "text-[10px] text-emerald-500 font-bold uppercase tracking-[0.4em] mt-2 opacity-60";
                 }
-                // FIXED: FAB Color restoration
-                if(fab) fab.classList.remove('is-offline');
                 if(ping) ping.className = "absolute inset-0 rounded-full bg-waterDark animate-ping opacity-20 pointer-events-none";
                 processSyncCleanup();
             } else {
+                if(fab) fab.classList.add('is-offline');
                 if(statusText) {
                     statusText.innerText = "● Offline (Cached)";
-                    statusText.className = "text-[10px] text-warning font-bold uppercase tracking-[0.4em] mb-2 opacity-60";
+                    statusText.className = "text-[10px] text-warning font-bold uppercase tracking-[0.4em] mt-2 opacity-60";
                 }
-                // FIXED: FAB Warning state trigger
-                if(fab) fab.classList.add('is-offline');
                 if(ping) ping.className = "absolute inset-0 rounded-full bg-warning animate-ping opacity-20 pointer-events-none";
             }
         });
@@ -327,40 +324,29 @@
         const updateHUDStats = async () => {
             if(!localPropertiesCache) return;
             const rSnap = await db.ref('readings').once('value');
+            const totalUnits = Object.keys(localPropertiesCache).length;
+            const uniqueCaptured = new Set();
             const currentCycle = new Date().toISOString().slice(0, 7);
-            const activeStreetName = document.getElementById('active-street').innerText.replace(' St.', '').trim();
-            
-            const totalSubdivisionUnits = Object.keys(localPropertiesCache).length;
-            const uniqueCapturedIds = new Set();
 
             if (rSnap.exists()) {
                 Object.values(rSnap.val()).forEach(r => {
-                    if (r.billingCycle === currentCycle && r.propertyId) uniqueCapturedIds.add(r.propertyId);
+                    if (r.billingCycle === currentCycle && r.propertyId) uniqueCaptured.add(r.propertyId);
                 });
             }
 
             getOutbox().forEach(item => {
-                if (item.billingCycle === currentCycle && item.propertyId) uniqueCapturedIds.add(item.propertyId);
+                if (item.billingCycle === currentCycle && item.propertyId) uniqueCaptured.add(item.propertyId);
             });
 
-            // GLOBAL PROGRESS
-            const subdivisionCapturedCount = uniqueCapturedIds.size;
-            const globalPct = totalSubdivisionUnits > 0 ? Math.min(100, Math.round((subdivisionCapturedCount / totalSubdivisionUnits) * 100)) : 0;
-            document.getElementById('display-progress-pct').innerHTML = `${globalPct}<span class="text-lg opacity-50 ml-1">%</span>`;
-            document.getElementById('display-counts').innerText = `${subdivisionCapturedCount} / ${totalSubdivisionUnits} Total Units`;
-            const bar = document.getElementById('progress-bar');
-            if(bar) bar.style.width = `${globalPct}%`;
+            const capturedCount = uniqueCaptured.size;
+            const remaining = Math.max(0, totalUnits - capturedCount);
+            const pct = totalUnits > 0 ? Math.min(100, Math.round((capturedCount / totalUnits) * 100)) : 0;
 
-            // STREET-SPECIFIC REMAINING
-            if(activeStreetName && activeStreetName !== "---") {
-                const streetProperties = Object.keys(localPropertiesCache).filter(id => localPropertiesCache[id].street === activeStreetName);
-                const streetTotal = streetProperties.length;
-                const streetCaptured = streetProperties.filter(id => uniqueCapturedIds.has(id)).length;
-                const streetRemaining = Math.max(0, streetTotal - streetCaptured);
-                document.getElementById('remaining-units').innerText = `${streetRemaining} Units`;
-            } else {
-                document.getElementById('remaining-units').innerText = `-- Units`;
-            }
+            document.getElementById('display-progress-pct').innerHTML = `${pct}<span class="text-lg opacity-50 ml-1">%</span>`;
+            document.getElementById('display-counts').innerText = `${capturedCount} / ${totalUnits} Units`;
+            document.getElementById('remaining-units').innerText = `${remaining} Units`;
+            const bar = document.getElementById('progress-bar');
+            if(bar) bar.style.width = `${pct}%`;
         };
 
         const renderFeeds = (snapshot) => {
@@ -380,12 +366,10 @@
             const latestItems = displayItems.slice(0, 5);
 
             if(latestItems.length > 0 && latestItems[0].locationAddress) {
-                const newStreet = latestItems[0].locationAddress.split(' ')[0];
-                document.getElementById('active-street').innerText = newStreet + ' St.';
+                document.getElementById('active-street').innerText = latestItems[0].locationAddress.split(' ')[0] + ' St.';
             }
 
             latestItems.forEach(item => { activityContainer.appendChild(createLogEntry(item, item.isSynced)); });
-            updateHUDStats();
             renderOutboxOnly();
         };
 
@@ -394,8 +378,6 @@
             div.className = `console-entry ${isSynced ? 'border-water' : 'outbox-entry animate-pulse'}`;
             const ts = r.timestamp?.seconds ? r.timestamp.seconds * 1000 : r.timestamp;
             const timeDisplay = (typeof ts === 'number') ? new Date(ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'Pending';
-            
-            // FIXED: RESTORED ORIGIN TAG
             const originBadge = r.fromOffline === true ? '<span class="text-[7px] bg-slate-200 dark:bg-slate-800 px-1 rounded text-slate-500 font-black">OFFLINE-ORIGIN</span>' : '';
 
             div.innerHTML = `
@@ -422,6 +404,7 @@
             const reading = parseFloat(document.getElementById('input-reading').value);
             const btn = document.getElementById('final-submit-btn');
             btn.innerText = "..."; btn.disabled = true;
+            
             const newRef = db.ref('readings').push();
             const readingId = newRef.key;
             const now = Date.now();
@@ -447,15 +430,19 @@
             renderOutboxOnly();
 
             const firebaseData = { ...readingData, timestamp: firebase.database.ServerValue.TIMESTAMP };
+            
             newRef.set(firebaseData).then(() => {
                 let current = getOutbox().filter(item => item.readingId !== readingId);
                 setOutbox(current);
                 renderOutboxOnly();
             });
+
             db.ref(`properties/${activeProperty.propertyId}`).update({ lastReading: reading });
+            
             toast(`Captured (${isDeviceOffline ? 'Offline' : 'Online'})`, isDeviceOffline ? "warning" : "success");
             closeReadingModal();
             updateHUDStats();
+            
             setTimeout(() => { btn.innerText = "Yes, Upload"; btn.disabled = false; }, 1000);
         };
 
@@ -465,6 +452,8 @@
             const lotInput = document.getElementById('input-lot').value.trim().toLowerCase();
 
             if(!street || !block || !lotInput) return toast("Missing details", "info");
+            if(!localPropertiesCache) return toast("Waking cache...", "warning");
+
             activeProperty = null;
             for(let id in localPropertiesCache) {
                 const p = localPropertiesCache[id];
@@ -477,6 +466,8 @@
             if(activeProperty) {
                 document.getElementById('modal-stage-locator').classList.add('hidden');
                 document.getElementById('modal-stage-reading').classList.remove('hidden');
+                
+                // REORDERED UI LABELS
                 document.getElementById('display-prop-id').innerText = `${activeProperty.street} B${activeProperty.block} L${activeProperty.lot}`;
                 document.getElementById('display-owner').innerText = activeProperty.ownerName || activeProperty.name;
                 document.getElementById('display-prev').innerText = `${activeProperty.lastReading || 0} m³`;
@@ -495,7 +486,20 @@
             if(isNaN(reading) || reading <= (activeProperty?.lastReading || 0)) return toast("Check value", "info");
             document.getElementById('modal-stage-reading').classList.add('hidden');
             document.getElementById('modal-stage-confirm').classList.remove('hidden');
-            document.getElementById('confirm-summary').innerHTML = `<div class="flex justify-between items-center"><span>Property</span><span class="font-black text-waterDark uppercase text-right">${activeProperty.street}<br>B${activeProperty.block} L${activeProperty.lot}</span></div><div class="flex justify-between text-[10px] opacity-60"><span>Owner</span><span class="font-bold">${activeProperty.ownerName}</span></div><div class="border-t border-slate-300 dark:border-slate-700 mt-2 pt-2 flex justify-between text-sm"><span class="font-bold">Captured Reading</span><span class="text-waterDark dark:text-water font-black">${reading.toFixed(1)} m³</span></div>`;
+            
+            document.getElementById('confirm-summary').innerHTML = `
+                <div class="flex justify-between items-center">
+                    <span>Property</span>
+                    <span class="font-black text-waterDark uppercase text-right">${activeProperty.street}<br>B${activeProperty.block} L${activeProperty.lot}</span>
+                </div>
+                <div class="flex justify-between text-[10px] opacity-60">
+                    <span>Owner</span>
+                    <span class="font-bold">${activeProperty.ownerName}</span>
+                </div>
+                <div class="border-t border-slate-300 dark:border-slate-700 mt-2 pt-2 flex justify-between text-sm">
+                    <span class="font-bold">Captured Reading</span>
+                    <span class="text-waterDark dark:text-water font-black">${reading.toFixed(1)} m³</span>
+                </div>`;
         };
 
         window.openReadingModal = () => { document.getElementById('readingModal').classList.remove('hidden'); resetModalState(); };
@@ -506,17 +510,18 @@
             document.getElementById('modal-stage-confirm').classList.add('hidden');
             document.getElementById('input-reading').value = '';
         };
-        window.backToReading = () => { document.getElementById('modal-stage-confirm').classList.add('hidden'); document.getElementById('modal-stage-reading').classList.remove('hidden'); };
+        window.backToReading = () => {
+            document.getElementById('modal-stage-confirm').classList.add('hidden');
+            document.getElementById('modal-stage-reading').classList.remove('hidden');
+        };
 
         db.ref('readings').limitToLast(5).on('value', (snap) => {
+            updateHUDStats();
             if(snap.exists()) renderFeeds(snap);
-            else updateHUDStats();
         });
 
         auth.onAuthStateChanged(async (user) => { 
             if (!user) return window.location.replace('../index.html');
-            const readerName = sessionStorage.getItem('aqt_user_name') || "Staff";
-            document.getElementById('reader-name-display').innerText = readerName;
             primePropertyCache();
             processSyncCleanup();
             const snap = await db.ref('config/billing').once('value');
@@ -529,7 +534,9 @@
             if (streetSnap.exists() && select) {
                 select.innerHTML = '<option value="" disabled selected>Select Street...</option>';
                 Object.values(streetSnap.val()).forEach(st => {
-                    const opt = document.createElement('option'); opt.value = st.name; opt.textContent = st.fullName; select.appendChild(opt);
+                    const opt = document.createElement('option');
+                    opt.value = st.name; opt.textContent = st.fullName;
+                    select.appendChild(opt);
                 });
             }
         });
