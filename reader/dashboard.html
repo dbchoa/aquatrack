@@ -282,21 +282,28 @@
             }
         };
 
+        // --- FIXED: FAB COLOR CHANGE LOGIC ---
         db.ref(".info/connected").on("value", (snap) => {
             isDeviceOffline = (snap.val() === false);
             const statusText = document.getElementById('connection-status');
+            const fab = document.getElementById('fab-container');
+            const ping = document.getElementById('fab-ping');
 
             if (!isDeviceOffline) {
                 if(statusText) {
                     statusText.innerText = "● Online";
                     statusText.className = "text-[10px] text-emerald-500 font-bold uppercase tracking-[0.4em] mb-2 opacity-60";
                 }
+                if(fab) fab.classList.remove('is-offline');
+                if(ping) ping.className = "absolute inset-0 rounded-full bg-waterDark animate-ping opacity-20 pointer-events-none";
                 processSyncCleanup();
             } else {
                 if(statusText) {
                     statusText.innerText = "● Offline (Cached)";
                     statusText.className = "text-[10px] text-warning font-bold uppercase tracking-[0.4em] mb-2 opacity-60";
                 }
+                if(fab) fab.classList.add('is-offline');
+                if(ping) ping.className = "absolute inset-0 rounded-full bg-warning animate-ping opacity-20 pointer-events-none";
             }
         });
 
@@ -320,10 +327,9 @@
             if(!localPropertiesCache) return;
             const rSnap = await db.ref('readings').once('value');
             const currentCycle = new Date().toISOString().slice(0, 7);
-            
-            // Scoped Calculation Logic
             const activeStreetName = document.getElementById('active-street').innerText.replace(' St.', '').trim();
-            const totalSubdivisionUnits = Object.keys(localPropertiesCache).length;
+            
+            const totalSubUnits = Object.keys(localPropertiesCache).length;
             const uniqueCapturedIds = new Set();
 
             if (rSnap.exists()) {
@@ -331,28 +337,24 @@
                     if (r.billingCycle === currentCycle && r.propertyId) uniqueCapturedIds.add(r.propertyId);
                 });
             }
-
             getOutbox().forEach(item => {
                 if (item.billingCycle === currentCycle && item.propertyId) uniqueCapturedIds.add(item.propertyId);
             });
 
-            // Update Global Progress
-            const subdivisionCapturedCount = uniqueCapturedIds.size;
-            const globalPct = totalSubdivisionUnits > 0 ? Math.min(100, Math.round((subdivisionCapturedCount / totalSubdivisionUnits) * 100)) : 0;
+            const globalCapturedCount = uniqueCapturedIds.size;
+            const globalPct = totalSubUnits > 0 ? Math.min(100, Math.round((globalCapturedCount / totalSubUnits) * 100)) : 0;
             document.getElementById('display-progress-pct').innerHTML = `${globalPct}<span class="text-lg opacity-50 ml-1">%</span>`;
-            document.getElementById('display-counts').innerText = `${subdivisionCapturedCount} / ${totalSubdivisionUnits} Total Units`;
+            document.getElementById('display-counts').innerText = `${globalCapturedCount} / ${totalSubUnits} Total Units`;
             const bar = document.getElementById('progress-bar');
             if(bar) bar.style.width = `${globalPct}%`;
 
-            // Update Scoped Street Remaining
             if(activeStreetName && activeStreetName !== "---") {
-                const streetProperties = Object.keys(localPropertiesCache).filter(id => localPropertiesCache[id].street === activeStreetName);
-                const streetTotal = streetProperties.length;
-                const streetCapturedCount = streetProperties.filter(id => uniqueCapturedIds.has(id)).length;
-                const streetRemaining = Math.max(0, streetTotal - streetCapturedCount);
+                const streetProps = Object.keys(localPropertiesCache).filter(id => localPropertiesCache[id].street === activeStreetName);
+                const streetCapturedCount = streetProps.filter(id => uniqueCapturedIds.has(id)).length;
+                const streetRemaining = Math.max(0, streetProps.length - streetCapturedCount);
                 document.getElementById('remaining-units').innerText = `${streetRemaining} Units`;
             } else {
-                document.getElementById('remaining-units').innerText = `${totalSubdivisionUnits - globalCapturedCount} Units`;
+                document.getElementById('remaining-units').innerText = `${totalSubUnits - globalCapturedCount} Units`;
             }
         };
 
@@ -373,11 +375,12 @@
             const latestItems = displayItems.slice(0, 5);
 
             if(latestItems.length > 0 && latestItems[0].locationAddress) {
-                document.getElementById('active-street').innerText = latestItems[0].locationAddress.split(' ')[0] + ' St.';
+                const newStreet = latestItems[0].locationAddress.split(' ')[0];
+                document.getElementById('active-street').innerText = newStreet + ' St.';
             }
 
             latestItems.forEach(item => { activityContainer.appendChild(createLogEntry(item, item.isSynced)); });
-            updateHUDStats(); // Trigger re-calculation for the specific street
+            updateHUDStats();
             renderOutboxOnly();
         };
 
@@ -386,23 +389,14 @@
             div.className = `console-entry ${isSynced ? 'border-water' : 'outbox-entry animate-pulse'}`;
             const ts = r.timestamp?.seconds ? r.timestamp.seconds * 1000 : r.timestamp;
             const timeDisplay = (typeof ts === 'number') ? new Date(ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'Pending';
-            const originBadge = r.fromOffline === true ? '<span class="text-[7px] bg-slate-200 dark:bg-slate-800 px-1 rounded text-slate-500 font-black">OFFLINE-ORIGIN</span>' : '';
-
             div.innerHTML = `
                 <div class="flex flex-col">
-                    <div class="flex items-center gap-2">
-                        <span class="text-[10px] font-black uppercase text-slate-900 dark:text-white">${r.locationAddress}</span>
-                        ${originBadge}
-                    </div>
+                    <div class="flex items-center gap-2"><span class="text-[10px] font-black uppercase text-slate-900 dark:text-white">${r.locationAddress}</span></div>
                     <span class="text-[9px] text-slate-500 font-bold">${timeDisplay}</span>
                 </div>
                 <div class="text-right">
-                    <div class="font-mono text-sm font-black ${isSynced ? 'text-waterDark dark:text-water' : 'text-amber-600'}">
-                        ${r.reading.toFixed(1)} <span class="text-[8px] opacity-60">m³</span>
-                    </div>
-                    <p class="text-[7px] uppercase font-bold ${isSynced ? 'text-emerald-500' : 'text-amber-500'}">
-                        ${isSynced ? 'Synced' : 'In Outbox'}
-                    </p>
+                    <div class="font-mono text-sm font-black ${isSynced ? 'text-waterDark dark:text-water' : 'text-amber-600'}">${r.reading.toFixed(1)} <span class="text-[8px] opacity-60">m³</span></div>
+                    <p class="text-[7px] uppercase font-bold ${isSynced ? 'text-emerald-500' : 'text-amber-500'}">${isSynced ? 'Synced' : 'In Outbox'}</p>
                 </div>
             `;
             return div;
@@ -412,7 +406,6 @@
             const reading = parseFloat(document.getElementById('input-reading').value);
             const btn = document.getElementById('final-submit-btn');
             btn.innerText = "..."; btn.disabled = true;
-            
             const newRef = db.ref('readings').push();
             const readingId = newRef.key;
             const now = Date.now();
@@ -438,13 +431,11 @@
             renderOutboxOnly();
 
             const firebaseData = { ...readingData, timestamp: firebase.database.ServerValue.TIMESTAMP };
-            
             newRef.set(firebaseData).then(() => {
                 let current = getOutbox().filter(item => item.readingId !== readingId);
                 setOutbox(current);
                 renderOutboxOnly();
             });
-
             db.ref(`properties/${activeProperty.propertyId}`).update({ lastReading: reading });
             toast(`Captured (${isDeviceOffline ? 'Offline' : 'Online'})`, isDeviceOffline ? "warning" : "success");
             closeReadingModal();
@@ -456,7 +447,6 @@
             const street = document.getElementById('input-street').value;
             const block = document.getElementById('input-block').value;
             const lotInput = document.getElementById('input-lot').value.trim().toLowerCase();
-
             if(!street || !block || !lotInput) return toast("Missing details", "info");
             activeProperty = null;
             for(let id in localPropertiesCache) {
@@ -466,7 +456,6 @@
                     break;
                 }
             }
-
             if(activeProperty) {
                 document.getElementById('modal-stage-locator').classList.add('hidden');
                 document.getElementById('modal-stage-reading').classList.remove('hidden');
@@ -488,20 +477,7 @@
             if(isNaN(reading) || reading <= (activeProperty?.lastReading || 0)) return toast("Check value", "info");
             document.getElementById('modal-stage-reading').classList.add('hidden');
             document.getElementById('modal-stage-confirm').classList.remove('hidden');
-            
-            document.getElementById('confirm-summary').innerHTML = `
-                <div class="flex justify-between items-center">
-                    <span>Property</span>
-                    <span class="font-black text-waterDark uppercase text-right">${activeProperty.street}<br>B${activeProperty.block} L${activeProperty.lot}</span>
-                </div>
-                <div class="flex justify-between text-[10px] opacity-60">
-                    <span>Owner</span>
-                    <span class="font-bold">${activeProperty.ownerName}</span>
-                </div>
-                <div class="border-t border-slate-300 dark:border-slate-700 mt-2 pt-2 flex justify-between text-sm">
-                    <span class="font-bold">Captured Reading</span>
-                    <span class="text-waterDark dark:text-water font-black">${reading.toFixed(1)} m³</span>
-                </div>`;
+            document.getElementById('confirm-summary').innerHTML = `<div class="flex justify-between items-center"><span>Property</span><span class="font-black text-waterDark uppercase text-right">${activeProperty.street}<br>B${activeProperty.block} L${activeProperty.lot}</span></div><div class="flex justify-between text-[10px] opacity-60"><span>Owner</span><span class="font-bold">${activeProperty.ownerName}</span></div><div class="border-t border-slate-300 dark:border-slate-700 mt-2 pt-2 flex justify-between text-sm"><span class="font-bold">Captured Reading</span><span class="text-waterDark dark:text-water font-black">${reading.toFixed(1)} m³</span></div>`;
         };
 
         window.openReadingModal = () => { document.getElementById('readingModal').classList.remove('hidden'); resetModalState(); };
@@ -512,10 +488,7 @@
             document.getElementById('modal-stage-confirm').classList.add('hidden');
             document.getElementById('input-reading').value = '';
         };
-        window.backToReading = () => {
-            document.getElementById('modal-stage-confirm').classList.add('hidden');
-            document.getElementById('modal-stage-reading').classList.remove('hidden');
-        };
+        window.backToReading = () => { document.getElementById('modal-stage-confirm').classList.add('hidden'); document.getElementById('modal-stage-reading').classList.remove('hidden'); };
 
         db.ref('readings').limitToLast(5).on('value', (snap) => {
             if(snap.exists()) renderFeeds(snap);
@@ -530,17 +503,12 @@
             processSyncCleanup();
             const snap = await db.ref('config/billing').once('value');
             if (snap.exists()) billingConfig = snap.val();
-            const el = document.getElementById('rate-summary-text');
-            if(el) el.innerText = `₱${billingConfig.minFee} base up to ${billingConfig.threshold}m³ + ₱${billingConfig.excessRate}/m³ excess`;
-            
             const streetSnap = await db.ref('config/streets').once('value');
             const select = document.getElementById('input-street');
             if (streetSnap.exists() && select) {
                 select.innerHTML = '<option value="" disabled selected>Select Street...</option>';
                 Object.values(streetSnap.val()).forEach(st => {
-                    const opt = document.createElement('option');
-                    opt.value = st.name; opt.textContent = st.fullName;
-                    select.appendChild(opt);
+                    const opt = document.createElement('option'); opt.value = st.name; opt.textContent = st.fullName; select.appendChild(opt);
                 });
             }
         });
