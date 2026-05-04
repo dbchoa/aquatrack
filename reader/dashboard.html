@@ -459,8 +459,6 @@
             const reading = parseFloat(document.getElementById('input-reading').value);
             const btn = document.getElementById('final-submit-btn');
             const billingCycle = new Date().toISOString().slice(0, 7);
-            
-            // [Inference] Predictable ID: Property + Month
             const readingId = `${activeProperty.propertyId}_${billingCycle}`;
             const readingRef = db.ref(`readings/${readingId}`);
             const now = Date.now();
@@ -468,15 +466,9 @@
             btn.innerText = "..."; 
             btn.disabled = true;
         
-            // [Inference] HYBRID ANCHOR LOGIC: Establish the "Floor" once per cycle
+            // [Inference] HYBRID ANCHOR LOGIC
             const currentSnap = await readingRef.once('value');
-            let anchorReading = 0;
-        
-            if (currentSnap.exists()) {
-                anchorReading = currentSnap.val().prevReading; // [Inference] Use locked anchor
-            } else {
-                anchorReading = activeProperty.lastReading || 0; // [Inference] Fallback to migration anchor
-            }
+            let anchorReading = currentSnap.exists() ? currentSnap.val().prevReading : (activeProperty.lastReading || 0);
         
             const readingData = {
                 readingId: readingId,
@@ -493,43 +485,56 @@
                 appliedRates: { ...billingConfig }
             };
         
-            // [Inference] Update local outbox first for instant visual feedback
+            // [Inference] STEP 1: Update Local Outbox (Deduplication)
             let outbox = getOutbox();
             const existingIdx = outbox.findIndex(item => item.readingId === readingId);
-            if(existingIdx > -1) {
-                outbox[existingIdx] = readingData;
-            } else {
-                outbox.push(readingData);
-            }
+            if(existingIdx > -1) outbox[existingIdx] = readingData;
+            else outbox.push(readingData);
             
             setOutbox(outbox);
             renderOutboxOnly();
         
-            // [Inference] Server Sync
+            // [Inference] STEP 2: Prepare Firebase Data
             const firebaseData = { ...readingData, timestamp: firebase.database.ServerValue.TIMESTAMP };
             
-            // [Inference] SURGICAL FIX: Using await ensures outbox is cleared BEFORE triggering HUD/Feeds
-            try {
-                await readingRef.set(firebaseData);
-                
-                // 1. Clear outbox entry immediately
+            // [Inference] STEP 3: Connection-Aware Execution
+            if (isDeviceOffline) {
+                // [Inference] FIRE AND FORGET: Do not 'await' when offline so the UI doesn't hang.
+                // Firebase handles the internal queueing automatically.
+                readingRef.set(firebaseData); 
+                finishSubmission(readingId, true);
+            } else {
+                try {
+                    await readingRef.set(firebaseData);
+                    finishSubmission(readingId, false);
+                } catch (error) {
+                    toast("Sync Error", "error");
+                    btn.innerText = "Yes, Upload"; 
+                    btn.disabled = false;
+                }
+            }
+        };
+        
+        // [Inference] HELPER: Cleans up UI in the correct order to prevent race conditions
+        const finishSubmission = (readingId, wasOffline) => {
+            // [Inference] CRITICAL: Clear outbox BEFORE updating HUD/Feeds. 
+            // This allows renderFeeds to see the item as "Synced" immediately.
+            if (!wasOffline) {
                 let current = getOutbox().filter(item => item.readingId !== readingId);
                 setOutbox(current);
-        
-                // 2. Refresh UI components
-                renderOutboxOnly();
-                updateHUDStats(); 
-                
-                toast(`Captured (${isDeviceOffline ? 'Offline' : 'Online'})`, isDeviceOffline ? "warning" : "success");
-            } catch (error) {
-                toast("Sync Error", "error");
-            } finally {
-                closeReadingModal();
-                setTimeout(() => { 
-                    btn.innerText = "Yes, Upload"; 
-                    btn.disabled = false; 
-                }, 1000);
             }
+        
+            renderOutboxOnly();
+            updateHUDStats(); // [Inference] This refresh triggers the feed update
+            
+            toast(`Captured (${wasOffline ? 'Offline' : 'Online'})`, wasOffline ? "warning" : "success");
+            closeReadingModal();
+            
+            const btn = document.getElementById('final-submit-btn');
+            setTimeout(() => { 
+                btn.innerText = "Yes, Upload"; 
+                btn.disabled = false; 
+            }, 1000);
         };
 
         window.identifyProperty = () => {
