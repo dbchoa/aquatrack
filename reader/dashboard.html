@@ -464,16 +464,17 @@
         
             btn.innerText = "..."; btn.disabled = true;
         
-            // [Inference] OFFLINE-AWARE HYBRID ANCHOR
+            // [Inference] OFFLINE-AWARE ANCHOR CHECK
+            // We check the local outbox first. If it's not there, we only check the server if ONLINE.
             let anchorReading = 0;
             const outbox = getOutbox();
             const localEntry = outbox.find(item => item.readingId === readingId);
         
             if (localEntry) {
-                // 1. If it's in the outbox, we already have the anchor locally
+                // Case A: Mistake correction already exists in Outbox
                 anchorReading = localEntry.prevReading;
             } else if (!isDeviceOffline) {
-                // 2. If online and not in outbox, check the server
+                // Case B: Online, check if a record exists on server to lock the anchor
                 try {
                     const currentSnap = await readingRef.once('value');
                     anchorReading = currentSnap.exists() ? currentSnap.val().prevReading : (activeProperty.lastReading || 0);
@@ -481,7 +482,7 @@
                     anchorReading = activeProperty.lastReading || 0;
                 }
             } else {
-                // 3. If offline and not in outbox, fallback to the migration anchor
+                // Case C: Offline and new entry, use the migration anchor from property node
                 anchorReading = activeProperty.lastReading || 0;
             }
         
@@ -500,7 +501,7 @@
                 appliedRates: { ...billingConfig }
             };
         
-            // Update Local Outbox (Deduplication)
+            // Update Local Outbox immediately for deduplication
             let updatedOutbox = getOutbox();
             const existingIdx = updatedOutbox.findIndex(item => item.readingId === readingId);
             if(existingIdx > -1) updatedOutbox[existingIdx] = readingData;
@@ -511,7 +512,7 @@
             const firebaseData = { ...readingData, timestamp: firebase.database.ServerValue.TIMESTAMP };
             
             if (isDeviceOffline) {
-                // [Inference] Fire and forget: Firebase SDK queues the task without pausing execution
+                // [Inference] Fire and forget: No 'await' so the UI transitions immediately
                 readingRef.set(firebaseData); 
                 window.finishSubmission(readingId, true);
             } else {
@@ -527,12 +528,13 @@
         };
         
         window.finishSubmission = (readingId, wasOffline) => {
-            // [Inference] Clear outbox entry BEFORE UI refresh to prevent Activity Log race conditions
+            // [Inference] CRITICAL: Clear outbox BEFORE UI refresh to prevent Activity Log race conditions
             if (!wasOffline) {
                 let current = getOutbox().filter(item => item.readingId !== readingId);
                 localStorage.setItem('aqt_outbox', JSON.stringify(current));
             }
         
+            // Refresh UI Components
             renderOutboxOnly();
             updateHUDStats(); 
             
