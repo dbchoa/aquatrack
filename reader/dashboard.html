@@ -464,27 +464,11 @@
         
             btn.innerText = "..."; btn.disabled = true;
         
-            // [Inference] OFFLINE-AWARE ANCHOR CHECK
-            // We check the local outbox first. If it's not there, we only check the server if ONLINE.
-            let anchorReading = 0;
+            // Use the same floor logic as showConfirmation
+            let anchorReading = activeProperty.lastReading || 0;
             const outbox = getOutbox();
             const localEntry = outbox.find(item => item.readingId === readingId);
-        
-            if (localEntry) {
-                // Case A: Mistake correction already exists in Outbox
-                anchorReading = localEntry.prevReading;
-            } else if (!isDeviceOffline) {
-                // Case B: Online, check if a record exists on server to lock the anchor
-                try {
-                    const currentSnap = await readingRef.once('value');
-                    anchorReading = currentSnap.exists() ? currentSnap.val().prevReading : (activeProperty.lastReading || 0);
-                } catch (e) {
-                    anchorReading = activeProperty.lastReading || 0;
-                }
-            } else {
-                // Case C: Offline and new entry, use the migration anchor from property node
-                anchorReading = activeProperty.lastReading || 0;
-            }
+            if (localEntry) anchorReading = localEntry.prevReading;
         
             const readingData = {
                 readingId: readingId,
@@ -501,7 +485,7 @@
                 appliedRates: { ...billingConfig }
             };
         
-            // Update Local Outbox immediately for deduplication
+            // Update Local Outbox first
             let updatedOutbox = getOutbox();
             const existingIdx = updatedOutbox.findIndex(item => item.readingId === readingId);
             if(existingIdx > -1) updatedOutbox[existingIdx] = readingData;
@@ -512,31 +496,28 @@
             const firebaseData = { ...readingData, timestamp: firebase.database.ServerValue.TIMESTAMP };
             
             if (isDeviceOffline) {
-                // [Inference] Fire and forget: No 'await' so the UI transitions immediately
-                readingRef.set(firebaseData); 
+                readingRef.set(firebaseData); // No await
                 window.finishSubmission(readingId, true);
             } else {
                 try {
-                    await readingRef.set(firebaseData);
+                    await readingRef.set(firebaseData); // Await online
                     window.finishSubmission(readingId, false);
                 } catch (error) {
                     toast("Sync Error", "error");
-                    btn.innerText = "Yes, Upload"; 
-                    btn.disabled = false;
+                    btn.innerText = "Yes, Upload"; btn.disabled = false;
                 }
             }
         };
         
         window.finishSubmission = (readingId, wasOffline) => {
-            // [Inference] CRITICAL: Clear outbox BEFORE UI refresh to prevent Activity Log race conditions
-            if (!wasOffline) {
-                let current = getOutbox().filter(item => item.readingId !== readingId);
-                localStorage.setItem('aqt_outbox', JSON.stringify(current));
-            }
+            // [Verified Fix] Update Storage directly BEFORE any UI calls
+            const currentOutbox = JSON.parse(localStorage.getItem('aqt_outbox') || '[]');
+            const filtered = currentOutbox.filter(item => item.readingId !== readingId);
+            localStorage.setItem('aqt_outbox', JSON.stringify(filtered));
         
-            // Refresh UI Components
+            // UI Updates
             renderOutboxOnly();
-            updateHUDStats(); 
+            updateHUDStats(); // This triggers the feed update via its internal logic
             
             toast(`Captured (${wasOffline ? 'Offline' : 'Online'})`, wasOffline ? "warning" : "success");
             closeReadingModal();
@@ -598,15 +579,21 @@
             const billingCycle = new Date().toISOString().slice(0, 7);
             const readingId = `${activeProperty.propertyId}_${billingCycle}`;
             
-            // [Inference] Check if a record for THIS month already exists to get the locked anchor
-            const snap = await db.ref(`readings/${readingId}`).once('value');
-            
-            // [Inference] HYBRID VALIDATION:
-            // 1. If editing an existing month: Use its locked prevReading.
-            // 2. If new entry for the month: Use the property node's lastReading (Migration Anchor).
-            const monthlyFloor = snap.exists() ? snap.val().prevReading : (activeProperty?.lastReading || 0);
+            // [Verified Fix] OFFLINE-AWARE FLOOR CHECK
+            let monthlyFloor = activeProperty?.lastReading || 0;
+            const outbox = getOutbox();
+            const localEntry = outbox.find(o => o.readingId === readingId);
         
-            // [Inference] Validates against the anchor, allowing downward corrections within the cycle
+            if (localEntry) {
+                monthlyFloor = localEntry.prevReading;
+            } else if (!isDeviceOffline) {
+                try {
+                    // Only 'await' if we are actually online
+                    const snap = await db.ref(`readings/${readingId}`).once('value');
+                    if (snap.exists()) monthlyFloor = snap.val().prevReading;
+                } catch (e) { console.error("Floor fetch skipped"); }
+            }
+        
             if(isNaN(reading) || reading < monthlyFloor) {
                 return toast(`Value must be at least ${monthlyFloor} m³`, "info");
             }
