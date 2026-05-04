@@ -527,14 +527,27 @@
         auth.onAuthStateChanged(async (user) => { 
             if (!user) return window.location.replace('../index.html');
             
-            // SESSION RECOVERY LOGIC
+            // --- DEEP-FETCH SESSION RECOVERY ---
             let readerName = sessionStorage.getItem('aqt_user_name');
-            if(!readerName) {
-                // Pull from profile if storage is empty
-                readerName = user.displayName || "Staff";
+            
+            if(!readerName || readerName === "Staff") {
+                // Attempt 1: Pull from Firebase Auth Profile
+                if (user.displayName) {
+                    readerName = user.displayName;
+                } else {
+                    // Attempt 2: Pull from Database source of truth
+                    try {
+                        const userSnap = await db.ref(`users/${user.uid}/name`).once('value');
+                        readerName = userSnap.exists() ? userSnap.val() : "Staff";
+                    } catch (e) {
+                        readerName = "Staff";
+                    }
+                }
                 sessionStorage.setItem('aqt_user_name', readerName);
             }
-            document.getElementById('reader-name-display').innerText = readerName;
+            
+            const nameEl = document.getElementById('reader-name-display');
+            if(nameEl) nameEl.innerText = readerName;
 
             primePropertyCache();
             processSyncCleanup();
