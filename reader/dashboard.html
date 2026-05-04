@@ -389,9 +389,9 @@
         };
 
         const renderFeeds = (snapshot) => {
-            // [Verified] If we are currently in the middle of a submission, 
-            // wait for finishSubmission to clear the outbox first.
-            if (isProcessingSubmission) return; 
+            // [Verified Fix] If a submission is in progress, block the listener's UI update.
+            // finishSubmission will manually trigger the refresh once the outbox is stable.
+            if (isProcessingSubmission) return;
         
             const activityContainer = document.getElementById('readings-feed');
             activityContainer.innerHTML = '';
@@ -401,7 +401,7 @@
         
             snapshot.forEach(child => {
                 const data = child.val();
-                // Skip if still in Outbox to prevent duplicates
+                // Skip synced items if they are still technically in the Outbox to prevent double-display
                 const isPendingSync = outbox.some(o => o.readingId === data.readingId);
                 if (isPendingSync) return; 
         
@@ -450,7 +450,7 @@
         };
 
         window.submitReading = async () => {
-            isProcessingSubmission = true; // [Verified] Lock the feed renderer
+            isProcessingSubmission = true; // [Verified Lock]
             const reading = parseFloat(document.getElementById('input-reading').value);
             const btn = document.getElementById('final-submit-btn');
             const billingCycle = new Date().toISOString().slice(0, 7);
@@ -459,59 +459,61 @@
         
             btn.innerText = "..."; btn.disabled = true;
         
-            // Offline-safe anchor logic
+            // Anchor Logic (Floor check)
             let anchorReading = activeProperty.lastReading || 0;
             const outbox = getOutbox();
             const localEntry = outbox.find(item => item.readingId === readingId);
             if (localEntry) anchorReading = localEntry.prevReading;
         
             const readingData = {
-                readingId: readingId,
-                propertyId: activeProperty.propertyId,
+                readingId, propertyId: activeProperty.propertyId,
                 locationAddress: `${activeProperty.street} B${activeProperty.block} L${activeProperty.lot}`,
-                readerId: auth.currentUser.uid,
-                readerName: sessionStorage.getItem('aqt_user_name'),
-                billingCycle: billingCycle,
-                reading: reading,
-                prevReading: anchorReading,
-                timestamp: Date.now(),
-                status: 'pending',
-                fromOffline: isDeviceOffline,
-                appliedRates: { ...billingConfig }
+                readerId: auth.currentUser.uid, readerName: sessionStorage.getItem('aqt_user_name'),
+                billingCycle, reading, prevReading: anchorReading, timestamp: Date.now(),
+                status: 'pending', fromOffline: isDeviceOffline, appliedRates: { ...billingConfig }
             };
         
             const firebaseData = { ...readingData, timestamp: firebase.database.ServerValue.TIMESTAMP };
             
+            // [Critical Offline Fix] Update Local Outbox Storage strictly BEFORE calling Firebase .set()
+            // This ensures renderFeeds (if triggered by latency compensation) sees the item in Outbox.
+            let updatedOutbox = getOutbox();
+            const existingIdx = updatedOutbox.findIndex(item => item.readingId === readingId);
+            if(existingIdx > -1) updatedOutbox[existingIdx] = readingData;
+            else updatedOutbox.push(readingData);
+            setOutbox(updatedOutbox);
+            renderOutboxOnly();
+        
             if (isDeviceOffline) {
-                // [Issue 1 Fix] Update Outbox FIRST, then trigger Firebase
-                let updatedOutbox = getOutbox();
-                updatedOutbox.push(readingData);
-                setOutbox(updatedOutbox);
-                
-                readingRef.set(firebaseData); // Firebase triggers local listener here
+                readingRef.set(firebaseData); // No await. Firebase triggers listener immediately.
                 window.finishSubmission(readingId, true);
             } else {
                 try {
                     await readingRef.set(firebaseData);
                     window.finishSubmission(readingId, false);
                 } catch (error) {
-                    isProcessingSubmission = false;
-                    toast("Sync Error", "error");
+                    isProcessingSubmission = false; // Release lock on error
+                    toast("Connection Error", "error");
                     btn.innerText = "Yes, Upload"; btn.disabled = false;
                 }
             }
         };
         
         window.finishSubmission = (readingId, wasOffline) => {
-            // [Issue 2 Fix] Clear Outbox strictly before unlocking the Feed
-            const currentOutbox = JSON.parse(localStorage.getItem('aqt_outbox') || '[]');
-            const filtered = currentOutbox.filter(item => item.readingId !== readingId);
-            localStorage.setItem('aqt_outbox', JSON.stringify(filtered));
-        
-            isProcessingSubmission = false; // [Verified] Unlock the feed renderer
+            // [Critical Online Fix] Only clear outbox if synced. 
+            // If offline, the item MUST stay in the outbox.
+            if (!wasOffline) {
+                const current = getOutbox().filter(item => item.readingId !== readingId);
+                localStorage.setItem('aqt_outbox', JSON.stringify(current));
+            }
         
             renderOutboxOnly();
-            // Manually trigger a fresh render of the feeds now that Outbox is clear
+            updateHUDStats();
+            
+            // Release the UI Lock
+            isProcessingSubmission = false; 
+        
+            // Manually force a clean Activity Log render now that outbox is stable
             db.ref('readings').limitToLast(5).once('value', (snap) => {
                 if(snap.exists()) renderFeeds(snap);
             });
@@ -521,8 +523,7 @@
             
             const btn = document.getElementById('final-submit-btn');
             setTimeout(() => { 
-                btn.innerText = "Yes, Upload"; 
-                btn.disabled = false; 
+                if(btn) { btn.innerText = "Yes, Upload"; btn.disabled = false; }
             }, 1000);
         };
 
