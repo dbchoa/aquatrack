@@ -115,7 +115,7 @@
                 <h4 id="active-street" class="text-xl font-bold text-slate-900 dark:text-white truncate">---</h4>
             </div>
             <div class="glass-card p-6 rounded-xl shadow-sm border-water/40 dark:border-water/40">
-                <p class="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Remaining</p>
+                <p class="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Unread on Street</p>
                 <h4 id="remaining-units" class="text-xl font-bold text-waterDark dark:text-water">-- Units</h4>
             </div>
         </div>
@@ -326,29 +326,46 @@
         const updateHUDStats = async () => {
             if(!localPropertiesCache) return;
             const rSnap = await db.ref('readings').once('value');
-            const totalUnits = Object.keys(localPropertiesCache).length;
-            const uniqueCaptured = new Set();
+            const totalSubdivisionUnits = Object.keys(localPropertiesCache).length;
+            const uniqueCapturedIds = new Set();
             const currentCycle = new Date().toISOString().slice(0, 7);
 
+            // Create set of all properties already read this cycle
             if (rSnap.exists()) {
                 Object.values(rSnap.val()).forEach(r => {
-                    if (r.billingCycle === currentCycle && r.propertyId) uniqueCaptured.add(r.propertyId);
+                    if (r.billingCycle === currentCycle && r.propertyId) uniqueCapturedIds.add(r.propertyId);
                 });
             }
-
             getOutbox().forEach(item => {
-                if (item.billingCycle === currentCycle && item.propertyId) uniqueCaptured.add(item.propertyId);
+                if (item.billingCycle === currentCycle && item.propertyId) uniqueCapturedIds.add(item.propertyId);
             });
 
-            const capturedCount = uniqueCaptured.size;
-            const remaining = Math.max(0, totalUnits - capturedCount);
-            const pct = totalUnits > 0 ? Math.min(100, Math.round((capturedCount / totalUnits) * 100)) : 0;
-
-            document.getElementById('display-progress-pct').innerHTML = `${pct}<span class="text-lg opacity-50 ml-1">%</span>`;
-            document.getElementById('display-counts').innerText = `${capturedCount} / ${totalUnits} Units`;
-            document.getElementById('remaining-units').innerText = `${remaining} Units`;
+            // Update Global Progress (Main Card)
+            const globalCapturedCount = uniqueCapturedIds.size;
+            const globalPct = totalSubdivisionUnits > 0 ? Math.min(100, Math.round((globalCapturedCount / totalSubdivisionUnits) * 100)) : 0;
+            document.getElementById('display-progress-pct').innerHTML = `${globalPct}<span class="text-lg opacity-50 ml-1">%</span>`;
+            document.getElementById('display-counts').innerText = `${globalCapturedCount} / ${totalSubdivisionUnits} Total Units`;
             const bar = document.getElementById('progress-bar');
-            if(bar) bar.style.width = `${pct}%`;
+            if(bar) bar.style.width = `${globalPct}%`;
+
+            // --- SURGICAL SCOPED LOGIC: STREET REMAINING ---
+            const activeStreetName = document.getElementById('active-street').innerText.replace(' St.', '').trim();
+            
+            if(activeStreetName && activeStreetName !== "---") {
+                // Filter cache for properties on THIS street only
+                const streetProperties = Object.keys(localPropertiesCache).filter(id => localPropertiesCache[id].street === activeStreetName);
+                const streetTotal = streetProperties.length;
+                
+                // Count how many of those street properties are in the Captured Set
+                const streetCapturedCount = streetProperties.filter(id => uniqueCapturedIds.has(id)).length;
+                const streetRemaining = Math.max(0, streetTotal - streetCapturedCount);
+                
+                document.getElementById('remaining-units').innerText = `${streetRemaining} Units`;
+            } else {
+                // Fallback if no street is detected yet
+                const subdivisionRemaining = Math.max(0, totalSubdivisionUnits - globalCapturedCount);
+                document.getElementById('remaining-units').innerText = `${subdivisionRemaining} Units`;
+            }
         };
 
         // --- FIXED: renderFeeds Logic (Removed outbox supplementation) ---
