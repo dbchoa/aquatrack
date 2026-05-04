@@ -460,7 +460,7 @@
             const btn = document.getElementById('final-submit-btn');
             const billingCycle = new Date().toISOString().slice(0, 7);
             
-            // [Inference] KEY STRATEGY: Create a predictable ID based on Property and Month
+            // [Inference] Predictable ID: Property + Month
             const readingId = `${activeProperty.propertyId}_${billingCycle}`;
             const readingRef = db.ref(`readings/${readingId}`);
             const now = Date.now();
@@ -468,17 +468,14 @@
             btn.innerText = "..."; 
             btn.disabled = true;
         
-            // [Inference] HYBRID ANCHOR LOGIC
-            // 1. Check if a record for THIS month already exists
+            // [Inference] HYBRID ANCHOR LOGIC: Establish the "Floor" once per cycle
             const currentSnap = await readingRef.once('value');
             let anchorReading = 0;
         
             if (currentSnap.exists()) {
-                // [Inference] OVERWRITE CASE: Use the prevReading already locked into this month's record
-                anchorReading = currentSnap.val().prevReading;
+                anchorReading = currentSnap.val().prevReading; // [Inference] Use locked anchor
             } else {
-                // [Inference] NEW ENTRY CASE: Fallback to the Property Node (Migration/Onboarding Anchor)
-                anchorReading = activeProperty.lastReading || 0;
+                anchorReading = activeProperty.lastReading || 0; // [Inference] Fallback to migration anchor
             }
         
             const readingData = {
@@ -489,7 +486,6 @@
                 readerName: sessionStorage.getItem('aqt_user_name'),
                 billingCycle: billingCycle,
                 reading: reading,
-                // [Inference] This anchor is now "sticky" for the rest of the cycle
                 prevReading: anchorReading,
                 timestamp: now,
                 status: 'pending',
@@ -497,7 +493,7 @@
                 appliedRates: { ...billingConfig }
             };
         
-            // [Inference] DEDUPLICATION: Replace existing item in outbox if this property is already present
+            // [Inference] Update local outbox first for instant visual feedback
             let outbox = getOutbox();
             const existingIdx = outbox.findIndex(item => item.readingId === readingId);
             if(existingIdx > -1) {
@@ -509,14 +505,32 @@
             setOutbox(outbox);
             renderOutboxOnly();
         
-            // [Inference] Use .set() instead of .push() to overwrite existing folder for this month
+            // [Inference] Server Sync
             const firebaseData = { ...readingData, timestamp: firebase.database.ServerValue.TIMESTAMP };
             
-            readingRef.set(firebaseData).then(() => {
+            // [Inference] SURGICAL FIX: Using await ensures outbox is cleared BEFORE triggering HUD/Feeds
+            try {
+                await readingRef.set(firebaseData);
+                
+                // 1. Clear outbox entry immediately
                 let current = getOutbox().filter(item => item.readingId !== readingId);
                 setOutbox(current);
+        
+                // 2. Refresh UI components
                 renderOutboxOnly();
-            });
+                updateHUDStats(); 
+                
+                toast(`Captured (${isDeviceOffline ? 'Offline' : 'Online'})`, isDeviceOffline ? "warning" : "success");
+            } catch (error) {
+                toast("Sync Error", "error");
+            } finally {
+                closeReadingModal();
+                setTimeout(() => { 
+                    btn.innerText = "Yes, Upload"; 
+                    btn.disabled = false; 
+                }, 1000);
+            }
+        };
         
             // [Inference] SURGICAL REMOVAL: 
             // We no longer update activeProperty.lastReading. 
@@ -558,10 +572,22 @@
             } else toast("Unit not found", "error");
         };
 
-        document.getElementById('input-reading').addEventListener('input', (e) => {
+        document.getElementById('input-reading').addEventListener('input', async (e) => {
             const val = parseFloat(e.target.value) || 0;
-            const consumption = Math.max(0, val - (activeProperty?.lastReading || 0));
-            const amount = consumption <= billingConfig.threshold ? billingConfig.minFee : billingConfig.minFee + ((consumption - billingConfig.threshold) * billingConfig.excessRate);
+            const billingCycle = new Date().toISOString().slice(0, 7);
+            const readingId = `${activeProperty.propertyId}_${billingCycle}`;
+            
+            // [Inference] HYBRID ANCHOR: Check if we have a locked anchor for this month
+            // We check the local outbox first for instant offline feedback, then fallback to property
+            const outbox = getOutbox();
+            const localEntry = outbox.find(o => o.readingId === readingId);
+            const anchor = localEntry ? localEntry.prevReading : (activeProperty?.lastReading || 0);
+        
+            const consumption = Math.max(0, val - anchor);
+            const amount = consumption <= billingConfig.threshold 
+                ? billingConfig.minFee 
+                : billingConfig.minFee + ((consumption - billingConfig.threshold) * billingConfig.excessRate);
+            
             document.getElementById('display-cost').innerText = formatCurrency(amount);
         });
 
