@@ -366,41 +366,62 @@
             }
         };
 
-        const renderFeeds = (snapshot) => {
-            const activityContainer = document.getElementById('readings-feed');
-            activityContainer.innerHTML = '';
-            
-            let displayItems = [];
-            
-            snapshot.forEach(child => {
-                const data = child.val();
-                
-                // --- CRITICAL SURGERY: IGNORE LATENCY COMPENSATION ---
-                // We only want items that have been acknowledged by the server.
-                // In Offline mode, Firebase sets timestamp to a local estimate.
-                // We filter out anything that is tagged fromOffline but doesn't have a final server timestamp yet.
-                if (data.status === 'pending' && data.fromOffline === true) {
-                    return; // Skip this item, let the Outbox handle it
-                }
+        // --- FIXED: renderFeeds Logic (Removed outbox supplementation) ---
 
-                displayItems.push({ ...data, isSynced: true });
+        const renderFeeds = (snapshot) => {
+
+            const activityContainer = document.getElementById('readings-feed');
+
+            activityContainer.innerHTML = '';
+
+            
+
+            let displayItems = [];
+
+            // Strictly showing server-synced items from the snapshot provided by the Firebase listener
+
+            snapshot.forEach(child => { 
+
+                displayItems.push({ ...child.val(), isSynced: true }); 
+
             });
+
+
+
+            // Descending Sort by server timestamp
 
             displayItems.sort((a, b) => (b.timestamp?.seconds || b.timestamp) - (a.timestamp?.seconds || a.timestamp));
+
             const latestItems = displayItems.slice(0, 5);
 
+
+
             if(latestItems.length > 0 && latestItems[0].locationAddress) {
+
+                // Remove the " Bxx Lxx" part to keep the full street name
+
                 const fullAddress = latestItems[0].locationAddress;
+
                 const streetPart = fullAddress.split(/ B\d+/)[0]; 
+
                 document.getElementById('active-street').innerText = streetPart + ' St.';
+
             }
 
-            latestItems.forEach(item => {
-                activityContainer.appendChild(createLogEntry(item, true));
+
+
+            latestItems.forEach(item => { 
+
+                activityContainer.appendChild(createLogEntry(item, true)); 
+
             });
+
             
+
             updateHUDStats();
-            renderOutboxOnly();
+
+            renderOutboxOnly(); // Outbox section handles local non-synced items independently
+
         };
 
         const createLogEntry = (r, isSynced) => {
