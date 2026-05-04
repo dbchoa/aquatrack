@@ -366,62 +366,45 @@
             }
         };
 
-        // --- FIXED: renderFeeds Logic (Removed outbox supplementation) ---
-
         const renderFeeds = (snapshot) => {
-
             const activityContainer = document.getElementById('readings-feed');
-
             activityContainer.innerHTML = '';
-
             
-
             let displayItems = [];
+            const outbox = getOutbox();
 
-            // Strictly showing server-synced items from the snapshot provided by the Firebase listener
+            snapshot.forEach(child => {
+                const data = child.val();
+                
+                // --- SURGICAL ISOLATION LOGIC ---
+                // We check if this specific readingId is still present in our local Outbox.
+                // If it is, Firebase is currently using "Latency Compensation" to show it locally.
+                // We skip it here to let the Outbox section handle it.
+                const isPendingSync = outbox.some(o => o.readingId === data.readingId);
 
-            snapshot.forEach(child => { 
+                if (isPendingSync) {
+                    return; // Skip: Item is currently in the Outbox
+                }
 
-                displayItems.push({ ...child.val(), isSynced: true }); 
-
+                displayItems.push({ ...data, isSynced: true });
             });
 
-
-
-            // Descending Sort by server timestamp
-
+            // Descending Sort (Server items usually have valid timestamps here)
             displayItems.sort((a, b) => (b.timestamp?.seconds || b.timestamp) - (a.timestamp?.seconds || a.timestamp));
-
             const latestItems = displayItems.slice(0, 5);
 
-
-
             if(latestItems.length > 0 && latestItems[0].locationAddress) {
-
-                // Remove the " Bxx Lxx" part to keep the full street name
-
                 const fullAddress = latestItems[0].locationAddress;
-
                 const streetPart = fullAddress.split(/ B\d+/)[0]; 
-
                 document.getElementById('active-street').innerText = streetPart + ' St.';
-
             }
 
-
-
-            latestItems.forEach(item => { 
-
-                activityContainer.appendChild(createLogEntry(item, true)); 
-
+            latestItems.forEach(item => {
+                activityContainer.appendChild(createLogEntry(item, true));
             });
-
             
-
             updateHUDStats();
-
-            renderOutboxOnly(); // Outbox section handles local non-synced items independently
-
+            renderOutboxOnly();
         };
 
         const createLogEntry = (r, isSynced) => {
