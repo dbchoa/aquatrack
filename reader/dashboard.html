@@ -450,7 +450,7 @@
         };
 
         window.submitReading = async () => {
-            isProcessingSubmission = true; // [Verified Lock]
+            isProcessingSubmission = true; // LOCK ON
             const reading = parseFloat(document.getElementById('input-reading').value);
             const btn = document.getElementById('final-submit-btn');
             const billingCycle = new Date().toISOString().slice(0, 7);
@@ -459,7 +459,7 @@
         
             btn.innerText = "..."; btn.disabled = true;
         
-            // Anchor Logic (Floor check)
+            // Anchor logic
             let anchorReading = activeProperty.lastReading || 0;
             const outbox = getOutbox();
             const localEntry = outbox.find(item => item.readingId === readingId);
@@ -473,10 +473,7 @@
                 status: 'pending', fromOffline: isDeviceOffline, appliedRates: { ...billingConfig }
             };
         
-            const firebaseData = { ...readingData, timestamp: firebase.database.ServerValue.TIMESTAMP };
-            
-            // [Critical Offline Fix] Update Local Outbox Storage strictly BEFORE calling Firebase .set()
-            // This ensures renderFeeds (if triggered by latency compensation) sees the item in Outbox.
+            // [Verified Fix] Commit to Outbox BEFORE triggering Firebase cache
             let updatedOutbox = getOutbox();
             const existingIdx = updatedOutbox.findIndex(item => item.readingId === readingId);
             if(existingIdx > -1) updatedOutbox[existingIdx] = readingData;
@@ -484,39 +481,40 @@
             setOutbox(updatedOutbox);
             renderOutboxOnly();
         
+            const firebaseData = { ...readingData, timestamp: firebase.database.ServerValue.TIMESTAMP };
+            
             if (isDeviceOffline) {
-                readingRef.set(firebaseData); // No await. Firebase triggers listener immediately.
+                readingRef.set(firebaseData); 
                 window.finishSubmission(readingId, true);
             } else {
                 try {
                     await readingRef.set(firebaseData);
                     window.finishSubmission(readingId, false);
                 } catch (error) {
-                    isProcessingSubmission = false; // Release lock on error
-                    toast("Connection Error", "error");
+                    isProcessingSubmission = false; // Release on error
+                    toast("Sync Error", "error");
                     btn.innerText = "Yes, Upload"; btn.disabled = false;
                 }
             }
         };
         
         window.finishSubmission = (readingId, wasOffline) => {
-            // [Critical Online Fix] Only clear outbox if synced. 
-            // If offline, the item MUST stay in the outbox.
+            // [Verified Fix] Only clear if it actually reached the server
             if (!wasOffline) {
-                const current = getOutbox().filter(item => item.readingId !== readingId);
-                localStorage.setItem('aqt_outbox', JSON.stringify(current));
+                const filtered = getOutbox().filter(item => item.readingId !== readingId);
+                localStorage.setItem('aqt_outbox', JSON.stringify(filtered));
             }
         
             renderOutboxOnly();
             updateHUDStats();
             
-            // Release the UI Lock
-            isProcessingSubmission = false; 
-        
-            // Manually force a clean Activity Log render now that outbox is stable
-            db.ref('readings').limitToLast(5).once('value', (snap) => {
-                if(snap.exists()) renderFeeds(snap);
-            });
+            // Release lock and force a clean re-render of the feeds
+            setTimeout(() => {
+                isProcessingSubmission = false; 
+                db.ref('readings').orderByChild('timestamp').limitToLast(5).once('value', (snap) => {
+                    if(snap.exists()) renderFeeds(snap);
+                });
+            }, 200); // 200ms allows disk write to finish
             
             toast(`Captured (${wasOffline ? 'Offline' : 'Online'})`, wasOffline ? "warning" : "success");
             closeReadingModal();
@@ -627,11 +625,11 @@
             document.getElementById('modal-stage-reading').classList.remove('hidden');
         };
 
-        db.ref('readings').limitToLast(5).on('value', (snap) => {
+        // REPLACE THIS LINE
+        db.ref('readings').orderByChild('timestamp').limitToLast(5).on('value', (snap) => {
             updateHUDStats();
             if(snap.exists()) renderFeeds(snap);
         });
-
         auth.onAuthStateChanged(async (user) => { 
             if (!user) return window.location.replace('../index.html');
             
