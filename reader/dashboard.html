@@ -531,20 +531,6 @@
                 }, 1000);
             }
         };
-        
-            // [Inference] SURGICAL REMOVAL: 
-            // We no longer update activeProperty.lastReading. 
-            // This ensures showConfirmation always validates against the original month-start value.
-            
-            toast(`Captured (${isDeviceOffline ? 'Offline' : 'Online'})`, isDeviceOffline ? "warning" : "success");
-            closeReadingModal();
-            updateHUDStats();
-            
-            setTimeout(() => { 
-                btn.innerText = "Yes, Upload"; 
-                btn.disabled = false; 
-            }, 1000);
-        };
 
         window.identifyProperty = () => {
             const street = document.getElementById('input-street').value;
