@@ -464,9 +464,26 @@
         
             btn.innerText = "..."; btn.disabled = true;
         
-            // [Inference] Hybrid Anchor Logic
-            const currentSnap = await readingRef.once('value');
-            let anchorReading = currentSnap.exists() ? currentSnap.val().prevReading : (activeProperty.lastReading || 0);
+            // [Inference] OFFLINE-AWARE HYBRID ANCHOR
+            let anchorReading = 0;
+            const outbox = getOutbox();
+            const localEntry = outbox.find(item => item.readingId === readingId);
+        
+            if (localEntry) {
+                // 1. If it's in the outbox, we already have the anchor locally
+                anchorReading = localEntry.prevReading;
+            } else if (!isDeviceOffline) {
+                // 2. If online and not in outbox, check the server
+                try {
+                    const currentSnap = await readingRef.once('value');
+                    anchorReading = currentSnap.exists() ? currentSnap.val().prevReading : (activeProperty.lastReading || 0);
+                } catch (e) {
+                    anchorReading = activeProperty.lastReading || 0;
+                }
+            } else {
+                // 3. If offline and not in outbox, fallback to the migration anchor
+                anchorReading = activeProperty.lastReading || 0;
+            }
         
             const readingData = {
                 readingId: readingId,
@@ -483,17 +500,18 @@
                 appliedRates: { ...billingConfig }
             };
         
-            // Update Local Outbox
-            let outbox = getOutbox();
-            const existingIdx = outbox.findIndex(item => item.readingId === readingId);
-            if(existingIdx > -1) outbox[existingIdx] = readingData;
-            else outbox.push(readingData);
-            setOutbox(outbox);
+            // Update Local Outbox (Deduplication)
+            let updatedOutbox = getOutbox();
+            const existingIdx = updatedOutbox.findIndex(item => item.readingId === readingId);
+            if(existingIdx > -1) updatedOutbox[existingIdx] = readingData;
+            else updatedOutbox.push(readingData);
+            setOutbox(updatedOutbox);
             renderOutboxOnly();
         
             const firebaseData = { ...readingData, timestamp: firebase.database.ServerValue.TIMESTAMP };
             
             if (isDeviceOffline) {
+                // [Inference] Fire and forget: Firebase SDK queues the task without pausing execution
                 readingRef.set(firebaseData); 
                 window.finishSubmission(readingId, true);
             } else {
@@ -508,12 +526,11 @@
             }
         };
         
-        // [Inference] Attach to window so HTML onclicks can find it
         window.finishSubmission = (readingId, wasOffline) => {
-            // 1. Clear outbox entry immediately so renderFeeds doesn't skip it
+            // [Inference] Clear outbox entry BEFORE UI refresh to prevent Activity Log race conditions
             if (!wasOffline) {
                 let current = getOutbox().filter(item => item.readingId !== readingId);
-                localStorage.setItem('aqt_outbox', JSON.stringify(current)); // Direct update
+                localStorage.setItem('aqt_outbox', JSON.stringify(current));
             }
         
             renderOutboxOnly();
