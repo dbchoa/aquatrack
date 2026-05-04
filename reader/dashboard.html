@@ -554,7 +554,18 @@
 
         window.showConfirmation = () => {
             const reading = parseFloat(document.getElementById('input-reading').value);
-            if(isNaN(reading) || reading <= (activeProperty?.lastReading || 0)) return toast("Check value", "info");
+            
+            // [Inference] ANCHOR: We use the lastReading from the property node, 
+            // which represents the previous month's final value.
+            const monthlyFloor = activeProperty?.lastReading || 0;
+        
+            // [Inference] Changed from <= to < to allow 0 consumption (same as start of month).
+            // Now you can correct a mistake (e.g., changing 50 down to 25) 
+            // as long as 25 is still >= the monthlyFloor.
+            if(isNaN(reading) || reading < monthlyFloor) {
+                return toast(`Value must be at least ${monthlyFloor} m³`, "info");
+            }
+        
             document.getElementById('modal-stage-reading').classList.add('hidden');
             document.getElementById('modal-stage-confirm').classList.remove('hidden');
             
