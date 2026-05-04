@@ -455,7 +455,7 @@
             return div;
         };
 
-        window.submitReading = () => {
+        window.submitReading = async () => {
             const reading = parseFloat(document.getElementById('input-reading').value);
             const btn = document.getElementById('final-submit-btn');
             const billingCycle = new Date().toISOString().slice(0, 7);
@@ -468,6 +468,19 @@
             btn.innerText = "..."; 
             btn.disabled = true;
         
+            // [Inference] HYBRID ANCHOR LOGIC
+            // 1. Check if a record for THIS month already exists
+            const currentSnap = await readingRef.once('value');
+            let anchorReading = 0;
+        
+            if (currentSnap.exists()) {
+                // [Inference] OVERWRITE CASE: Use the prevReading already locked into this month's record
+                anchorReading = currentSnap.val().prevReading;
+            } else {
+                // [Inference] NEW ENTRY CASE: Fallback to the Property Node (Migration/Onboarding Anchor)
+                anchorReading = activeProperty.lastReading || 0;
+            }
+        
             const readingData = {
                 readingId: readingId,
                 propertyId: activeProperty.propertyId,
@@ -476,9 +489,8 @@
                 readerName: sessionStorage.getItem('aqt_user_name'),
                 billingCycle: billingCycle,
                 reading: reading,
-                // [Inference] ANCHOR: Always use start-of-cycle value for computation to ignore current month corrections
-                prevReading: activeProperty.lastReading || 0,
-                // [Inference] Update timestamp to current submission time
+                // [Inference] This anchor is now "sticky" for the rest of the cycle
+                prevReading: anchorReading,
                 timestamp: now,
                 status: 'pending',
                 fromOffline: isDeviceOffline,
@@ -506,8 +518,9 @@
                 renderOutboxOnly();
             });
         
-            // Update property lastReading for current session persistence
-            db.ref(`properties/${activeProperty.propertyId}`).update({ lastReading: reading });
+            // [Inference] SURGICAL REMOVAL: 
+            // We no longer update activeProperty.lastReading. 
+            // This ensures showConfirmation always validates against the original month-start value.
             
             toast(`Captured (${isDeviceOffline ? 'Offline' : 'Online'})`, isDeviceOffline ? "warning" : "success");
             closeReadingModal();
@@ -552,16 +565,20 @@
             document.getElementById('display-cost').innerText = formatCurrency(amount);
         });
 
-        window.showConfirmation = () => {
+        window.showConfirmation = async () => {
             const reading = parseFloat(document.getElementById('input-reading').value);
+            const billingCycle = new Date().toISOString().slice(0, 7);
+            const readingId = `${activeProperty.propertyId}_${billingCycle}`;
             
-            // [Inference] ANCHOR: We use the lastReading from the property node, 
-            // which represents the previous month's final value.
-            const monthlyFloor = activeProperty?.lastReading || 0;
+            // [Inference] Check if a record for THIS month already exists to get the locked anchor
+            const snap = await db.ref(`readings/${readingId}`).once('value');
+            
+            // [Inference] HYBRID VALIDATION:
+            // 1. If editing an existing month: Use its locked prevReading.
+            // 2. If new entry for the month: Use the property node's lastReading (Migration Anchor).
+            const monthlyFloor = snap.exists() ? snap.val().prevReading : (activeProperty?.lastReading || 0);
         
-            // [Inference] Changed from <= to < to allow 0 consumption (same as start of month).
-            // Now you can correct a mistake (e.g., changing 50 down to 25) 
-            // as long as 25 is still >= the monthlyFloor.
+            // [Inference] Validates against the anchor, allowing downward corrections within the cycle
             if(isNaN(reading) || reading < monthlyFloor) {
                 return toast(`Value must be at least ${monthlyFloor} m³`, "info");
             }
