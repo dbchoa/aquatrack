@@ -243,7 +243,8 @@
         let billingConfig = { threshold: 15, minFee: 200, excessRate: 15 };
         let localPropertiesCache = null;
         let isDeviceOffline = false;
-
+        let isProcessingSubmission = false; // [Verified] Prevents race conditions during UI render
+        
         const getOutbox = () => JSON.parse(localStorage.getItem('aqt_outbox') || '[]');
         const setOutbox = (data) => localStorage.setItem('aqt_outbox', JSON.stringify(data));
 
@@ -388,42 +389,35 @@
         };
 
         const renderFeeds = (snapshot) => {
+            // [Verified] If we are currently in the middle of a submission, 
+            // wait for finishSubmission to clear the outbox first.
+            if (isProcessingSubmission) return; 
+        
             const activityContainer = document.getElementById('readings-feed');
             activityContainer.innerHTML = '';
             
             let displayItems = [];
             const outbox = getOutbox();
-
+        
             snapshot.forEach(child => {
                 const data = child.val();
-                
-                // --- SURGICAL ISOLATION LOGIC ---
-                // We check if this specific readingId is still present in our local Outbox.
-                // If it is, Firebase is currently using "Latency Compensation" to show it locally.
-                // We skip it here to let the Outbox section handle it.
+                // Skip if still in Outbox to prevent duplicates
                 const isPendingSync = outbox.some(o => o.readingId === data.readingId);
-
-                if (isPendingSync) {
-                    return; // Skip: Item is currently in the Outbox
-                }
-
+                if (isPendingSync) return; 
+        
                 displayItems.push({ ...data, isSynced: true });
             });
-
-            // Descending Sort (Server items usually have valid timestamps here)
+        
             displayItems.sort((a, b) => (b.timestamp?.seconds || b.timestamp) - (a.timestamp?.seconds || a.timestamp));
             const latestItems = displayItems.slice(0, 5);
-
+        
             if(latestItems.length > 0 && latestItems[0].locationAddress) {
                 const fullAddress = latestItems[0].locationAddress;
                 const streetPart = fullAddress.split(/ B\d+/)[0]; 
                 document.getElementById('active-street').innerText = streetPart + ' St.';
             }
-
-            latestItems.forEach(item => {
-                activityContainer.appendChild(createLogEntry(item, true));
-            });
-            
+        
+            latestItems.forEach(item => activityContainer.appendChild(createLogEntry(item, true)));
             updateHUDStats();
             renderOutboxOnly();
         };
@@ -456,6 +450,7 @@
         };
 
         window.submitReading = async () => {
+            isProcessingSubmission = true; // [Verified] Lock the feed renderer
             const reading = parseFloat(document.getElementById('input-reading').value);
             const btn = document.getElementById('final-submit-btn');
             const billingCycle = new Date().toISOString().slice(0, 7);
@@ -464,7 +459,7 @@
         
             btn.innerText = "..."; btn.disabled = true;
         
-            // Use the same floor logic as showConfirmation
+            // Offline-safe anchor logic
             let anchorReading = activeProperty.lastReading || 0;
             const outbox = getOutbox();
             const localEntry = outbox.find(item => item.readingId === readingId);
@@ -485,24 +480,22 @@
                 appliedRates: { ...billingConfig }
             };
         
-            // Update Local Outbox first
-            let updatedOutbox = getOutbox();
-            const existingIdx = updatedOutbox.findIndex(item => item.readingId === readingId);
-            if(existingIdx > -1) updatedOutbox[existingIdx] = readingData;
-            else updatedOutbox.push(readingData);
-            setOutbox(updatedOutbox);
-            renderOutboxOnly();
-        
             const firebaseData = { ...readingData, timestamp: firebase.database.ServerValue.TIMESTAMP };
             
             if (isDeviceOffline) {
-                readingRef.set(firebaseData); // No await
+                // [Issue 1 Fix] Update Outbox FIRST, then trigger Firebase
+                let updatedOutbox = getOutbox();
+                updatedOutbox.push(readingData);
+                setOutbox(updatedOutbox);
+                
+                readingRef.set(firebaseData); // Firebase triggers local listener here
                 window.finishSubmission(readingId, true);
             } else {
                 try {
-                    await readingRef.set(firebaseData); // Await online
+                    await readingRef.set(firebaseData);
                     window.finishSubmission(readingId, false);
                 } catch (error) {
+                    isProcessingSubmission = false;
                     toast("Sync Error", "error");
                     btn.innerText = "Yes, Upload"; btn.disabled = false;
                 }
@@ -510,14 +503,18 @@
         };
         
         window.finishSubmission = (readingId, wasOffline) => {
-            // [Verified Fix] Update Storage directly BEFORE any UI calls
+            // [Issue 2 Fix] Clear Outbox strictly before unlocking the Feed
             const currentOutbox = JSON.parse(localStorage.getItem('aqt_outbox') || '[]');
             const filtered = currentOutbox.filter(item => item.readingId !== readingId);
             localStorage.setItem('aqt_outbox', JSON.stringify(filtered));
         
-            // UI Updates
+            isProcessingSubmission = false; // [Verified] Unlock the feed renderer
+        
             renderOutboxOnly();
-            updateHUDStats(); // This triggers the feed update via its internal logic
+            // Manually trigger a fresh render of the feeds now that Outbox is clear
+            db.ref('readings').limitToLast(5).once('value', (snap) => {
+                if(snap.exists()) renderFeeds(snap);
+            });
             
             toast(`Captured (${wasOffline ? 'Offline' : 'Online'})`, wasOffline ? "warning" : "success");
             closeReadingModal();
