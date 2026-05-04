@@ -271,13 +271,19 @@
             const outboxSection = document.getElementById('outbox-section');
             const outboxCountEl = document.getElementById('outbox-count');
             
+            // [Inference] Get the deduplicated outbox from storage
             const outbox = getOutbox();
             outboxContainer.innerHTML = '';
-
+        
             if (outbox.length > 0) {
                 outboxSection.classList.remove('hidden');
+                // [Inference] The count will now correctly show 1 per house, even after multiple offline edits
                 outboxCountEl.innerText = outbox.length;
-                [...outbox].reverse().forEach(r => outboxContainer.appendChild(createLogEntry(r, false)));
+                
+                // [Inference] Render unique pending entries; reverse() ensures the most recent edit is seen first
+                [...outbox].reverse().forEach(r => {
+                    outboxContainer.appendChild(createLogEntry(r, false));
+                });
             } else {
                 outboxSection.classList.add('hidden');
             }
@@ -325,39 +331,54 @@
 
         const updateHUDStats = async () => {
             if(!localPropertiesCache) return;
+            
+            // [Inference] Pulling latest data to check against our unique property keys
             const rSnap = await db.ref('readings').once('value');
-            const totalUnits = Object.keys(localPropertiesCache).length;
-            const uniqueCaptured = new Set();
+            const totalSubdivisionUnits = Object.keys(localPropertiesCache).length;
+            
+            // [Inference] Using a Set ensures that unique IDs (Key Strategy) are only counted once
+            const uniqueCapturedIds = new Set();
             const currentCycle = new Date().toISOString().slice(0, 7);
-
+        
+            // [Inference] 1. Check server data for this month's unique keys
             if (rSnap.exists()) {
                 Object.values(rSnap.val()).forEach(r => {
-                    if (r.billingCycle === currentCycle && r.propertyId) uniqueCaptured.add(r.propertyId);
+                    if (r.billingCycle === currentCycle && r.propertyId) {
+                        uniqueCapturedIds.add(r.propertyId);
+                    }
                 });
             }
-
+        
+            // [Inference] 2. Check local outbox (synced or pending) to maintain real-time HUD accuracy
             getOutbox().forEach(item => {
-                if (item.billingCycle === currentCycle && item.propertyId) uniqueCaptured.add(item.propertyId);
+                if (item.billingCycle === currentCycle && item.propertyId) {
+                    uniqueCapturedIds.add(item.propertyId);
+                }
             });
-
-            const capturedCount = uniqueCaptured.size;
-            const globalPct = totalUnits > 0 ? Math.min(100, Math.round((capturedCount / totalUnits) * 100)) : 0;
-
+        
+            // --- GLOBAL HUD (Top Card) ---
+            const subdivisionCapturedCount = uniqueCapturedIds.size;
+            const globalPct = totalSubdivisionUnits > 0 ? Math.min(100, Math.round((subdivisionCapturedCount / totalSubdivisionUnits) * 100)) : 0;
+        
             document.getElementById('display-progress-pct').innerHTML = `${globalPct}<span class="text-lg opacity-50 ml-1">%</span>`;
-            document.getElementById('display-counts').innerText = `${capturedCount} / ${totalUnits} Units`;
+            document.getElementById('display-counts').innerText = `${subdivisionCapturedCount} / ${totalSubdivisionUnits} Total Units`;
+            
             const bar = document.getElementById('progress-bar');
             if(bar) bar.style.width = `${globalPct}%`;
-
-            // --- SURGICAL SCOPED LOGIC: STREET REMAINING (Improved Parsing) ---
+        
+            // --- STREET HUD (Focus Logic) ---
             const activeStreetDisplay = document.getElementById('active-street').innerText;
             const activeStreetName = activeStreetDisplay.replace(' St.', '').trim();
             
             if(activeStreetName && activeStreetName !== "---") {
+                // [Inference] Filter properties belonging only to the multi-word parsed street name
                 const streetProperties = Object.keys(localPropertiesCache).filter(id => 
                     localPropertiesCache[id].street === activeStreetName
                 );
+                
                 const streetTotal = streetProperties.length;
-                const streetCapturedCount = streetProperties.filter(id => uniqueCaptured.has(id)).length;
+                // [Inference] Check how many unique street properties are present in our Captured Set
+                const streetCapturedCount = streetProperties.filter(id => uniqueCapturedIds.has(id)).length;
                 const streetRemaining = Math.max(0, streetTotal - streetCapturedCount);
                 
                 document.getElementById('remaining-units').innerText = `${streetRemaining} Units`;
@@ -437,47 +458,65 @@
         window.submitReading = () => {
             const reading = parseFloat(document.getElementById('input-reading').value);
             const btn = document.getElementById('final-submit-btn');
-            btn.innerText = "..."; btn.disabled = true;
+            const billingCycle = new Date().toISOString().slice(0, 7);
             
-            const newRef = db.ref('readings').push();
-            const readingId = newRef.key;
+            // [Inference] KEY STRATEGY: Create a predictable ID based on Property and Month
+            const readingId = `${activeProperty.propertyId}_${billingCycle}`;
+            const readingRef = db.ref(`readings/${readingId}`);
             const now = Date.now();
-
+        
+            btn.innerText = "..."; 
+            btn.disabled = true;
+        
             const readingData = {
                 readingId: readingId,
                 propertyId: activeProperty.propertyId,
                 locationAddress: `${activeProperty.street} B${activeProperty.block} L${activeProperty.lot}`,
                 readerId: auth.currentUser.uid,
                 readerName: sessionStorage.getItem('aqt_user_name'),
-                billingCycle: new Date().toISOString().slice(0, 7),
+                billingCycle: billingCycle,
                 reading: reading,
+                // [Inference] ANCHOR: Always use start-of-cycle value for computation to ignore current month corrections
                 prevReading: activeProperty.lastReading || 0,
+                // [Inference] Update timestamp to current submission time
                 timestamp: now,
                 status: 'pending',
                 fromOffline: isDeviceOffline,
                 appliedRates: { ...billingConfig }
             };
-
+        
+            // [Inference] DEDUPLICATION: Replace existing item in outbox if this property is already present
             let outbox = getOutbox();
-            outbox.push(readingData);
+            const existingIdx = outbox.findIndex(item => item.readingId === readingId);
+            if(existingIdx > -1) {
+                outbox[existingIdx] = readingData;
+            } else {
+                outbox.push(readingData);
+            }
+            
             setOutbox(outbox);
             renderOutboxOnly();
-
+        
+            // [Inference] Use .set() instead of .push() to overwrite existing folder for this month
             const firebaseData = { ...readingData, timestamp: firebase.database.ServerValue.TIMESTAMP };
             
-            newRef.set(firebaseData).then(() => {
+            readingRef.set(firebaseData).then(() => {
                 let current = getOutbox().filter(item => item.readingId !== readingId);
                 setOutbox(current);
                 renderOutboxOnly();
             });
-
+        
+            // Update property lastReading for current session persistence
             db.ref(`properties/${activeProperty.propertyId}`).update({ lastReading: reading });
             
             toast(`Captured (${isDeviceOffline ? 'Offline' : 'Online'})`, isDeviceOffline ? "warning" : "success");
             closeReadingModal();
             updateHUDStats();
             
-            setTimeout(() => { btn.innerText = "Yes, Upload"; btn.disabled = false; }, 1000);
+            setTimeout(() => { 
+                btn.innerText = "Yes, Upload"; 
+                btn.disabled = false; 
+            }, 1000);
         };
 
         window.identifyProperty = () => {
