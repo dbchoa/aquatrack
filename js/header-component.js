@@ -10,7 +10,7 @@ export const injectHeader = () => {
     if (!header) return;
 
     // Matching reference structure: bg-glass, sticky top, justify-between
-    header.className = "bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex justify-between items-center sticky top-0 z-[100] w-full transition-all duration-300";
+    header.className = "bg-white/50 dark:bg-slate-900/50 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex justify-between items-center sticky top-0 z-[100] w-full transition-all duration-300";
     
     header.innerHTML = `
         <div class="flex items-center gap-3">
