@@ -89,7 +89,7 @@
     <main class="max-w-xl mx-auto p-6 pt-6 pb-44">
         <!-- REORDERED HEADER -->
         <div class="mb-10 text-center">
-            <p id="connection-status" class="text-[10px] text-emerald-900 font-bold uppercase tracking-[0.4em] mb-2 opacity-80">● Online</p>
+            <p id="connection-status" class="text-[10px] text-emerald-500 font-bold uppercase tracking-[0.4em] mb-2 opacity-80">● Online</p>
             <h2 class="text-3xl font-black tracking-tighter text-slate-900 dark:text-white uppercase">Reader Dashboard</h2>
             <p class="text-[11px] font-bold text-waterDark dark:text-water uppercase tracking-widest mt-1">Hello, <span id="reader-name-display">...</span></p>
         </div>
@@ -303,7 +303,7 @@
                 if(fab) fab.classList.remove('is-offline');
                 if(statusText) {
                     statusText.innerText = "● Online";
-                    statusText.className = "text-[10px] text-emerald-900 font-bold uppercase tracking-[0.4em] mb-2 opacity-80";
+                    statusText.className = "text-[10px] text-emerald-500 font-bold uppercase tracking-[0.4em] mb-2 opacity-80";
                 }
                 if(ping) ping.className = "absolute inset-0 rounded-full bg-waterDark animate-ping opacity-20 pointer-events-none";
                 processSyncCleanup();
