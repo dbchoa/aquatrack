@@ -263,6 +263,7 @@
         let localPropertiesCache = null;
         let isDeviceOffline = false;
         let isProcessingSubmission = false; // [Verified] Prevents race conditions during UI render
+        let uniqueCapturedIds = new Set(); // Global set to track IDs already read
         
         const getOutbox = () => JSON.parse(localStorage.getItem('aqt_outbox') || '[]');
         const setOutbox = (data) => localStorage.setItem('aqt_outbox', JSON.stringify(data));
@@ -352,15 +353,13 @@
         const updateHUDStats = async () => {
             if(!localPropertiesCache) return;
             
-            // [Inference] Pulling latest data to check against our unique property keys
             const rSnap = await db.ref('readings').once('value');
             const totalSubdivisionUnits = Object.keys(localPropertiesCache).length;
             
-            // [Inference] Using a Set ensures that unique IDs (Key Strategy) are only counted once
-            const uniqueCapturedIds = new Set();
+            // [Surgical Change] We clear the global set instead of re-declaring it locally
+            uniqueCapturedIds.clear(); 
             const currentCycle = new Date().toISOString().slice(0, 7);
         
-            // [Inference] 1. Check server data for this month's unique keys
             if (rSnap.exists()) {
                 Object.values(rSnap.val()).forEach(r => {
                     if (r.billingCycle === currentCycle && r.propertyId) {
@@ -369,14 +368,12 @@
                 });
             }
         
-            // [Inference] 2. Check local outbox (synced or pending) to maintain real-time HUD accuracy
             getOutbox().forEach(item => {
                 if (item.billingCycle === currentCycle && item.propertyId) {
                     uniqueCapturedIds.add(item.propertyId);
                 }
             });
         
-            // --- GLOBAL HUD (Top Card) ---
             const subdivisionCapturedCount = uniqueCapturedIds.size;
             const globalPct = totalSubdivisionUnits > 0 ? Math.min(100, Math.round((subdivisionCapturedCount / totalSubdivisionUnits) * 100)) : 0;
         
@@ -386,21 +383,16 @@
             const bar = document.getElementById('progress-bar');
             if(bar) bar.style.width = `${globalPct}%`;
         
-            // --- STREET HUD (Focus Logic) ---
             const activeStreetDisplay = document.getElementById('active-street').innerText;
             const activeStreetName = activeStreetDisplay.replace(' St.', '').trim();
             
             if(activeStreetName && activeStreetName !== "---") {
-                // [Inference] Filter properties belonging only to the multi-word parsed street name
                 const streetProperties = Object.keys(localPropertiesCache).filter(id => 
                     localPropertiesCache[id].street === activeStreetName
                 );
-                
                 const streetTotal = streetProperties.length;
-                // [Inference] Check how many unique street properties are present in our Captured Set
                 const streetCapturedCount = streetProperties.filter(id => uniqueCapturedIds.has(id)).length;
                 const streetRemaining = Math.max(0, streetTotal - streetCapturedCount);
-                
                 document.getElementById('remaining-units').innerText = `${streetRemaining} Units`;
             } else {
                 document.getElementById('remaining-units').innerText = `-- Units`;
@@ -468,6 +460,47 @@
             return div;
         };
 
+        window.openUnreadModal = () => {
+            const container = document.getElementById('unread-list-container');
+            const streetEl = document.getElementById('unread-street-name');
+            const activeStreetDisplay = document.getElementById('active-street').innerText;
+            const activeStreetName = activeStreetDisplay.replace(' St.', '').trim();
+            
+            container.innerHTML = '';
+            streetEl.innerText = activeStreetName + " Checklist";
+            
+            if (!localPropertiesCache || activeStreetName === "---") {
+                container.innerHTML = '<p class="text-center text-slate-400 text-xs py-4 italic">No street selected</p>';
+            } else {
+                // Filter cache for properties on this street NOT in our captured set
+                const unread = Object.keys(localPropertiesCache)
+                    .filter(id => {
+                        const p = localPropertiesCache[id];
+                        return p.street === activeStreetName && !uniqueCapturedIds.has(id);
+                    })
+                    .map(id => localPropertiesCache[id])
+                    // Sort numerically by Block and Lot for an easy walking path
+                    .sort((a, b) => a.block - b.block || a.lot.localeCompare(b.lot, undefined, {numeric: true}));
+        
+                if (unread.length === 0) {
+                    container.innerHTML = '<p class="text-center text-emerald-500 text-xs py-4 font-bold">Street Complete! ✓</p>';
+                } else {
+                    unread.forEach(p => {
+                        const div = document.createElement('div');
+                        div.className = "flex justify-between p-3 bg-slate-100 dark:bg-slate-800/50 rounded-xl mb-1 border border-slate-200 dark:border-slate-700";
+                        div.innerHTML = `
+                            <span class="text-xs font-black text-slate-900 dark:text-white uppercase">B${p.block} L${p.lot}</span>
+                            <span class="text-[10px] font-bold text-slate-500 truncate ml-4">${p.ownerName || p.name}</span>
+                        `;
+                        container.appendChild(div);
+                    });
+                }
+            }
+            document.getElementById('unreadModal').classList.remove('hidden');
+        };
+        
+        window.closeUnreadModal = () => document.getElementById('unreadModal').classList.add('hidden');
+        
         window.submitReading = async () => {
             isProcessingSubmission = true; // LOCK ON
             const reading = parseFloat(document.getElementById('input-reading').value);
