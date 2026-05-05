@@ -183,8 +183,42 @@
 
     <div id="readingModal" class="hidden fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-start md:items-center justify-center p-6 pt-19 md:pt-6">
         <div class="bg-white/95 dark:bg-slate-900/80 backdrop-blur-2xl w-full max-w-sm rounded-[2.5rem] p-8 border border-white dark:border-white/10 shadow-2xl relative overflow-hidden">
-            <div id="modal-stage-locator">
-                <h3 class="text-xl font-bold mb-6 text-center text-slate-900 dark:text-white uppercase tracking-tight">Locate Property</h3>
+            <!-- STAGE 0: SPRINGBOARD (The Choice) -->
+            <div id="modal-stage-springboard">
+                <h3 class="text-xl font-bold mb-6 text-center text-slate-900 dark:text-white uppercase tracking-tight">Identify Unit</h3>
+                <div class="space-y-3">
+                    <button onclick="switchStage('serial')" class="w-full p-6 bg-water/10 border border-water/20 rounded-2xl flex items-center justify-between group active:scale-95 transition-all">
+                        <div class="text-left">
+                            <p class="text-[10px] font-black text-waterDark uppercase tracking-widest">Method A</p>
+                            <h4 class="font-bold text-slate-900 dark:text-white">Scan Serial No.</h4>
+                        </div>
+                        <i class="bi bi-upc-scan text-2xl text-waterDark"></i>
+                    </button>
+
+                    <button onclick="switchStage('address')" class="w-full p-6 bg-slate-100 dark:bg-slate-800/40 rounded-2xl flex items-center justify-between group active:scale-95 transition-all">
+                        <div class="text-left">
+                            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Method B</p>
+                            <h4 class="font-bold text-slate-900 dark:text-white">Search Address</h4>
+                        </div>
+                        <i class="bi bi-geo-alt-fill text-2xl text-slate-400"></i>
+                    </button>
+                </div>
+                <button onclick="closeReadingModal()" class="w-full mt-6 py-3 text-slate-500 font-bold uppercase text-[10px] tracking-widest text-center">Cancel</button>
+            </div>
+
+            <!-- STAGE 1A: SERIAL SEARCH -->
+            <div id="modal-stage-serial" class="hidden text-center">
+                <h3 class="text-xl font-bold mb-6 text-slate-900 dark:text-white uppercase">Enter Serial</h3>
+                <input id="input-serial" type="text" placeholder="METER-SN" class="w-full p-6 bg-slate-200/50 dark:bg-slate-800/50 rounded-3xl text-2xl font-black outline-none text-slate-900 dark:text-white text-center tracking-widest mb-6 border-2 border-transparent focus:border-water">
+                <div class="flex flex-col gap-2">
+                    <button onclick="identifyPropertyBySerial()" class="w-full py-4 bg-waterDark text-white rounded-2xl font-black uppercase text-xs">Identify Unit</button>
+                    <button onclick="switchStage('springboard')" class="w-full py-2 text-slate-500 font-bold uppercase text-[10px]">Back to Options</button>
+                </div>
+            </div>
+
+            <!-- STAGE 1B: ADDRESS SEARCH -->
+            <div id="modal-stage-address" class="hidden">
+                <h3 class="text-xl font-bold mb-6 text-center text-slate-900 dark:text-white uppercase">Locate Property</h3>
                 <div class="space-y-4 mb-8">
                     <select id="input-street" class="w-full p-4 bg-slate-200/50 dark:bg-slate-800/50 border-none rounded-2xl text-sm font-bold outline-none text-slate-900 dark:text-white">
                         <option value="" disabled selected>Loading Streets...</option>
@@ -195,8 +229,8 @@
                     </div>
                 </div>
                 <div class="flex flex-col gap-2">
-                    <button onclick="identifyProperty()" class="w-full py-4 bg-waterDark text-white rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all">Identify Unit</button>
-                    <button onclick="closeReadingModal()" class="w-full py-3 text-slate-500 font-bold uppercase text-[10px] tracking-widest text-center">Cancel</button>
+                    <button onclick="identifyPropertyByAddress()" class="w-full py-4 bg-waterDark text-white rounded-2xl font-black uppercase text-xs">Identify Unit</button>
+                    <button onclick="switchStage('springboard')" class="w-full py-2 text-slate-500 font-bold uppercase text-[10px]">Back to Options</button>
                 </div>
             </div>
             
@@ -634,30 +668,61 @@
             }, 1000);
         };
 
-        window.identifyProperty = () => {
-            const street = document.getElementById('input-street').value;
-            const block = document.getElementById('input-block').value;
-            const lotInput = document.getElementById('input-lot').value.trim().toLowerCase();
+        // [Surgical] New Controller for multi-stage identification
+        window.switchStage = (stage) => {
+            const stages = ['springboard', 'serial', 'address', 'reading', 'confirm'];
+            stages.forEach(s => {
+                const el = document.getElementById(`modal-stage-${s}`);
+                if(el) el.classList.toggle('hidden', s !== stage);
+            });
+        };
 
-            if(!street || !block || !lotInput) return toast("Missing details", "info");
-            if(!localPropertiesCache) return toast("Waking cache...", "warning");
-
+        // Path A: Serial Identification
+        window.identifyPropertyBySerial = () => {
+            const serialInput = document.getElementById('input-serial').value.trim().toLowerCase();
+            if(!serialInput) return toast("Input Serial Number", "info");
+            
             activeProperty = null;
             for(let id in localPropertiesCache) {
                 const p = localPropertiesCache[id];
-                if(p.street === street && p.block.toString() === block.toString() && p.lot.toString().toLowerCase() === lotInput) {
+                if(p.meterSerial && p.meterSerial.toString().toLowerCase() === serialInput) {
                     activeProperty = { propertyId: id, ...p };
                     break;
                 }
             }
+            proceedToReading();
+        };
 
+        // Path B: Address Identification (The Fallback)
+        window.identifyPropertyByAddress = () => {
+            const street = document.getElementById('input-street').value;
+            const block = document.getElementById('input-block').value;
+            const lot = document.getElementById('input-lot').value.trim().toLowerCase();
+
+            if(!street || !block || !lot) return toast("Missing details", "info");
+
+            activeProperty = null;
+            for(let id in localPropertiesCache) {
+                const p = localPropertiesCache[id];
+                if(p.street === street && p.block.toString() === block && p.lot.toString().toLowerCase() === lot) {
+                    activeProperty = { propertyId: id, ...p };
+                    break;
+                }
+            }
+            proceedToReading();
+        };
+
+        // Internal helper to handle successful lookup
+        const proceedToReading = () => {
             if(activeProperty) {
-                document.getElementById('modal-stage-locator').classList.add('hidden');
-                document.getElementById('modal-stage-reading').classList.remove('hidden');
+                switchStage('reading');
                 document.getElementById('display-prop-id').innerText = `${activeProperty.street} B${activeProperty.block} L${activeProperty.lot}`;
                 document.getElementById('display-owner').innerText = activeProperty.ownerName || activeProperty.name;
                 document.getElementById('display-prev').innerText = `${activeProperty.lastReading || 0} m³`;
-            } else toast("Unit not found", "error");
+                setTimeout(() => document.getElementById('input-reading').focus(), 100);
+            } else {
+                toast("Property not found", "error");
+            }
         };
 
         document.getElementById('input-reading').addEventListener('input', async (e) => {
@@ -721,18 +786,20 @@
                 </div>`;
         };
 
-        window.openReadingModal = () => { document.getElementById('readingModal').classList.remove('hidden'); resetModalState(); };
+        // [Surgical] Updated Reset/Open controllers
+        window.openReadingModal = () => { 
+            document.getElementById('readingModal').classList.remove('hidden'); 
+            resetModalState(); 
+        };
         window.closeReadingModal = () => document.getElementById('readingModal').classList.add('hidden');
         window.resetModalState = () => {
-            document.getElementById('modal-stage-locator').classList.remove('hidden');
-            document.getElementById('modal-stage-reading').classList.add('hidden');
-            document.getElementById('modal-stage-confirm').classList.add('hidden');
-            document.getElementById('input-reading').value = '';
-        };
+			document.getElementById('input-serial').value = '';
+			document.getElementById('input-reading').value = '';
+			switchStage('springboard');
+		};
         window.backToReading = () => {
-            document.getElementById('modal-stage-confirm').classList.add('hidden');
-            document.getElementById('modal-stage-reading').classList.remove('hidden');
-        };
+			switchStage('reading');
+		};
 
         // REPLACE THIS LINE
         db.ref('readings').orderByChild('timestamp').limitToLast(5).on('value', (snap) => {
@@ -782,6 +849,37 @@
                 });
             }
         });
+		
+		// [Surgical] One-time Data Migration Function
+        window.runSerialMigration = async () => {
+            if (!localPropertiesCache) {
+                return toast("Wait for cache to sync...", "warning");
+            }
+
+            const propertyIds = Object.keys(localPropertiesCache).sort((a, b) => {
+                const pA = localPropertiesCache[a];
+                const pB = localPropertiesCache[b];
+                // Sort by Street -> Block -> Lot for a logical 1-49 sequence
+                return pA.street.localeCompare(pB.street) || 
+                       pA.block - pB.block || 
+                       pA.lot.localeCompare(pB.lot, undefined, {numeric: true});
+            });
+
+            const updates = {};
+            propertyIds.forEach((id, index) => {
+                // Assigns numeric string "1", "2", etc.
+                updates[`properties/${id}/meterSerial`] = (index + 1).toString();
+            });
+
+            try {
+                await db.ref().update(updates);
+                toast(`Assigned serials 1 to ${propertyIds.length}`, "success");
+                console.log("Migration Complete:", updates);
+            } catch (e) {
+                console.error("Migration Failed:", e);
+                toast("Migration Failed", "error");
+            }
+        };
     </script>
 </body>
 </html>
