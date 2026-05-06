@@ -152,9 +152,9 @@
                 } else {
                     // Cache exists, immediate jump to dashboard
                     const paths = {
-                        reader: 'reader/dashboard.html',
-                        billing: 'billing/dashboard.html',
-                        admin: 'admin/dashboard.html'
+                        reader: 'reader/reader.html',
+                        billing: 'billing/billing.html',
+                        admin: 'admin/admin.html'
                     };
                     window.location.replace(paths[cachedRole] || 'index.html');
                 }
