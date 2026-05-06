@@ -91,7 +91,14 @@
         <div class="mb-10 text-center">
             <p id="connection-status" class="text-[10px] text-emerald-500 font-bold uppercase tracking-[0.4em] mb-2 opacity-80">● Online</p>
             <h2 class="text-3xl font-black tracking-tighter text-slate-900 dark:text-white uppercase">Reader Dashboard</h2>
-            <p class="text-[11px] font-bold text-waterDark dark:text-water uppercase tracking-widest mt-1">Hello, <span id="reader-name-display">...</span></p>
+            <div class="flex flex-col items-center gap-3 mt-1">
+			    <p class="text-[11px] font-bold text-waterDark dark:text-water uppercase tracking-widest">
+			        Hello, <span id="reader-name-display">...</span>
+			    </p>
+			    <button onclick="openPasswordModal()" class="w-7 h-7 rounded-xl bg-water/10 flex items-center justify-center text-waterDark active:scale-90 transition-transform">
+			        <i class="bi bi-gear-fill text-lg"></i>
+			    </button>
+			</div>
         </div>
         
         <div class="glass-card p-8 rounded-32 border-b-4 dark:border-b-4 border-water mb-8 bg-white/90 dark:bg-slate-900/50 shadow-2xl relative overflow-hidden">
@@ -297,7 +304,26 @@
             <button onclick="closeGlobalUnreadModal()" class="w-full py-4 bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-300 rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all">Close</button>
         </div>
     </div>
-    
+
+	<div id="passwordModal" class="hidden fixed inset-0 z-[400] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6">
+	    <div class="bg-white/95 dark:bg-slate-900/80 backdrop-blur-2xl w-full max-w-sm rounded-[2.5rem] p-8 border border-white dark:border-white/10 shadow-2xl">
+	        <h3 class="text-xl font-bold mb-2 text-center text-slate-900 dark:text-white uppercase tracking-tight">Security</h3>
+	        <p class="text-[10px] text-center font-bold text-waterDark uppercase tracking-[0.2em] mb-6">Change Password</p>
+	        
+	        <div class="space-y-3 mb-8">
+	            <input id="pwd-current" type="password" placeholder="Current Password" class="w-full p-4 bg-slate-100 dark:bg-slate-800/50 rounded-2xl text-sm font-bold outline-none border-2 border-transparent focus:border-water/50 text-slate-900 dark:text-white">
+	            <div class="h-px bg-slate-200 dark:bg-slate-800 my-2"></div>
+	            <input id="pwd-new" type="password" placeholder="New Password" class="w-full p-4 bg-slate-100 dark:bg-slate-800/50 rounded-2xl text-sm font-bold outline-none border-2 border-transparent focus:border-water/50 text-slate-900 dark:text-white">
+	            <input id="pwd-confirm" type="password" placeholder="Confirm New Password" class="w-full p-4 bg-slate-100 dark:bg-slate-800/50 rounded-2xl text-sm font-bold outline-none border-2 border-transparent focus:border-water/50 text-slate-900 dark:text-white">
+	        </div>
+	
+	        <div class="flex flex-col gap-2">
+	            <button id="btn-update-pwd" onclick="handlePasswordChange()" class="w-full py-4 bg-waterDark text-white rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all">Update Credentials</button>
+	            <button onclick="closePasswordModal()" class="w-full py-3 text-slate-500 font-bold uppercase text-[10px] tracking-widest text-center">Cancel</button>
+	        </div>
+	    </div>
+	</div>
+	
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-auth-compat.js"></script>
@@ -887,6 +913,55 @@
                 toast("Migration Failed", "error");
             }
         };
+
+		// --- Security: Change Password Logic ---
+		window.openPasswordModal = () => {
+		    document.getElementById('passwordModal').classList.remove('hidden');
+		};
+		
+		window.closePasswordModal = () => {
+		    document.getElementById('passwordModal').classList.add('hidden');
+		    // Clear fields
+		    ['pwd-current', 'pwd-new', 'pwd-confirm'].forEach(id => document.getElementById(id).value = '');
+		};
+		
+		window.handlePasswordChange = async () => {
+		    const currentPwd = document.getElementById('pwd-current').value;
+		    const newPwd = document.getElementById('pwd-new').value;
+		    const confirmPwd = document.getElementById('pwd-confirm').value;
+		    const btn = document.getElementById('btn-update-pwd');
+		
+		    if (!currentPwd || !newPwd || !confirmPwd) return toast("Fill all fields", "info");
+		    if (newPwd !== confirmPwd) return toast("Passwords do not match", "error");
+		    if (newPwd.length < 6) return toast("Min. 6 characters", "warning");
+		
+		    try {
+		        btn.disabled = true;
+		        btn.innerText = "Verifying...";
+		        
+		        const user = auth.currentUser;
+		        // 1. Re-authenticate to prove identity
+		        const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPwd);
+		        await user.reauthenticateWithCredential(credential);
+		        
+		        // 2. Update to new password
+		        btn.innerText = "Updating...";
+		        await user.updatePassword(newPwd);
+		        
+		        toast("Password updated", "success");
+		        closePasswordModal();
+		    } catch (error) {
+		        console.error(error);
+		        if (error.code === 'auth/wrong-password') {
+		            toast("Incorrect current password", "error");
+		        } else {
+		            toast("Update failed. Try again.", "error");
+		        }
+		    } finally {
+		        btn.disabled = false;
+		        btn.innerText = "Update Credentials";
+		    }
+		};
     </script>
 </body>
 </html>
