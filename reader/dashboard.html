@@ -354,21 +354,42 @@
 		
         const processSyncCleanup = async () => {
             let outbox = getOutbox();
-            if (outbox.length === 0) return;
+            if (outbox.length === 0 || isDeviceOffline) return;
 
-            let changed = false;
             for (const item of outbox) {
-                const snap = await db.ref(`readings/${item.readingId}`).once('value');
-                if (snap.exists()) {
-                    outbox = outbox.filter(o => o.readingId !== item.readingId);
-                    changed = true;
+                try {
+                    // Hunt for the actual database baseline right now
+                    const historySnap = await db.ref('readings')
+                        .orderByChild('propertyId')
+                        .equalTo(item.propertyId)
+                        .limitToLast(1)
+                        .once('value');
+
+                    let finalPrev = item.prevReading; // Fallback to what we captured
+
+                    if (historySnap.exists()) {
+                        const latest = Object.values(historySnap.val())[0];
+                        // If same cycle (resubmit), take its prev. If new cycle, take its current reading.
+                        finalPrev = (latest.readingId === item.readingId) ? latest.prevReading : latest.reading;
+                    }
+
+                    // Prepare the healed data
+                    const syncedData = { 
+                        ...item, 
+                        prevReading: finalPrev,
+                        timestamp: firebase.database.ServerValue.TIMESTAMP 
+                    };
+
+                    await db.ref(`readings/${item.readingId}`).set(syncedData);
+                    
+                    // Remove from outbox after successful write
+                    outbox = getOutbox().filter(o => o.readingId !== item.readingId);
+                    setOutbox(outbox);
+                } catch (e) {
+                    console.error("Background Sync Failed for:", item.readingId, e);
                 }
             }
-
-            if (changed) {
-                setOutbox(outbox);
-                renderOutboxOnly();
-            }
+            renderOutboxOnly();
         };
 
         const renderOutboxOnly = () => {
@@ -626,21 +647,37 @@
         window.closeUnreadModal = () => document.getElementById('unreadModal').classList.add('hidden');
         
         window.submitReading = async () => {
-            isProcessingSubmission = true; // LOCK ON
+            isProcessingSubmission = true; 
             const reading = parseFloat(document.getElementById('input-reading').value);
             const btn = document.getElementById('final-submit-btn');
             const billingCycle = getTargetBillingCycle();
             const readingId = `${activeProperty.propertyId}_${billingCycle}`;
             const readingRef = db.ref(`readings/${readingId}`);
-        
+
             btn.innerText = "..."; btn.disabled = true;
-        
-            // Anchor logic
-            let anchorReading = activeProperty.lastReading || 0;
+
+            // Step 1: Establish a "Preliminary Baseline" (Local Only)
             const outbox = getOutbox();
             const localEntry = outbox.find(item => item.readingId === readingId);
-            if (localEntry) anchorReading = localEntry.prevReading;
-        
+            let anchorReading = localEntry ? localEntry.prevReading : (activeProperty.lastReading || 0);
+
+            // Step 2: The Surgical Hunt (Online Only)
+            if (!isDeviceOffline) {
+                try {
+                    const historySnap = await db.ref('readings')
+                        .orderByChild('propertyId')
+                        .equalTo(activeProperty.propertyId)
+                        .limitToLast(1)
+                        .once('value');
+
+                    if (historySnap.exists()) {
+                        const latest = Object.values(historySnap.val())[0];
+                        // Resubmit vs New Cycle Logic
+                        anchorReading = (latest.readingId === readingId) ? latest.prevReading : latest.reading;
+                    }
+                } catch (e) { console.warn("Cloud hunt failed, using local baseline"); }
+            }
+
             const readingData = {
                 readingId, propertyId: activeProperty.propertyId,
                 locationAddress: `${activeProperty.street} B${activeProperty.block} L${activeProperty.lot}`,
@@ -648,27 +685,26 @@
                 billingCycle, reading, prevReading: anchorReading, timestamp: Date.now(),
                 status: 'pending', fromOffline: isDeviceOffline, appliedRates: { ...billingConfig }
             };
-        
-            // [Verified Fix] Commit to Outbox BEFORE triggering Firebase cache
+
+            // Step 3: Commit to Local Memory
             let updatedOutbox = getOutbox();
             const existingIdx = updatedOutbox.findIndex(item => item.readingId === readingId);
             if(existingIdx > -1) updatedOutbox[existingIdx] = readingData;
             else updatedOutbox.push(readingData);
             setOutbox(updatedOutbox);
             renderOutboxOnly();
-        
-            const firebaseData = { ...readingData, timestamp: firebase.database.ServerValue.TIMESTAMP };
-            
+
+            // Step 4: Finalize
             if (isDeviceOffline) {
-                readingRef.set(firebaseData); 
                 window.finishSubmission(readingId, true);
             } else {
                 try {
+                    const firebaseData = { ...readingData, timestamp: firebase.database.ServerValue.TIMESTAMP };
                     await readingRef.set(firebaseData);
                     window.finishSubmission(readingId, false);
                 } catch (error) {
-                    isProcessingSubmission = false; // Release on error
-                    toast("Sync Error", "error");
+                    isProcessingSubmission = false;
+                    toast("Write Error", "error");
                     btn.innerText = "Yes, Upload"; btn.disabled = false;
                 }
             }
@@ -697,7 +733,10 @@
             
             const btn = document.getElementById('final-submit-btn');
             setTimeout(() => { 
-                if(btn) { btn.innerText = "Yes, Upload"; btn.disabled = false; }
+                if(btn) { 
+                    btn.innerText = "Yes, Upload"; 
+                    btn.disabled = false; 
+                }
             }, 1000);
         };
 
@@ -951,6 +990,50 @@
 		        btn.innerText = "Update Password";
 		    }
 		};
+
+		// [Surgical] Test Data Generator (Target: 2026-03)
+        window.generateTestData = async () => {
+            if (!localPropertiesCache) return toast("Syncing cache, try again...", "warning");
+            
+            const updates = {};
+            const cycle = "2026-03"; // The cycle BEFORE our current April target
+            const dummyConfig = { threshold: 15, minFee: 200, excessRate: 15 };
+            const propIds = Object.keys(localPropertiesCache);
+
+            propIds.forEach(id => {
+                const p = localPropertiesCache[id];
+                const readingId = `${id}_${cycle}`;
+                
+                // Start from property seed, add random usage (5-20 m3)
+                const seed = p.lastReading || 0;
+                const consumption = parseFloat((Math.random() * 15 + 5).toFixed(1)); 
+                const currentReading = seed + consumption;
+
+                updates[`readings/${readingId}`] = {
+                    readingId,
+                    propertyId: id,
+                    locationAddress: `${p.street} B${p.block} L${p.lot}`,
+                    readerId: "SYS_GEN_TEST",
+                    readerName: "System Generator",
+                    billingCycle: cycle,
+                    reading: currentReading,
+                    prevReading: seed,
+                    timestamp: new Date("2026-03-31T17:00:00Z").getTime(),
+                    status: 'paid', // Mark as paid to keep March financials closed
+                    fromOffline: false,
+                    appliedRates: dummyConfig
+                };
+            });
+
+            try {
+                await db.ref().update(updates);
+                toast(`Generated March readings for ${propIds.length} units`, "success");
+                console.log("March Baseline Seeded:", updates);
+            } catch (e) {
+                console.error("Generator Failed:", e);
+                toast("Generation Failed", "error");
+            }
+        };
     </script>
 </body>
 </html>
