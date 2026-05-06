@@ -140,9 +140,9 @@
                             sessionStorage.setItem('aqt_user_role', userData.role);
                             
                             const paths = {
-                                reader: 'reader/dashboard.html',
-                                billing: 'billing/dashboard.html',
-                                admin: 'admin/dashboard.html'
+                                reader: 'reader/reader.html',
+                                billing: 'billing/billing.html',
+                                admin: 'admin/admin.html'
                             };
                             window.location.replace(paths[userData.role] || 'index.html');
                         }
