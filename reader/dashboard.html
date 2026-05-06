@@ -315,10 +315,17 @@
         let isDeviceOffline = false;
         let isProcessingSubmission = false; // [Verified] Prevents race conditions during UI render
         let uniqueCapturedIds = new Set(); // Global set to track IDs already read
-        
+
+		// Helper to get billing cycle (Current Month - 1)
+		const getTargetBillingCycle = () => {
+		    const d = new Date();
+		    d.setMonth(d.getMonth() - 1);
+		    return d.toISOString().slice(0, 7);
+		};
+		
         const getOutbox = () => JSON.parse(localStorage.getItem('aqt_outbox') || '[]');
         const setOutbox = (data) => localStorage.setItem('aqt_outbox', JSON.stringify(data));
-
+		
         const processSyncCleanup = async () => {
             let outbox = getOutbox();
             if (outbox.length === 0) return;
@@ -409,7 +416,7 @@
             
             // [Surgical Change] We clear the global set instead of re-declaring it locally
             uniqueCapturedIds.clear(); 
-            const currentCycle = new Date().toISOString().slice(0, 7);
+            const currentCycle = getTargetBillingCycle();
         
             if (rSnap.exists()) {
                 Object.values(rSnap.val()).forEach(r => {
@@ -596,7 +603,7 @@
             isProcessingSubmission = true; // LOCK ON
             const reading = parseFloat(document.getElementById('input-reading').value);
             const btn = document.getElementById('final-submit-btn');
-            const billingCycle = new Date().toISOString().slice(0, 7);
+            const billingCycle = getTargetBillingCycle();
             const readingId = `${activeProperty.propertyId}_${billingCycle}`;
             const readingRef = db.ref(`readings/${readingId}`);
         
@@ -727,7 +734,7 @@
 
         document.getElementById('input-reading').addEventListener('input', async (e) => {
             const val = parseFloat(e.target.value) || 0;
-            const billingCycle = new Date().toISOString().slice(0, 7);
+            const billingCycle = getTargetBillingCycle();
             const readingId = `${activeProperty.propertyId}_${billingCycle}`;
             
             // [Inference] HYBRID ANCHOR: Check if we have a locked anchor for this month
@@ -746,7 +753,7 @@
 
         window.showConfirmation = async () => {
             const reading = parseFloat(document.getElementById('input-reading').value);
-            const billingCycle = new Date().toISOString().slice(0, 7);
+            const billingCycle = getTargetBillingCycle();
             const readingId = `${activeProperty.propertyId}_${billingCycle}`;
             
             // [Verified Fix] OFFLINE-AWARE FLOOR CHECK
