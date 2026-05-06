@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en" id="main-html">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - AquaTrack</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { 
+                        water: '#4facfe', 
+                        waterDark: '#0072ff',
+                        electric: '#4facfe',
+                        warning: '#f59e0b'
+                    },
+                    borderRadius: { '32': '32px', '48': '48px' }
+                }
+            }
+        }
+    </script>
+    <style>
+        .stat-glow { text-shadow: 0 0 15px rgba(79, 172, 254, 0.4); }
+        .glass-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-blur: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        .dark .glass-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(79, 172, 254, 0.4);
+            box-shadow: inset 0 0 12px rgba(79, 172, 254, 0.05);
+        }
+        .console-entry {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-left: 2px solid #4facfe;
+            margin-bottom: 0.25rem;
+            transition: opacity 0.3s ease;
+        }
+        .outbox-entry {
+            border-left: 2px solid #f59e0b;
+            background: rgba(245, 158, 11, 0.05);
+        }
+        .glass-vessel {
+            position: relative; width: 72px; height: 72px;
+            background: #011030; border: 2px solid rgba(79, 172, 254, 0.5);
+            border-radius: 50%; overflow: hidden;
+            box-shadow: 0 10px 30px rgba(79, 172, 254, 0.4);
+            transform: translate3d(0, 0, 0);
+            transition: all 0.5s ease;
+        }
+        .water-fill {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 85%;
+            background: linear-gradient(to bottom, #4facfe 0%, #0072ff 50%, #003366 100%);
+            transition: background 0.5s ease;
+        }
+        .is-offline .water-fill {
+            background: linear-gradient(to bottom, #f59e0b 0%, #d97706 50%, #78350f 100%);
+        }
+        .is-offline .glass-vessel { border-color: #f59e0b; box-shadow: 0 10px 30px rgba(245, 158, 11, 0.4); }
+
+        .water-fill::before {
+            content: ""; position: absolute; top: -165%; left: -50%; width: 200%; height: 200%;
+            background: #011030; border-radius: 38%; animation: slosh 5s linear infinite;
+        }
+        .glass-vessel::after {
+            content: ""; position: absolute; top: 5px; left: 12px; width: 25px; height: 12px;
+            background: rgba(255, 255, 255, 0.3); border-radius: 50%;
+            transform: rotate(-15deg); z-index: 25; pointer-events: none;
+        }
+        @keyframes slosh { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        #toast-container { position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%); z-index: 999; pointer-events: none; }
+    </style>
+</head>
+<body class="bg-slate-100 dark:bg-[#020617] font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300">
+    
+    <header id="header-container"></header>
+    <div id="toast-container"></div>
+
+    <main class="max-w-xl mx-auto p-6 pt-6 pb-44">
+        <!-- REORDERED HEADER -->
+        <div class="mb-10 text-center">
+            <p id="connection-status" class="text-[10px] text-emerald-500 font-bold uppercase tracking-[0.4em] mb-2 opacity-80">● Online</p>
+            <h2 class="text-3xl font-black tracking-tighter text-slate-900 dark:text-white uppercase">Reader Dashboard</h2>
+            <div class="flex flex-col items-center gap-3 mt-1">
+			    <p class="text-[11px] font-bold text-waterDark dark:text-water uppercase tracking-widest">
+			        Hello, <span id="reader-name-display">...</span>
+			    </p>
+			    <button onclick="openPasswordModal()" class="w-7 h-7 rounded-xl bg-water/10 flex items-center justify-center text-waterDark active:scale-90 transition-transform">
+			        <i class="bi bi-gear-fill text-lg"></i>
+			    </button>
+			</div>
+        </div>
+        
+        <div class="glass-card p-8 rounded-32 border-b-4 dark:border-b-4 border-water mb-8 bg-white/90 dark:bg-slate-900/50 shadow-2xl relative overflow-hidden">
+            <button onclick="openGlobalUnreadModal()" class="absolute top-6 right-6 w-7 h-7 rounded-2xl bg-water/10 flex items-center justify-center text-waterDark active:scale-90 transition-transform z-20">
+                <i class="bi bi-question-circle-fill text-lg"></i>
+            </button>
+            <div class="flex justify-between items-end relative z-10">
+                <div>
+                    <p class="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.3em] mb-1">Cycle Completion</p>
+                    <h3 id="display-progress-pct" class="text-5xl font-black tracking-tighter text-slate-900 dark:text-white stat-glow">--<span class="text-lg opacity-50 ml-1">%</span></h3>
+                </div>
+                <div class="text-right">
+                    <span id="display-counts" class="text-[10px] font-bold text-waterDark dark:text-water uppercase tracking-widest">Initialising HUD...</span>
+                </div>
+            </div>
+            <div class="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full mt-8 overflow-hidden">
+                <div id="progress-bar" class="h-full bg-waterDark dark:bg-water shadow-[0_0_15px_#4facfe] transition-all duration-1000 ease-out" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="glass-card p-6 rounded-xl shadow-sm border-water/40 dark:border-water/40">
+                <p class="text-[9px] font-black text-slate-500 dark:text-slate-200 uppercase tracking-widest mb-1">Current Street</p>
+                <h4 id="active-street" class="text-sm font-bold text-waterDark dark:text-water leading-tight">---</h4>
+            </div>
+            <div class="glass-card p-6 rounded-xl shadow-sm border-water/40 dark:border-water/40 relative overflow-hidden">
+			    <button onclick="openUnreadModal()" class="absolute top-4 right-4 w-7 h-7 rounded-xl bg-water/10 flex items-center justify-center text-waterDark active:scale-90 transition-transform z-20">
+			        <i class="bi bi-question-circle-fill text-lg"></i>
+			    </button>			
+			    <div>
+			        <p class="text-[9px] font-black text-slate-500 dark:text-slate-200 uppercase tracking-widest mb-1">Pending</p>
+			        <h4 id="remaining-units" class="text-sm font-bold text-waterDark dark:text-water">-- Units</h4>
+			    </div>
+			</div>
+        </div>
+
+        <div class="glass-card p-5 rounded-xl mb-10 flex items-center justify-between border-water/30 bg-water/5">
+            <div class="flex items-center gap-4">
+                <div class="w-7 h-7 rounded-2xl bg-water/10 flex items-center justify-center text-waterDark">
+                    <i class="bi bi-info-circle-fill text-lg"></i>
+                </div>
+                <div>
+                    <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Prevailing Rate</p>
+                    <h4 id="rate-summary-text" class="text-xs font-bold text-slate-700 dark:text-slate-300">Syncing rates...</h4>
+                </div>
+            </div>
+        </div>
+
+        <div id="outbox-section" class="hidden mb-10">
+            <div class="flex items-center justify-between mb-4 px-2">
+                <div class="h-[1px] flex-1 bg-slate-300 dark:bg-slate-800 mr-6 opacity-40"></div>
+                <h2 class="text-[11px] font-black uppercase tracking-[0.25em] text-amber-600 dark:text-amber-500 flex items-center gap-2">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                    </span>
+                    Waiting for Sync
+                </h2>
+                <span id="outbox-count" class="text-[10px] font-bold bg-amber-500 text-white px-2 py-0.5 rounded-full">0</span>
+                <div class="h-[1px] flex-1 bg-slate-300 dark:bg-slate-800 ml-6 opacity-40"></div>
+            </div>
+            <div id="outbox-feed" class="flex flex-col space-y-1"></div>
+        </div>
+        
+        <div class="flex items-center justify-between mb-4 px-2">
+            <div class="h-[1px] flex-1 bg-slate-300 dark:bg-slate-800 mr-6 opacity-40"></div>
+            <h2 class="text-[11px] font-black uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">Activity Log</h2>
+            <div class="h-[1px] flex-1 bg-slate-300 dark:bg-slate-800 ml-6 opacity-40"></div>
+        </div>
+
+        <div id="readings-feed" class="flex flex-col space-y-1"></div>
+    </main>
+
+    <div class="fixed bottom-0 left-0 right-0 z-[110] bg-white/30 dark:bg-[#020617]/30 backdrop-blur border-t border-slate-200 dark:border-white/5 px-6 py-5">
+        <div class="max-w-xl mx-auto flex justify-center items-center">
+            <button id="fab-container" onclick="openReadingModal()" class="relative flex items-center justify-center group active:scale-95 transition-all duration-300">
+                <span id="fab-ping" class="absolute inset-0 rounded-full bg-waterDark animate-ping opacity-20 pointer-events-none"></span>
+                <div class="glass-vessel">
+                    <div class="water-fill"></div>
+                    <div class="absolute inset-0 flex items-center justify-center z-20">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-white drop-shadow-lg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                    </div>
+                </div>
+            </button>
+        </div>
+    </div>
+
+    <div id="readingModal" class="hidden fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-start md:items-center justify-center p-6 pt-19 md:pt-6">
+        <div class="bg-white/95 dark:bg-slate-900/80 backdrop-blur-2xl w-full max-w-sm rounded-[2.5rem] p-8 border border-white dark:border-white/10 shadow-2xl relative overflow-hidden">
+            <!-- STAGE 0: SPRINGBOARD (The Choice) -->
+            <div id="modal-stage-springboard">
+                <h3 class="text-xl font-bold mb-6 text-center text-slate-900 dark:text-white uppercase tracking-tight">Identify Unit</h3>
+                <div class="space-y-3">
+                    <button onclick="switchStage('serial')" class="w-full p-6 bg-water/10 border border-water/20 rounded-2xl flex items-center justify-between group active:scale-95 transition-all">
+                        <div class="text-left">
+                            <p class="text-[10px] font-black text-waterDark uppercase tracking-widest">Method A</p>
+                            <h4 class="font-bold text-slate-900 dark:text-white">By Serial No.</h4>
+                        </div>
+                        <i class="bi bi-upc-scan text-2xl text-waterDark"></i>
+                    </button>
+
+                    <button onclick="switchStage('address')" class="w-full p-6 bg-water/10 border border-water/20 rounded-2xl flex items-center justify-between group active:scale-95 transition-all">
+                        <div class="text-left">
+                            <p class="text-[10px] font-black text-waterDark uppercase tracking-widest">Method B</p>
+                            <h4 class="font-bold text-slate-900 dark:text-white">By Address</h4>
+                        </div>
+                        <i class="bi bi-geo-alt-fill text-2xl text-waterDark"></i>
+                    </button>
+                </div>
+                <button onclick="closeReadingModal()" class="w-full mt-6 py-3 text-slate-500 font-bold uppercase text-[14px] tracking-widest text-center">Cancel</button>
+            </div>
+
+            <!-- STAGE 1A: SERIAL SEARCH -->
+            <div id="modal-stage-serial" class="hidden text-center">
+                <h3 class="text-xl font-bold mb-6 text-slate-900 dark:text-white uppercase">Enter Serial</h3>
+                <input id="input-serial" type="text" placeholder="METER-SN" class="w-full p-6 bg-slate-200/50 dark:bg-slate-800/50 rounded-3xl text-2xl font-black outline-none text-slate-900 dark:text-white text-center tracking-widest mb-6 border-2 border-transparent focus:border-water">
+                <div class="flex flex-col gap-2">
+                    <button onclick="identifyPropertyBySerial()" class="w-full py-4 bg-waterDark text-white rounded-2xl font-black uppercase text-xs">Identify Unit</button>
+                    <button onclick="switchStage('springboard')" class="w-full py-2 text-slate-500 font-bold uppercase text-[12px]">Back to Options</button>
+                </div>
+            </div>
+
+            <!-- STAGE 1B: ADDRESS SEARCH -->
+            <div id="modal-stage-address" class="hidden">
+                <h3 class="text-xl font-bold mb-6 text-center text-slate-900 dark:text-white uppercase">Locate Property</h3>
+                <div class="space-y-4 mb-8">
+                    <select id="input-street" class="w-full p-4 bg-slate-200/50 dark:bg-slate-800/50 border-none rounded-2xl text-sm font-bold outline-none text-slate-900 dark:text-white">
+                        <option value="" disabled selected>Loading Streets...</option>
+                    </select>
+                    <div class="flex gap-2">
+                        <input id="input-block" type="number" placeholder="Block" class="w-1/2 p-4 bg-slate-200/50 dark:bg-slate-800/50 rounded-2xl text-sm font-bold outline-none text-slate-900 dark:text-white text-center">
+                        <input id="input-lot" type="text" placeholder="Lot" class="w-1/2 p-4 bg-slate-200/50 dark:bg-slate-800/50 rounded-2xl text-sm font-bold outline-none text-slate-900 dark:text-white text-center">
+                    </div>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <button onclick="identifyPropertyByAddress()" class="w-full py-4 bg-waterDark text-white rounded-2xl font-black uppercase text-xs">Identify Unit</button>
+                    <button onclick="switchStage('springboard')" class="w-full py-2 text-slate-500 font-bold uppercase text-[12px]">Back to Options</button>
+                </div>
+            </div>
+            
+            <div id="modal-stage-reading" class="hidden">
+                <div class="text-center mb-6">
+                    <p id="display-prop-id" class="text-lg font-black text-waterDark dark:text-water stat-glow tracking-widest uppercase">---</p>
+                    <h4 id="display-owner" class="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-wider">...</h4>
+                </div>
+                <div class="bg-slate-200/50 dark:bg-slate-800/50 p-6 rounded-3xl mb-4 text-center">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Current Reading (m³)</label>
+                    <input id="input-reading" type="number" step="0.1" placeholder="000.0" class="w-full text-center text-5xl font-black bg-transparent text-waterDark outline-none">
+                </div>
+                <div class="flex justify-between px-4 mb-8">
+                    <div class="text-left">
+                        <span class="text-[10px] text-slate-500 block uppercase font-bold tracking-tighter">Previous</span>
+                        <span id="display-prev" class="font-bold text-md text-slate-900 dark:text-white">0.0 m³</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] text-slate-500 block uppercase font-bold tracking-tighter">Estimated PHP</span>
+                        <span id="display-cost" class="font-black text-md text-emerald-600 dark:text-emerald-500">₱ 0.00</span>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="resetModalState()" class="flex-1 py-4 text-slate-500 font-bold uppercase text-xs">Back</button>
+                    <button onclick="showConfirmation().catch(console.error)" class="flex-1 py-4 bg-waterDark text-white rounded-2xl font-bold uppercase text-xs active:scale-95">Submit</button>
+                </div>
+            </div>
+
+            <div id="modal-stage-confirm" class="hidden">
+                <h3 class="text-xl font-bold mb-6 text-center text-slate-900 dark:text-white uppercase">Confirm Data</h3>
+                <div id="confirm-summary" class="space-y-3 bg-slate-200/50 dark:bg-slate-800/50 p-6 rounded-3xl mb-8 text-xs"></div>
+                <div class="flex gap-3">
+                    <button onclick="backToReading()" class="flex-1 py-4 text-slate-500 font-bold uppercase text-xs">No</button>
+                    <button id="final-submit-btn" onclick="submitReading()" class="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-bold uppercase text-xs shadow-lg active:scale-95">Yes, Upload</button>
+                </div>
+            </div>            
+        </div>
+    </div>
+
+    <!-- Unread Checklist Modal -->
+    <div id="unreadModal" class="hidden fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6">
+        <div class="bg-white/95 dark:bg-slate-900/80 backdrop-blur-2xl w-full max-w-sm rounded-[2.5rem] p-8 border border-white dark:border-white/10 shadow-2xl relative">
+            <h3 class="text-xl font-bold mb-2 text-center text-slate-900 dark:text-white uppercase tracking-tight">Street Checklist</h3>
+            <p id="unread-street-name" class="text-[10px] text-center font-black text-waterDark uppercase tracking-[0.2em] mb-6">---</p>
+            
+            <div id="unread-list-container" class="max-h-60 overflow-y-auto space-y-2 mb-8 pr-2">
+                <!-- Items injected here -->
+            </div>
+    
+            <button onclick="closeUnreadModal()" class="w-full py-4 bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-300 rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all">Close</button>
+        </div>
+    </div>
+
+    <!-- Global Unread Checklist Modal -->
+    <div id="globalUnreadModal" class="hidden fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6">
+        <div class="bg-white/95 dark:bg-slate-900/80 backdrop-blur-2xl w-full max-w-sm rounded-[2.5rem] p-8 border border-white dark:border-white/10 shadow-2xl relative">
+            <h3 class="text-xl font-bold mb-2 text-center text-slate-900 dark:text-white uppercase tracking-tight">Overall Checklist</h3>
+            <p class="text-[10px] text-center font-black text-waterDark uppercase tracking-[0.2em] mb-6">Remaining Subdivision Units</p>
+            
+            <div id="global-unread-list-container" class="max-h-80 overflow-y-auto space-y-2 mb-8 pr-2">
+                <!-- Items injected here -->
+            </div>
+    
+            <button onclick="closeGlobalUnreadModal()" class="w-full py-4 bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-300 rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all">Close</button>
+        </div>
+    </div>
+
+	<div id="passwordModal" class="hidden fixed inset-0 z-[400] bg-black/60 backdrop-blur-sm flex items-start md:items-center justify-center p-6 pt-19 md:pt-6">
+	    <div class="bg-white/95 dark:bg-slate-900/80 backdrop-blur-2xl w-full max-w-sm rounded-[2.5rem] p-8 border border-white dark:border-white/10 shadow-2xl relative overflow-hidden">
+	        <h3 class="text-xl font-bold mb-2 text-center text-slate-900 dark:text-white uppercase tracking-tight">Security</h3>
+	        <p class="text-[10px] text-center font-bold text-waterDark uppercase tracking-[0.2em] mb-6">Change Account Password</p>
+	        
+	        <div class="space-y-3 mb-8">
+	            <input id="pwd-current" type="password" placeholder="Current Password" class="w-full p-4 bg-slate-100 dark:bg-slate-800/50 rounded-2xl text-sm font-bold outline-none border-2 border-transparent focus:border-water/50 text-slate-900 dark:text-white">
+	            <div class="h-px bg-slate-200 dark:bg-slate-800 my-2"></div>
+	            <input id="pwd-new" type="password" placeholder="New Password" class="w-full p-4 bg-slate-100 dark:bg-slate-800/50 rounded-2xl text-sm font-bold outline-none border-2 border-transparent focus:border-water/50 text-slate-900 dark:text-white">
+	            <input id="pwd-confirm" type="password" placeholder="Confirm New Password" class="w-full p-4 bg-slate-100 dark:bg-slate-800/50 rounded-2xl text-sm font-bold outline-none border-2 border-transparent focus:border-water/50 text-slate-900 dark:text-white">
+	        </div>
+	
+	        <div class="flex flex-col gap-2">
+	            <button id="btn-update-pwd" onclick="handlePasswordChange()" class="w-full py-4 bg-waterDark text-white rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all">Update Password</button>
+	            <button onclick="closePasswordModal()" class="w-full py-3 text-slate-500 font-bold uppercase text-[12px] tracking-widest text-center">Cancel</button>
+	        </div>
+	    </div>
+	</div>
+	
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-auth-compat.js"></script>
+
+    <script type="module">
+        import { injectHeader } from '../js/header-component.js';
+        import { db, auth } from '../js/firebase-init.js';
+        import { toast, formatCurrency } from '../js/utils.js';
+
+        injectHeader();
+
+        let activeProperty = null;
+        let billingConfig = { threshold: 15, minFee: 200, excessRate: 15 };
+        let localPropertiesCache = null;
+        let isDeviceOffline = false;
+        let isProcessingSubmission = false; // [Verified] Prevents race conditions during UI render
+        let uniqueCapturedIds = new Set(); // Global set to track IDs already read
+
+		// Helper to get billing cycle (Current Month - 1)
+		const getTargetBillingCycle = () => {
+		    const d = new Date();
+		    d.setMonth(d.getMonth() - 1);
+		    return d.toISOString().slice(0, 7);
+		};
+		
+        const getOutbox = () => JSON.parse(localStorage.getItem('aqt_outbox') || '[]');
+        const setOutbox = (data) => localStorage.setItem('aqt_outbox', JSON.stringify(data));
+		
+        const processSyncCleanup = async () => {
+            let outbox = getOutbox();
+            if (outbox.length === 0 || isDeviceOffline) return;
+
+            for (const item of outbox) {
+                try {
+                    // Hunt for the actual database baseline right now
+                    const historySnap = await db.ref('readings')
+                        .orderByChild('propertyId')
+                        .equalTo(item.propertyId)
+                        .limitToLast(1)
+                        .once('value');
+
+                    let finalPrev = item.prevReading; // Fallback to what we captured
+
+                    if (historySnap.exists()) {
+                        const latest = Object.values(historySnap.val())[0];
+                        // If same cycle (resubmit), take its prev. If new cycle, take its current reading.
+                        finalPrev = (latest.readingId === item.readingId) ? latest.prevReading : latest.reading;
+                    }
+
+                    // Prepare the healed data
+                    const syncedData = { 
+                        ...item, 
+                        prevReading: finalPrev,
+                        timestamp: firebase.database.ServerValue.TIMESTAMP 
+                    };
+
+                    await db.ref(`readings/${item.readingId}`).set(syncedData);
+                    
+                    // Remove from outbox after successful write
+                    outbox = getOutbox().filter(o => o.readingId !== item.readingId);
+                    setOutbox(outbox);
+                } catch (e) {
+                    console.error("Background Sync Failed for:", item.readingId, e);
+                }
+            }
+            renderOutboxOnly();
+        };
+
+        const renderOutboxOnly = () => {
+            const outboxContainer = document.getElementById('outbox-feed');
+            const outboxSection = document.getElementById('outbox-section');
+            const outboxCountEl = document.getElementById('outbox-count');
+            
+            // [Inference] Get the deduplicated outbox from storage
+            const outbox = getOutbox();
+            outboxContainer.innerHTML = '';
+        
+            if (outbox.length > 0) {
+                outboxSection.classList.remove('hidden');
+                // [Inference] The count will now correctly show 1 per house, even after multiple offline edits
+                outboxCountEl.innerText = outbox.length;
+                
+                // [Inference] Render unique pending entries; reverse() ensures the most recent edit is seen first
+                [...outbox].reverse().forEach(r => {
+                    outboxContainer.appendChild(createLogEntry(r, false));
+                });
+            } else {
+                outboxSection.classList.add('hidden');
+            }
+        };
+
+        db.ref(".info/connected").on("value", (snap) => {
+            isDeviceOffline = (snap.val() === false);
+            const fab = document.getElementById('fab-container');
+            const statusText = document.getElementById('connection-status');
+            const ping = document.getElementById('fab-ping');
+
+            if (!isDeviceOffline) {
+                if(fab) fab.classList.remove('is-offline');
+                if(statusText) {
+                    statusText.innerText = "● Online";
+                    statusText.className = "text-[10px] text-emerald-500 font-bold uppercase tracking-[0.4em] mb-2 opacity-80";
+                }
+                if(ping) ping.className = "absolute inset-0 rounded-full bg-waterDark animate-ping opacity-20 pointer-events-none";
+                processSyncCleanup();
+            } else {
+                if(fab) fab.classList.add('is-offline');
+                if(statusText) {
+                    statusText.innerText = "● Offline (Cached)";
+                    statusText.className = "text-[10px] text-warning font-bold uppercase tracking-[0.4em] mb-2 opacity-60";
+                }
+                if(ping) ping.className = "absolute inset-0 rounded-full bg-warning animate-ping opacity-20 pointer-events-none";
+            }
+        });
+
+        setInterval(() => {
+            if (!isDeviceOffline) {
+                processSyncCleanup();
+                updateHUDStats(); 
+            }
+        }, 30000); 
+
+        const primePropertyCache = () => {
+            db.ref('properties').on('value', (snap) => {
+                if(snap.exists()) {
+                    localPropertiesCache = snap.val();
+                    updateHUDStats();
+                }
+            });
+        };
+
+        const updateHUDStats = async () => {
+            if(!localPropertiesCache) return;
+            
+            const rSnap = await db.ref('readings').once('value');
+            const totalSubdivisionUnits = Object.keys(localPropertiesCache).length;
+            
+            // [Surgical Change] We clear the global set instead of re-declaring it locally
+            uniqueCapturedIds.clear(); 
+            const currentCycle = getTargetBillingCycle();
+        
+            if (rSnap.exists()) {
+                Object.values(rSnap.val()).forEach(r => {
+                    if (r.billingCycle === currentCycle && r.propertyId) {
+                        uniqueCapturedIds.add(r.propertyId);
+                    }
+                });
+            }
+        
+            getOutbox().forEach(item => {
+                if (item.billingCycle === currentCycle && item.propertyId) {
+                    uniqueCapturedIds.add(item.propertyId);
+                }
+            });
+        
+            const subdivisionCapturedCount = uniqueCapturedIds.size;
+            const globalPct = totalSubdivisionUnits > 0 ? Math.min(100, Math.round((subdivisionCapturedCount / totalSubdivisionUnits) * 100)) : 0;
+        
+            document.getElementById('display-progress-pct').innerHTML = `${globalPct}<span class="text-lg opacity-50 ml-1">%</span>`;
+            document.getElementById('display-counts').innerText = `${subdivisionCapturedCount} / ${totalSubdivisionUnits} Units`;
+            
+            const bar = document.getElementById('progress-bar');
+            if(bar) bar.style.width = `${globalPct}%`;
+        
+            const activeStreetDisplay = document.getElementById('active-street').innerText;
+            const activeStreetName = activeStreetDisplay.replace(' St.', '').trim();
+            
+            if(activeStreetName && activeStreetName !== "---") {
+                const streetProperties = Object.keys(localPropertiesCache).filter(id => 
+                    localPropertiesCache[id].street === activeStreetName
+                );
+                const streetTotal = streetProperties.length;
+                const streetCapturedCount = streetProperties.filter(id => uniqueCapturedIds.has(id)).length;
+                const streetRemaining = Math.max(0, streetTotal - streetCapturedCount);
+                document.getElementById('remaining-units').innerText = `${streetRemaining} Units`;
+            } else {
+                document.getElementById('remaining-units').innerText = `-- Units`;
+            }
+        };
+
+        const renderFeeds = (snapshot) => {
+            // [Verified Fix] If a submission is in progress, block the listener's UI update.
+            // finishSubmission will manually trigger the refresh once the outbox is stable.
+            if (isProcessingSubmission) return;
+        
+            const activityContainer = document.getElementById('readings-feed');
+            activityContainer.innerHTML = '';
+            
+            let displayItems = [];
+            const outbox = getOutbox();
+        
+            snapshot.forEach(child => {
+                const data = child.val();
+                // Skip synced items if they are still technically in the Outbox to prevent double-display
+                const isPendingSync = outbox.some(o => o.readingId === data.readingId);
+                if (isPendingSync) return; 
+        
+                displayItems.push({ ...data, isSynced: true });
+            });
+        
+            displayItems.sort((a, b) => (b.timestamp?.seconds || b.timestamp) - (a.timestamp?.seconds || a.timestamp));
+            const latestItems = displayItems.slice(0, 5);
+        
+            if(latestItems.length > 0 && latestItems[0].locationAddress) {
+                const fullAddress = latestItems[0].locationAddress;
+                const streetPart = fullAddress.split(/ B\d+/)[0]; 
+                document.getElementById('active-street').innerText = streetPart + ' St.';
+            }
+        
+            latestItems.forEach(item => activityContainer.appendChild(createLogEntry(item, true)));
+            updateHUDStats();
+            renderOutboxOnly();
+        };
+
+        const createLogEntry = (r, isSynced) => {
+            const div = document.createElement('div');
+            div.className = `console-entry ${isSynced ? 'border-water' : 'outbox-entry animate-pulse'}`;
+            const ts = r.timestamp?.seconds ? r.timestamp.seconds * 1000 : r.timestamp;
+            const timeDisplay = (typeof ts === 'number') ? new Date(ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'Pending';
+            const originBadge = r.fromOffline === true ? '<span class="text-[7px] bg-slate-200 dark:bg-slate-800 px-1 rounded text-slate-500 font-black">OFFLINE-ORIGIN</span>' : '';
+
+            div.innerHTML = `
+                <div class="flex flex-col">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-black uppercase text-slate-900 dark:text-white">${r.locationAddress}</span>
+                        ${originBadge}
+                    </div>
+                    <span class="text-[9px] text-slate-500 font-bold">${timeDisplay}</span>
+                </div>
+                <div class="text-right">
+                    <div class="font-mono text-sm font-black ${isSynced ? 'text-waterDark dark:text-water' : 'text-amber-600'}">
+                        ${r.reading.toFixed(1)} <span class="text-[8px] opacity-60">m³</span>
+                    </div>
+                    <p class="text-[7px] uppercase font-bold ${isSynced ? 'text-emerald-500' : 'text-amber-500'}">
+                        ${isSynced ? 'Synced' : 'In Outbox'}
+                    </p>
+                </div>
+            `;
+            return div;
+        };
+
+        window.openGlobalUnreadModal = () => {
+            const container = document.getElementById('global-unread-list-container');
+            container.innerHTML = '';
+            
+            if (!localPropertiesCache) {
+                container.innerHTML = '<p class="text-center text-slate-400 text-xs py-4 italic">Waking cache...</p>';
+            } else {
+                // Filter entire cache for properties NOT in our captured set
+                const unread = Object.keys(localPropertiesCache)
+                    .filter(id => !uniqueCapturedIds.has(id))
+                    .map(id => localPropertiesCache[id])
+                    // Sort by Street, then Block, then Lot
+                    .sort((a, b) => 
+                        a.street.localeCompare(b.street) || 
+                        a.block - b.block || 
+                        a.lot.localeCompare(b.lot, undefined, {numeric: true})
+                    );
+        
+                if (unread.length === 0) {
+                    container.innerHTML = '<p class="text-center text-emerald-500 text-xs py-4 font-bold">Subdivision Complete! 🏆</p>';
+                } else {
+                    unread.forEach(p => {
+                        const div = document.createElement('div');
+                        div.className = "flex flex-col p-3 bg-slate-100 dark:bg-slate-800/50 rounded-xl mb-1 border border-slate-200 dark:border-slate-700";
+                        div.innerHTML = `
+                            <div class="flex justify-between items-center">
+                                <span class="text-[9px] font-black text-waterDark uppercase tracking-widest">${p.street}</span>
+                                <span class="text-xs font-black text-slate-900 dark:text-white uppercase">B${p.block} L${p.lot}</span>
+                            </div>
+                            <span class="text-[10px] font-bold text-slate-500 truncate mt-1">${p.ownerName || p.name}</span>
+                        `;
+                        container.appendChild(div);
+                    });
+                }
+            }
+            document.getElementById('globalUnreadModal').classList.remove('hidden');
+        };
+        
+        window.closeGlobalUnreadModal = () => document.getElementById('globalUnreadModal').classList.add('hidden');
+        
+        window.openUnreadModal = () => {
+            const container = document.getElementById('unread-list-container');
+            const streetEl = document.getElementById('unread-street-name');
+            const activeStreetDisplay = document.getElementById('active-street').innerText;
+            const activeStreetName = activeStreetDisplay.replace(' St.', '').trim();
+            
+            container.innerHTML = '';
+            streetEl.innerText = activeStreetName + " Checklist";
+            
+            if (!localPropertiesCache || activeStreetName === "---") {
+                container.innerHTML = '<p class="text-center text-slate-400 text-xs py-4 italic">No street selected</p>';
+            } else {
+                // Filter cache for properties on this street NOT in our captured set
+                const unread = Object.keys(localPropertiesCache)
+                    .filter(id => {
+                        const p = localPropertiesCache[id];
+                        return p.street === activeStreetName && !uniqueCapturedIds.has(id);
+                    })
+                    .map(id => localPropertiesCache[id])
+                    // Sort numerically by Block and Lot for an easy walking path
+                    .sort((a, b) => a.block - b.block || a.lot.localeCompare(b.lot, undefined, {numeric: true}));
+        
+                if (unread.length === 0) {
+                    container.innerHTML = '<p class="text-center text-emerald-500 text-xs py-4 font-bold">Street Complete! ✓</p>';
+                } else {
+                    unread.forEach(p => {
+                        const div = document.createElement('div');
+                        div.className = "flex justify-between p-3 bg-slate-100 dark:bg-slate-800/50 rounded-xl mb-1 border border-slate-200 dark:border-slate-700";
+                        div.innerHTML = `
+                            <span class="text-xs font-black text-slate-900 dark:text-white uppercase">B${p.block} L${p.lot}</span>
+                            <span class="text-[10px] font-bold text-slate-500 truncate ml-4">${p.ownerName || p.name}</span>
+                        `;
+                        container.appendChild(div);
+                    });
+                }
+            }
+            document.getElementById('unreadModal').classList.remove('hidden');
+        };
+        
+        window.closeUnreadModal = () => document.getElementById('unreadModal').classList.add('hidden');
+        
+        window.submitReading = async () => {
+            isProcessingSubmission = true; 
+            const reading = parseFloat(document.getElementById('input-reading').value);
+            const btn = document.getElementById('final-submit-btn');
+            const billingCycle = getTargetBillingCycle();
+            const readingId = `${activeProperty.propertyId}_${billingCycle}`;
+            const readingRef = db.ref(`readings/${readingId}`);
+
+            btn.innerText = "..."; btn.disabled = true;
+
+            // Step 1: Establish a "Preliminary Baseline" (Local Only)
+            const outbox = getOutbox();
+            const localEntry = outbox.find(item => item.readingId === readingId);
+            let anchorReading = localEntry ? localEntry.prevReading : (activeProperty.lastReading || 0);
+
+            // Step 2: The Surgical Hunt (Online Only)
+            if (!isDeviceOffline) {
+                try {
+                    const historySnap = await db.ref('readings')
+                        .orderByChild('propertyId')
+                        .equalTo(activeProperty.propertyId)
+                        .limitToLast(1)
+                        .once('value');
+
+                    if (historySnap.exists()) {
+                        const latest = Object.values(historySnap.val())[0];
+                        // Resubmit vs New Cycle Logic
+                        anchorReading = (latest.readingId === readingId) ? latest.prevReading : latest.reading;
+                    }
+                } catch (e) { console.warn("Cloud hunt failed, using local baseline"); }
+            }
+
+            const readingData = {
+                readingId, propertyId: activeProperty.propertyId,
+                locationAddress: `${activeProperty.street} B${activeProperty.block} L${activeProperty.lot}`,
+                readerId: auth.currentUser.uid, readerName: sessionStorage.getItem('aqt_user_name'),
+                billingCycle, reading, prevReading: anchorReading, timestamp: Date.now(),
+                status: 'pending', fromOffline: isDeviceOffline, appliedRates: { ...billingConfig }
+            };
+
+            // Step 3: Commit to Local Memory
+            let updatedOutbox = getOutbox();
+            const existingIdx = updatedOutbox.findIndex(item => item.readingId === readingId);
+            if(existingIdx > -1) updatedOutbox[existingIdx] = readingData;
+            else updatedOutbox.push(readingData);
+            setOutbox(updatedOutbox);
+            renderOutboxOnly();
+
+            // Step 4: Finalize
+            if (isDeviceOffline) {
+                window.finishSubmission(readingId, true);
+            } else {
+                try {
+                    const firebaseData = { ...readingData, timestamp: firebase.database.ServerValue.TIMESTAMP };
+                    await readingRef.set(firebaseData);
+                    window.finishSubmission(readingId, false);
+                } catch (error) {
+                    isProcessingSubmission = false;
+                    toast("Write Error", "error");
+                    btn.innerText = "Yes, Upload"; btn.disabled = false;
+                }
+            }
+        };
+        
+        window.finishSubmission = (readingId, wasOffline) => {
+            // [Verified Fix] Only clear if it actually reached the server
+            if (!wasOffline) {
+                const filtered = getOutbox().filter(item => item.readingId !== readingId);
+                localStorage.setItem('aqt_outbox', JSON.stringify(filtered));
+            }
+        
+            renderOutboxOnly();
+            updateHUDStats();
+            
+            // Release lock and force a clean re-render of the feeds
+            setTimeout(() => {
+                isProcessingSubmission = false; 
+                db.ref('readings').orderByChild('timestamp').limitToLast(5).once('value', (snap) => {
+                    if(snap.exists()) renderFeeds(snap);
+                });
+            }, 200); // 200ms allows disk write to finish
+            
+            toast(`Captured (${wasOffline ? 'Offline' : 'Online'})`, wasOffline ? "warning" : "success");
+            closeReadingModal();
+            
+            const btn = document.getElementById('final-submit-btn');
+            setTimeout(() => { 
+                if(btn) { 
+                    btn.innerText = "Yes, Upload"; 
+                    btn.disabled = false; 
+                }
+            }, 1000);
+        };
+
+        // [Surgical] New Controller for multi-stage identification
+        window.switchStage = (stage) => {
+            const stages = ['springboard', 'serial', 'address', 'reading', 'confirm'];
+            stages.forEach(s => {
+                const el = document.getElementById(`modal-stage-${s}`);
+                if(el) el.classList.toggle('hidden', s !== stage);
+            });
+        };
+
+        // Path A: Serial Identification
+        window.identifyPropertyBySerial = () => {
+            const serialInput = document.getElementById('input-serial').value.trim().toLowerCase();
+            if(!serialInput) return toast("Input Serial Number", "info");
+            
+            activeProperty = null;
+            for(let id in localPropertiesCache) {
+                const p = localPropertiesCache[id];
+                if(p.meterSerial && p.meterSerial.toString().toLowerCase() === serialInput) {
+                    activeProperty = { propertyId: id, ...p };
+                    break;
+                }
+            }
+            proceedToReading();
+        };
+
+        // Path B: Address Identification (The Fallback)
+        window.identifyPropertyByAddress = () => {
+            const street = document.getElementById('input-street').value;
+            const block = document.getElementById('input-block').value;
+            const lot = document.getElementById('input-lot').value.trim().toLowerCase();
+
+            if(!street || !block || !lot) return toast("Missing details", "info");
+
+            activeProperty = null;
+            for(let id in localPropertiesCache) {
+                const p = localPropertiesCache[id];
+                if(p.street === street && p.block.toString() === block && p.lot.toString().toLowerCase() === lot) {
+                    activeProperty = { propertyId: id, ...p };
+                    break;
+                }
+            }
+            proceedToReading();
+        };
+
+        // Internal helper to handle successful lookup
+        const proceedToReading = () => {
+            if(activeProperty) {
+                switchStage('reading');
+                document.getElementById('display-prop-id').innerText = `${activeProperty.street} B${activeProperty.block} L${activeProperty.lot}`;
+                document.getElementById('display-owner').innerText = activeProperty.ownerName || activeProperty.name;
+                document.getElementById('display-prev').innerText = `${activeProperty.lastReading || 0} m³`;
+                setTimeout(() => document.getElementById('input-reading').focus(), 100);
+            } else {
+                toast("Property not found", "error");
+            }
+        };
+
+        document.getElementById('input-reading').addEventListener('input', async (e) => {
+            const val = parseFloat(e.target.value) || 0;
+            const billingCycle = getTargetBillingCycle();
+            const readingId = `${activeProperty.propertyId}_${billingCycle}`;
+            
+            // [Inference] HYBRID ANCHOR: Check if we have a locked anchor for this month
+            // We check the local outbox first for instant offline feedback, then fallback to property
+            const outbox = getOutbox();
+            const localEntry = outbox.find(o => o.readingId === readingId);
+            const anchor = localEntry ? localEntry.prevReading : (activeProperty?.lastReading || 0);
+        
+            const consumption = Math.max(0, val - anchor);
+            const amount = consumption <= billingConfig.threshold 
+                ? billingConfig.minFee 
+                : billingConfig.minFee + ((consumption - billingConfig.threshold) * billingConfig.excessRate);
+            
+            document.getElementById('display-cost').innerText = formatCurrency(amount);
+        });
+
+        window.showConfirmation = async () => {
+            const reading = parseFloat(document.getElementById('input-reading').value);
+            const billingCycle = getTargetBillingCycle();
+            const readingId = `${activeProperty.propertyId}_${billingCycle}`;
+            
+            // [Verified Fix] OFFLINE-AWARE FLOOR CHECK
+            let monthlyFloor = activeProperty?.lastReading || 0;
+            const outbox = getOutbox();
+            const localEntry = outbox.find(o => o.readingId === readingId);
+        
+            if (localEntry) {
+                monthlyFloor = localEntry.prevReading;
+            } else if (!isDeviceOffline) {
+                try {
+                    // Only 'await' if we are actually online
+                    const snap = await db.ref(`readings/${readingId}`).once('value');
+                    if (snap.exists()) monthlyFloor = snap.val().prevReading;
+                } catch (e) { console.error("Floor fetch skipped"); }
+            }
+        
+            if(isNaN(reading) || reading < monthlyFloor) {
+                return toast(`Value must be at least ${monthlyFloor} m³`, "info");
+            }
+        
+            document.getElementById('modal-stage-reading').classList.add('hidden');
+            document.getElementById('modal-stage-confirm').classList.remove('hidden');
+            
+            document.getElementById('confirm-summary').innerHTML = `
+                <div class="flex justify-between items-center">
+                    <span>Property</span>
+                    <span class="font-black text-waterDark uppercase text-right">${activeProperty.street}<br>B${activeProperty.block} L${activeProperty.lot}</span>
+                </div>
+                <div class="flex justify-between text-[10px] opacity-60">
+                    <span>Owner</span>
+                    <span class="font-bold">${activeProperty.ownerName}</span>
+                </div>
+                <div class="border-t border-slate-300 dark:border-slate-700 mt-2 pt-2 flex justify-between text-sm">
+                    <span class="font-bold">Captured Reading</span>
+                    <span class="text-waterDark dark:text-water font-black">${reading.toFixed(1)} m³</span>
+                </div>`;
+        };
+
+        // [Surgical] Updated Reset/Open controllers
+        window.openReadingModal = () => { 
+            document.getElementById('readingModal').classList.remove('hidden'); 
+            resetModalState(); 
+        };
+        window.closeReadingModal = () => document.getElementById('readingModal').classList.add('hidden');
+        window.resetModalState = () => {
+			document.getElementById('input-serial').value = '';
+			document.getElementById('input-reading').value = '';
+			switchStage('springboard');
+		};
+        window.backToReading = () => {
+			switchStage('reading');
+		};
+
+        // REPLACE THIS LINE
+        db.ref('readings').orderByChild('timestamp').limitToLast(5).on('value', (snap) => {
+            updateHUDStats();
+            if(snap.exists()) renderFeeds(snap);
+        });
+        auth.onAuthStateChanged(async (user) => { 
+            if (!user) return window.location.replace('../index.html');
+            
+            // --- DEEP-FETCH SESSION RECOVERY ---
+            let readerName = sessionStorage.getItem('aqt_user_name');
+            
+            if(!readerName || readerName === "Staff") {
+                // Attempt 1: Pull from Firebase Auth Profile
+                if (user.displayName) {
+                    readerName = user.displayName;
+                } else {
+                    // Attempt 2: Pull from Database source of truth
+                    try {
+                        const userSnap = await db.ref(`users/${user.uid}/name`).once('value');
+                        readerName = userSnap.exists() ? userSnap.val() : "Staff";
+                    } catch (e) {
+                        readerName = "Staff";
+                    }
+                }
+                sessionStorage.setItem('aqt_user_name', readerName);
+            }
+            
+            const nameEl = document.getElementById('reader-name-display');
+            if(nameEl) nameEl.innerText = readerName;
+
+            primePropertyCache();
+            processSyncCleanup();
+            const snap = await db.ref('config/billing').once('value');
+            if (snap.exists()) billingConfig = snap.val();
+            const el = document.getElementById('rate-summary-text');
+            if(el) el.innerText = `₱${billingConfig.minFee} base up to ${billingConfig.threshold}m³ + ₱${billingConfig.excessRate}/m³ excess`;
+            
+            const streetSnap = await db.ref('config/streets').once('value');
+            const select = document.getElementById('input-street');
+            if (streetSnap.exists() && select) {
+                select.innerHTML = '<option value="" disabled selected>Select Street...</option>';
+                Object.values(streetSnap.val()).forEach(st => {
+                    const opt = document.createElement('option');
+                    opt.value = st.name; opt.textContent = st.fullName;
+                    select.appendChild(opt);
+                });
+            }
+        });
+		
+		// [Surgical] One-time Data Migration Function
+        window.runSerialMigration = async () => {
+            if (!localPropertiesCache) {
+                return toast("Wait for cache to sync...", "warning");
+            }
+
+            const propertyIds = Object.keys(localPropertiesCache).sort((a, b) => {
+                const pA = localPropertiesCache[a];
+                const pB = localPropertiesCache[b];
+                // Sort by Street -> Block -> Lot for a logical 1-49 sequence
+                return pA.street.localeCompare(pB.street) || 
+                       pA.block - pB.block || 
+                       pA.lot.localeCompare(pB.lot, undefined, {numeric: true});
+            });
+
+            const updates = {};
+            propertyIds.forEach((id, index) => {
+                // Assigns numeric string "1", "2", etc.
+                updates[`properties/${id}/meterSerial`] = (index + 1).toString();
+            });
+
+            try {
+                await db.ref().update(updates);
+                toast(`Assigned serials 1 to ${propertyIds.length}`, "success");
+                console.log("Migration Complete:", updates);
+            } catch (e) {
+                console.error("Migration Failed:", e);
+                toast("Migration Failed", "error");
+            }
+        };
+
+		// Security Logic
+		window.openPasswordModal = () => document.getElementById('passwordModal').classList.remove('hidden');
+		
+		window.closePasswordModal = () => {
+		    document.getElementById('passwordModal').classList.add('hidden');
+		    ['pwd-current', 'pwd-new', 'pwd-confirm'].forEach(id => document.getElementById(id).value = '');
+		};
+		
+		window.handlePasswordChange = async () => {
+		    const currentPwd = document.getElementById('pwd-current').value;
+		    const newPwd = document.getElementById('pwd-new').value;
+		    const confirmPwd = document.getElementById('pwd-confirm').value;
+		    const btn = document.getElementById('btn-update-pwd');
+		
+		    if (!currentPwd || !newPwd || !confirmPwd) return toast("Fill all fields", "info");
+		    if (newPwd !== confirmPwd) return toast("Passwords do not match", "error");
+		    if (newPwd.length < 6) return toast("Min. 6 characters", "warning");
+		
+		    try {
+		        btn.disabled = true;
+		        btn.innerText = "Verifying...";
+		        const user = auth.currentUser;
+		        const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPwd);
+		        
+		        await user.reauthenticateWithCredential(credential);
+		        btn.innerText = "Updating...";
+		        await user.updatePassword(newPwd);
+		        
+		        toast("Password updated", "success");
+		        closePasswordModal();
+		    } catch (error) {
+		        toast(error.code === 'auth/wrong-password' ? "Wrong current password" : "Update failed", "error");
+		    } finally {
+		        btn.disabled = false;
+		        btn.innerText = "Update Password";
+		    }
+		};
+
+		// [Surgical] Test Data Generator (Target: 2026-03)
+        window.generateTestData = async () => {
+            if (!localPropertiesCache) return toast("Syncing cache, try again...", "warning");
+            
+            const updates = {};
+            const cycle = "2026-03"; // The cycle BEFORE our current April target
+            const dummyConfig = { threshold: 15, minFee: 200, excessRate: 15 };
+            const propIds = Object.keys(localPropertiesCache);
+
+            propIds.forEach(id => {
+                const p = localPropertiesCache[id];
+                const readingId = `${id}_${cycle}`;
+                
+                // Start from property seed, add random usage (5-20 m3)
+                const seed = p.lastReading || 0;
+                const consumption = parseFloat((Math.random() * 15 + 5).toFixed(1)); 
+                const currentReading = seed + consumption;
+
+                updates[`readings/${readingId}`] = {
+                    readingId,
+                    propertyId: id,
+                    locationAddress: `${p.street} B${p.block} L${p.lot}`,
+                    readerId: "SYS_GEN_TEST",
+                    readerName: "System Generator",
+                    billingCycle: cycle,
+                    reading: currentReading,
+                    prevReading: seed,
+                    timestamp: new Date("2026-03-31T17:00:00Z").getTime(),
+                    status: 'paid', // Mark as paid to keep March financials closed
+                    fromOffline: false,
+                    appliedRates: dummyConfig
+                };
+            });
+
+            try {
+                await db.ref().update(updates);
+                toast(`Generated March readings for ${propIds.length} units`, "success");
+                console.log("March Baseline Seeded:", updates);
+            } catch (e) {
+                console.error("Generator Failed:", e);
+                toast("Generation Failed", "error");
+            }
+        };
+    </script>
+</body>
+</html>
