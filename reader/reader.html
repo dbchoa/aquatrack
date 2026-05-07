@@ -966,42 +966,7 @@
 		    }
 		};
 
-		window.purgeReadings = () => {
-            if(confirm("Master, are you sure you want to wipe the ledger?")) {
-                db.ref('readings').remove()
-                    .then(() => toast("Ledger Purged", "success"))
-                    .catch(e => toast("Purge Failed", "error"));
-            }
-        };
-
-        window.runMigration = async () => {
-            console.log("🛠️ Starting Legacy Reading Migration...");
-            const snap = await db.ref('readings').once('value');
-            if(!snap.exists()) return toast("No readings to migrate", "info");
-
-            const readings = snap.val();
-            const updates = {};
-            let count = 0;
-
-            Object.keys(readings).forEach(oldKey => {
-                const r = readings[oldKey];
-                if (!r.unitId) {
-                    const unitId = `${r.propertyId}_1`; 
-                    const newKey = `${unitId}_${r.billingCycle}`;
-                    updates[`readings/${newKey}`] = {
-                        ...r,
-                        unitId: unitId,
-                        readingId: newKey,
-                        consumption: r.consumption || parseFloat((r.reading - r.prevReading).toFixed(1))
-                    };
-                    updates[`readings/${oldKey}`] = null;
-                    count++;
-                }
-            });
-
-            await db.ref().update(updates);
-            toast(`Healed ${count} Legacy Entries`, "success");
-        };
+		
     </script>
 </body>
 </html>
