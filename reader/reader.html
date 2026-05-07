@@ -1035,54 +1035,53 @@
             }
         };
 
-		// [Surgical Migration] Stage 1: Property-to-Unit Bridge (One-Time Use)
-        window.runV2Migration = async () => {
-            console.log("🚀 Initializing AquaTrack v2.0 Migration...");
+		// [Surgical Patch] Stage 1.5: Readings Data Enrichment (One-Time Use)
+        window.patchReadingsV2 = async () => {
+            console.log("🛠️ Initializing Readings Patch for v2.0...");
             
             try {
-                // 1. Fetch the current state of properties
-                const propsSnap = await db.ref('properties').once('value');
-                if (!propsSnap.exists()) return toast("No properties found to migrate", "error");
+                // 1. Fetch all existing readings
+                const readingsSnap = await db.ref('readings').once('value');
+                if (!readingsSnap.exists()) return toast("No readings found to patch", "error");
 
-                const properties = propsSnap.val();
+                const readings = readingsSnap.val();
                 const updates = {};
                 let count = 0;
 
-                Object.keys(properties).forEach(propId => {
-                    const p = properties[propId];
-                    const unitId = `${propId}_1`; // Street_Block_Lot_UnitNumber
+                Object.keys(readings).forEach(readingId => {
+                    const r = readings[readingId];
+                    
+                    // Logic: If consumption or unitId is missing, calculate and prepare update
+                    // We assume existing readings were for the primary unit (_1)
+                    if (r.consumption === undefined || !r.unitId) {
+                        const calculatedConsumption = parseFloat((r.reading - r.prevReading).toFixed(1));
+                        const assignedUnitId = `${r.propertyId}_1`;
 
-                    // A. Create the NEW Unit Node
-                    updates[`Unit/${unitId}`] = {
-                        unitId: unitId,
-                        unitNumber: 1,
-                        propertyId: propId,
-                        meterSerial: p.meterSerial || "0000",
-                        lastReading: p.lastReading || 0,
-                        unitLabel: "Main House",
-                        status: p.status || "active"
-                    };
-
-                    // B. CLEANUP: Remove deprecated fields from Properties Node
-                    // We use null to tell Firebase to delete these specific fields
-                    updates[`properties/${propId}/meterSerial`] = null;
-                    updates[`properties/${propId}/lastReading`] = null;
-
-                    count++;
+                        // Apply the patch to this specific record
+                        updates[`readings/${readingId}/consumption`] = calculatedConsumption;
+                        updates[`readings/${readingId}/unitId`] = assignedUnitId;
+                        
+                        count++;
+                    }
                 });
 
-                // 2. Execute the Atomic Batch Update
+                if (count === 0) {
+                    console.log("✨ All readings are already up to date.");
+                    return toast("Readings already patched", "info");
+                }
+
+                // 2. Atomic Batch Update
                 await db.ref().update(updates);
 
-                console.log(`✅ Success! Migrated ${count} units to the new structure.`);
-                toast(`v2.0 Migration Complete: ${count} Units Created`, "success");
+                console.log(`✅ Success! Patched ${count} reading entries.`);
+                toast(`v2.0 Patch Complete: ${count} Entries Updated`, "success");
                 
-                // Safety: Disable function after use
-                window.runV2Migration = () => console.warn("Migration already completed.");
+                // Safety: Disable function
+                window.patchReadingsV2 = () => console.warn("Patch already applied.");
 
             } catch (error) {
-                console.error("❌ Migration Failed:", error);
-                toast("Migration Error: Check Console", "error");
+                console.error("❌ Patch Failed:", error);
+                toast("Patch Error: Check Console", "error");
             }
         };
     </script>
