@@ -1034,6 +1034,57 @@
                 toast("Generation Failed", "error");
             }
         };
+
+		// [Surgical Migration] Stage 1: Property-to-Unit Bridge (One-Time Use)
+        window.runV2Migration = async () => {
+            console.log("🚀 Initializing AquaTrack v2.0 Migration...");
+            
+            try {
+                // 1. Fetch the current state of properties
+                const propsSnap = await db.ref('properties').once('value');
+                if (!propsSnap.exists()) return toast("No properties found to migrate", "error");
+
+                const properties = propsSnap.val();
+                const updates = {};
+                let count = 0;
+
+                Object.keys(properties).forEach(propId => {
+                    const p = properties[propId];
+                    const unitId = `${propId}_1`; // Street_Block_Lot_UnitNumber
+
+                    // A. Create the NEW Unit Node
+                    updates[`Unit/${unitId}`] = {
+                        unitId: unitId,
+                        unitNumber: 1,
+                        propertyId: propId,
+                        meterSerial: p.meterSerial || "0000",
+                        lastReading: p.lastReading || 0,
+                        unitLabel: "Main House",
+                        status: p.status || "active"
+                    };
+
+                    // B. CLEANUP: Remove deprecated fields from Properties Node
+                    // We use null to tell Firebase to delete these specific fields
+                    updates[`properties/${propId}/meterSerial`] = null;
+                    updates[`properties/${propId}/lastReading`] = null;
+
+                    count++;
+                });
+
+                // 2. Execute the Atomic Batch Update
+                await db.ref().update(updates);
+
+                console.log(`✅ Success! Migrated ${count} units to the new structure.`);
+                toast(`v2.0 Migration Complete: ${count} Units Created`, "success");
+                
+                // Safety: Disable function after use
+                window.runV2Migration = () => console.warn("Migration already completed.");
+
+            } catch (error) {
+                console.error("❌ Migration Failed:", error);
+                toast("Migration Error: Check Console", "error");
+            }
+        };
     </script>
 </body>
 </html>
