@@ -811,16 +811,12 @@
             }
         };
 
-        document.getElementById('input-reading').addEventListener('input', async (e) => {
+        document.getElementById('input-reading').addEventListener('input', (e) => {
             const val = parseFloat(e.target.value) || 0;
-            const billingCycle = getTargetBillingCycle();
-            const readingId = `${activeProperty.propertyId}_${billingCycle}`;
             
-            // [Inference] HYBRID ANCHOR: Check if we have a locked anchor for this month
-            // We check the local outbox first for instant offline feedback, then fallback to property
-            const outbox = getOutbox();
-            const localEntry = outbox.find(o => o.readingId === readingId);
-            const anchor = localEntry ? localEntry.prevReading : (activeProperty?.lastReading || 0);
+            // FIX: Pull the anchor directly from the display element we just synced
+            const prevStr = document.getElementById('display-prev').innerText;
+            const anchor = parseFloat(prevStr) || 0;
         
             const consumption = Math.max(0, val - anchor);
             const amount = consumption <= billingConfig.threshold 
