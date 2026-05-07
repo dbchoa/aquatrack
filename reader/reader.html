@@ -322,22 +322,21 @@
 
             for (const item of outbox) {
                 try {
-                    // Hunt for the actual database baseline right now
+                    // SURGICAL FIX: Hunt by unitId to keep the meter history unique
                     const historySnap = await db.ref('readings')
-                        .orderByChild('propertyId')
-                        .equalTo(item.propertyId)
+                        .orderByChild('unitId')
+                        .equalTo(item.unitId)
                         .limitToLast(1)
                         .once('value');
 
-                    let finalPrev = item.prevReading; // Fallback to what we captured
+                    let finalPrev = item.prevReading;
 
                     if (historySnap.exists()) {
                         const latest = Object.values(historySnap.val())[0];
-                        // If same cycle (resubmit), take its prev. If new cycle, take its current reading.
+                        // Logic: If same cycle, keep prev. If new cycle, latest reading becomes the new prev.
                         finalPrev = (latest.readingId === item.readingId) ? latest.prevReading : latest.reading;
                     }
 
-                    // Prepare the healed data
                     const syncedData = { 
                         ...item, 
                         prevReading: finalPrev,
@@ -346,7 +345,7 @@
 
                     await db.ref(`readings/${item.readingId}`).set(syncedData);
                     
-                    // Remove from outbox after successful write
+                    // Remove from local outbox after confirmed cloud write
                     outbox = getOutbox().filter(o => o.readingId !== item.readingId);
                     setOutbox(outbox);
                 } catch (e) {
