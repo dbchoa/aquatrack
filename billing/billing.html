@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Billing Central - AquaTrack</title>
+    <title>Billing Command - AquaTrack v2.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="../style.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
@@ -42,14 +42,8 @@
             user-select: none;
             border: 2px solid transparent;
         }
-        .custom-select-trigger.is-open {
-            background: white !important;
-            border: 2px solid #4facfe !important;
-        }
-        .dark .custom-select-trigger.is-open {
-            background: #1e293b !important;
-            border-color: #4facfe !important;
-        }
+        .custom-select-trigger.is-open { border: 2px solid #4facfe !important; }
+        
         .select-dropdown-panel {
             position: absolute;
             top: calc(100% + 4px);
@@ -77,7 +71,6 @@
         .select-option:hover { background: #4facfe; color: white; }
         .select-option.is-selected { color: #4facfe; background: rgba(79, 172, 254, 0.1); }
 
-        /* KPI button styling */
         .kpi-btn { transition: all 0.2s ease; border-right: 1px solid rgba(79, 172, 254, 0.1); }
         .kpi-btn:hover { background: rgba(79, 172, 254, 0.05); }
 
@@ -96,7 +89,7 @@
                 <h4 id="hud-daily" class="text-2xl font-black text-emerald-500 stat-glow">₱ 0.00</h4>
             </button>
             <button onclick="setFilterStatus('pending')" class="kpi-btn p-6 group text-left">
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-amber-500">Unpaid Balance</p>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-amber-500">Pending Receivables</p>
                 <h4 id="hud-pending" class="text-2xl font-black text-amber-500">₱ 0.00</h4>
             </button>
             <div class="p-6 flex justify-between items-center bg-water/5">
@@ -112,12 +105,12 @@
 
         <div class="p-4 bg-white dark:bg-slate-900/50 flex gap-4 items-end border-b border-water/10">
             <div class="flex-1 flex flex-col">
-                <label class="text-[9px] font-black text-slate-400 uppercase mb-1 block tracking-tighter ml-2">Search Ledger</label>
+                <label class="text-[9px] font-black text-slate-400 uppercase mb-1 block tracking-tighter ml-2">Search Ledger (Name/Serial/Address)</label>
                 <div class="relative h-[48px] group">
                     <div class="absolute left-4 inset-y-0 flex items-center pointer-events-none">
                         <i class="bi bi-search text-slate-400 group-focus-within:text-water"></i>
                     </div>
-                    <input id="search-input" type="text" placeholder="Search name, serial, street..." 
+                    <input id="search-input" type="text" placeholder="Search..." 
                            class="w-full h-full pl-11 pr-4 bg-slate-100 dark:bg-slate-800 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-water/40 border-none transition-all">
                 </div>
             </div>
@@ -141,10 +134,9 @@
             <div class="w-96 bg-white dark:bg-slate-900 border-l border-water/20 overflow-y-auto hidden lg:block" id="intel-sidebar">
                 <div id="intel-empty" class="h-full flex flex-col items-center justify-center p-10 text-center opacity-20">
                     <i class="bi bi-lightning-charge text-6xl mb-4"></i>
-                    <p class="font-black uppercase tracking-tighter text-xs">Select a unit to process payment</p>
+                    <p class="font-black uppercase tracking-tighter text-xs">Select Unit to process</p>
                 </div>
-                <div id="intel-content" class="hidden p-8">
-                    </div>
+                <div id="intel-content" class="hidden p-8"></div>
             </div>
         </div>
     </main>
@@ -161,6 +153,7 @@
         injectHeader();
 
         let allReadings = [];
+        let unitsMap = {}; // Cache for Unit labels/serials
         let activeReading = null;
         let currentFilterStatus = 'all';
 
@@ -178,7 +171,9 @@
             
             container.innerHTML = '';
             const filtered = allReadings.filter(r => {
+                const unit = unitsMap[r.unitId] || {};
                 const matchesSearch = r.locationAddress.toLowerCase().includes(search) || 
+                                     (unit.meterSerial && unit.meterSerial.toString().includes(search)) ||
                                      (r.readerName && r.readerName.toLowerCase().includes(search));
                 const matchesCycle = r.billingCycle === cycle;
                 const matchesStatus = currentFilterStatus === 'all' || r.status === currentFilterStatus;
@@ -187,14 +182,10 @@
 
             updateKPIs(allReadings.filter(r => r.billingCycle === cycle));
 
-            if (filtered.length === 0) {
-                container.innerHTML = `<div class="p-20 text-center opacity-30 font-bold uppercase text-xs tracking-widest">No records found</div>`;
-                return;
-            }
-
             filtered.forEach(r => {
                 const amount = calculateAmount(r);
                 const isPaid = r.status === 'paid';
+                const unit = unitsMap[r.unitId] || {};
                 
                 const card = document.createElement('div');
                 card.className = `glass-card p-4 rounded-2xl flex items-center justify-between cursor-pointer hover:scale-[1.01] active:scale-95 transition-all ${activeReading?.readingId === r.readingId ? 'ring-2 ring-water' : ''}`;
@@ -206,8 +197,11 @@
                             <i class="bi ${isPaid ? 'bi-check-circle-fill' : 'bi-clock-history'}"></i>
                         </div>
                         <div>
-                            <p class="text-xs font-black uppercase tracking-tighter">${r.locationAddress}</p>
-                            <p class="text-[9px] font-bold text-slate-400 uppercase">Usage: ${(r.reading - r.prevReading).toFixed(1)} m³</p>
+                            <div class="flex items-center gap-2">
+                                <p class="text-xs font-black uppercase tracking-tighter">${r.locationAddress}</p>
+                                <span class="text-[8px] bg-water/10 text-waterDark px-1.5 py-0.5 rounded font-black uppercase">${unit.unitLabel || 'Unit'}</span>
+                            </div>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">SN: ${unit.meterSerial || 'N/A'}</p>
                         </div>
                     </div>
                     <div class="text-right">
@@ -221,89 +215,73 @@
 
         const selectUnit = (r) => {
             activeReading = r;
-            renderLedger(); // Update selection highlights
             const sidebar = document.getElementById('intel-content');
             const empty = document.getElementById('intel-empty');
-            
-            sidebar.classList.remove('hidden');
-            empty.classList.add('hidden');
+            sidebar.classList.remove('hidden'); empty.classList.add('hidden');
 
             const amount = calculateAmount(r);
             const isPaid = r.status === 'paid';
+            const unit = unitsMap[r.unitId] || {};
 
             sidebar.innerHTML = `
                 <div class="animate-in fade-in slide-in-from-right-4 duration-300">
-                    <h2 class="text-2xl font-black uppercase tracking-tighter mb-1">${r.locationAddress}</h2>
-                    <p class="text-[10px] font-black text-waterDark uppercase tracking-[0.2em] mb-6">${r.billingCycle} Ledger</p>
+                    <div class="mb-6">
+                        <h2 class="text-2xl font-black uppercase tracking-tighter leading-none">${r.locationAddress}</h2>
+                        <p class="text-[10px] font-black text-waterDark uppercase tracking-[0.2em] mt-2">${unit.unitLabel || 'Standard Unit'} / Cycle ${r.billingCycle}</p>
+                    </div>
                     
                     <div class="space-y-4 mb-8">
                         <div class="bg-slate-100 dark:bg-slate-800/50 p-5 rounded-2xl">
-                            <p class="text-[9px] font-black text-slate-400 uppercase mb-2 tracking-widest">Consumption Math</p>
-                            <div class="flex justify-between text-xs font-bold">
-                                <span>Present Reading</span>
-                                <span>${r.reading.toFixed(1)} m³</span>
-                            </div>
-                            <div class="flex justify-between text-xs font-bold opacity-50 mt-1">
-                                <span>Previous Reading</span>
-                                <span>${r.prevReading.toFixed(1)} m³</span>
-                            </div>
+                            <p class="text-[9px] font-black text-slate-400 uppercase mb-3 tracking-widest">Bill Calculation</p>
+                            <div class="flex justify-between text-xs font-bold"><span>Present</span><span>${r.reading.toFixed(1)} m³</span></div>
+                            <div class="flex justify-between text-xs font-bold opacity-50 mt-1"><span>Previous</span><span>${r.prevReading.toFixed(1)} m³</span></div>
                             <div class="border-t border-slate-200 dark:border-slate-700 mt-2 pt-2 flex justify-between font-black text-waterDark">
-                                <span>Net Usage</span>
-                                <span>${(r.reading - r.prevReading).toFixed(1)} m³</span>
+                                <span>Consumption</span><span>${(r.reading - r.prevReading).toFixed(1)} m³</span>
                             </div>
                         </div>
 
-                        <div class="${isPaid ? 'bg-emerald-500/10' : 'bg-amber-500/10'} p-5 rounded-2xl border ${isPaid ? 'border-emerald-500/20' : 'border-amber-500/20'}">
-                            <p class="text-[9px] font-black uppercase mb-2 tracking-widest ${isPaid ? 'text-emerald-600' : 'text-amber-600'}">Amount Due</p>
+                        <div class="${isPaid ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-amber-500/10 border-amber-500/20'} p-5 rounded-2xl border">
+                            <p class="text-[9px] font-black uppercase mb-1 tracking-widest ${isPaid ? 'text-emerald-600' : 'text-amber-600'}">Total Due</p>
                             <h3 class="text-3xl font-black tracking-tighter ${isPaid ? 'text-emerald-600' : 'text-slate-900 dark:text-white'}">${formatCurrency(amount)}</h3>
-                            ${isPaid ? `<p class="text-[10px] font-bold text-emerald-600 uppercase mt-1">Paid on ${r.paidDate || 'N/A'}</p>` : ''}
+                            ${isPaid ? `<p class="text-[9px] font-bold text-emerald-600 uppercase mt-2">Received: ${r.paidDate}</p>` : ''}
                         </div>
                     </div>
 
                     <button onclick="processPayment()" 
                             class="w-full py-4 ${isPaid ? 'bg-slate-200 dark:bg-slate-800 text-slate-500' : 'bg-emerald-600 text-white shadow-xl shadow-emerald-600/20'} rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all">
-                        ${isPaid ? 'Undo Payment Status' : 'Mark as Paid'}
+                        ${isPaid ? 'Undo Payment' : 'Mark as Paid'}
                     </button>
                 </div>
             `;
+            renderLedger(); // Refresh highlights
         };
 
         window.processPayment = async () => {
-            if(!activeReading) return;
             const isSettling = activeReading.status !== 'paid';
             const date = new Date().toISOString().slice(0, 10);
-
             try {
                 await db.ref(`readings/${activeReading.readingId}`).update({
                     status: isSettling ? 'paid' : 'pending',
                     paidDate: isSettling ? date : null
                 });
-                toast(isSettling ? "Payment Recorded" : "Status Reset", "success");
-                // The .on('value') listener will auto-refresh the UI
-            } catch (e) {
-                toast("Update Error", "error");
-            }
+                toast(isSettling ? "Payment Saved" : "Status Reset", "success");
+            } catch (e) { toast("Error", "error"); }
         };
 
         const updateKPIs = (cycleData) => {
-            let totalExpected = 0; let totalCollected = 0;
+            let expected = 0; let collected = 0;
             const today = new Date().toISOString().slice(0, 10);
-
             cycleData.forEach(r => {
                 const amt = calculateAmount(r);
-                totalExpected += amt;
-                if (r.status === 'paid') totalCollected += amt;
+                expected += amt;
+                if (r.status === 'paid') collected += amt;
             });
-
-            // "Collected Today" Logic
-            const dailyTake = allReadings.filter(r => r.status === 'paid' && r.paidDate === today)
-                                        .reduce((acc, r) => acc + calculateAmount(r), 0);
-
-            const efficiency = totalExpected > 0 ? Math.round((totalCollected / totalExpected) * 100) : 0;
+            const daily = allReadings.filter(r => r.status === 'paid' && r.paidDate === today)
+                                     .reduce((acc, curr) => acc + calculateAmount(child), 0);
             
-            document.getElementById('hud-daily').innerText = formatCurrency(dailyTake);
-            document.getElementById('hud-pending').innerText = formatCurrency(totalExpected - totalCollected);
-            document.getElementById('display-efficiency-pct').innerText = `${efficiency}%`;
+            document.getElementById('hud-daily').innerText = formatCurrency(daily);
+            document.getElementById('hud-pending').innerText = formatCurrency(expected - collected);
+            document.getElementById('display-efficiency-pct').innerText = `${expected > 0 ? Math.round((collected/expected)*100) : 0}%`;
         };
 
         window.toggleCycleDropdown = () => {
@@ -324,34 +302,38 @@
         window.selectCycleOption = (cycle) => {
             document.getElementById('filter-cycle').value = cycle;
             document.getElementById('selected-cycle-label').innerText = cycle;
-            window.toggleCycleDropdown();
-            renderLedger();
+            window.toggleCycleDropdown(); renderLedger();
         };
 
         window.setFilterStatus = (status) => {
             currentFilterStatus = (currentFilterStatus === status) ? 'all' : status;
-            toast(`Filter: ${currentFilterStatus.toUpperCase()}`, "info");
-            renderLedger();
+            toast(`Filter: ${currentFilterStatus.toUpperCase()}`, "info"); renderLedger();
         };
 
         window.handleExcelExport = () => {
             const cycle = document.getElementById('filter-cycle').value;
             const data = allReadings.filter(r => r.billingCycle === cycle).map(r => ({
                 Address: r.locationAddress,
+                Unit: (unitsMap[r.unitId] || {}).unitLabel || 'Standard',
                 Usage: (r.reading - r.prevReading).toFixed(1),
                 Amount: calculateAmount(r),
                 Status: r.status,
-                PaidDate: r.paidDate || 'Unpaid'
+                PaidDate: r.paidDate || 'N/A'
             }));
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Collection_Ledger");
-            XLSX.writeFile(wb, `AquaTrack_Ledger_${cycle}.xlsx`);
+            XLSX.utils.book_append_sheet(wb, ws, "Collection");
+            XLSX.writeFile(wb, `AquaTrack_v2.2_${cycle}.xlsx`);
         };
 
         auth.onAuthStateChanged(user => {
             if (!user) return window.location.replace('../index.html');
             
+            // Sync Units first for labels/serials
+            db.ref('Unit').on('value', uSnap => {
+                if(uSnap.exists()) unitsMap = uSnap.val();
+            });
+
             db.ref('readings').on('value', snap => {
                 if(snap.exists()) {
                     allReadings = Object.values(snap.val());
@@ -361,8 +343,7 @@
                     const label = document.getElementById('selected-cycle-label');
 
                     if (!hiddenInput.value && cycles.length > 0) {
-                        hiddenInput.value = cycles[0];
-                        label.innerText = cycles[0];
+                        hiddenInput.value = cycles[0]; label.innerText = cycles[0];
                     }
 
                     optionsContainer.innerHTML = cycles.map(c => `
@@ -371,7 +352,10 @@
                     `).join('');
 
                     renderLedger();
-                    if(activeReading) selectUnit(allReadings.find(r => r.readingId === activeReading.readingId));
+                    if(activeReading) {
+                        const updated = allReadings.find(r => r.readingId === activeReading.readingId);
+                        if(updated) selectUnit(updated);
+                    }
                 }
             });
         });
