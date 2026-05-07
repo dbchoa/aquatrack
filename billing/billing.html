@@ -257,27 +257,40 @@
         };
 
         window.processPayment = async () => {
+            if(!activeReading) return;
             const isSettling = activeReading.status !== 'paid';
             const date = new Date().toISOString().slice(0, 10);
+            
             try {
+                // Perform the update
                 await db.ref(`readings/${activeReading.readingId}`).update({
                     status: isSettling ? 'paid' : 'pending',
                     paidDate: isSettling ? date : null
                 });
+                
                 toast(isSettling ? "Payment Saved" : "Status Reset", "success");
-            } catch (e) { toast("Error", "error"); }
+                
+                // Real-time listener will trigger renderLedger, 
+                // but we keep the sidebar updated for immediate feedback
+            } catch (e) { 
+                console.error(e);
+                toast("Error updating ledger", "error"); 
+            }
         };
 
         const updateKPIs = (cycleData) => {
             let expected = 0; let collected = 0;
             const today = new Date().toISOString().slice(0, 10);
+            
             cycleData.forEach(r => {
                 const amt = calculateAmount(r);
                 expected += amt;
                 if (r.status === 'paid') collected += amt;
             });
+
+            // SURGICAL FIX: Used 'curr' instead of 'child'
             const daily = allReadings.filter(r => r.status === 'paid' && r.paidDate === today)
-                                     .reduce((acc, curr) => acc + calculateAmount(child), 0);
+                                     .reduce((acc, curr) => acc + calculateAmount(curr), 0);
             
             document.getElementById('hud-daily').innerText = formatCurrency(daily);
             document.getElementById('hud-pending').innerText = formatCurrency(expected - collected);
