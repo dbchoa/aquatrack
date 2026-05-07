@@ -103,27 +103,33 @@
             </div>
         </div>
 
-        <div class="p-4 bg-white dark:bg-slate-900/50 flex gap-4 items-end border-b border-water/10">
-            <div class="flex-1 flex flex-col">
-                <label class="text-[9px] font-black text-slate-400 uppercase mb-1 block tracking-tighter ml-2">Search Ledger (Name/Serial/Address)</label>
-                <div class="relative h-[48px] group">
-                    <div class="absolute left-4 inset-y-0 flex items-center pointer-events-none">
-                        <i class="bi bi-search text-slate-400 group-focus-within:text-water"></i>
-                    </div>
-                    <input id="search-input" type="text" placeholder="Search..." 
-                           class="w-full h-full pl-11 pr-4 bg-slate-100 dark:bg-slate-800 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-water/40 border-none transition-all">
-                </div>
+        <div class="p-4 bg-white dark:bg-slate-900/50 border-b border-water/10">
+            <div class="flex gap-2 mb-3 ml-2">
+                <button onclick="setSearchMode('address')" id="mode-address" class="search-mode-btn is-active">Address</button>
+                <button onclick="setSearchMode('serial')" id="mode-serial" class="search-mode-btn">Serial</button>
+                <button onclick="setSearchMode('name')" id="mode-name" class="search-mode-btn">Name</button>
             </div>
-
-            <div class="relative w-48 flex flex-col" id="cycle-select-wrapper">
-                <label class="text-[9px] font-black text-slate-400 uppercase mb-1 block tracking-tighter ml-2">Billing Cycle</label>
-                <div id="cycle-trigger" onclick="toggleCycleDropdown()" 
-                     class="custom-select-trigger flex items-center justify-between px-5 rounded-2xl h-[48px] bg-slate-100 dark:bg-slate-800 border-none">
-                    <span id="selected-cycle-label" class="text-xs font-black uppercase">---</span>
-                    <i class="bi bi-chevron-down opacity-50 text-[10px]"></i>
+        
+            <div class="flex gap-4 items-end">
+                <div class="flex-1 flex flex-col">
+                    <div class="relative h-[48px] group">
+                        <div class="absolute left-4 inset-y-0 flex items-center pointer-events-none">
+                            <i id="search-icon" class="bi bi-geo-alt text-slate-400 group-focus-within:text-water"></i>
+                        </div>
+                        <input id="search-input" type="text" placeholder="Search by address..." 
+                               class="w-full h-full pl-11 pr-4 bg-slate-100 dark:bg-slate-800 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-water/40 border-none transition-all">
+                    </div>
                 </div>
-                <input type="hidden" id="filter-cycle" value="">
-                <div id="cycle-options" class="select-dropdown-panel hidden scale-95 opacity-0"></div>
+        
+                <div class="relative w-48 flex flex-col" id="cycle-select-wrapper">
+                    <div id="cycle-trigger" onclick="toggleCycleDropdown()" 
+                         class="custom-select-trigger flex items-center justify-between px-5 rounded-2xl h-[48px] bg-slate-100 dark:bg-slate-800 border-none">
+                        <span id="selected-cycle-label" class="text-xs font-black uppercase">---</span>
+                        <i class="bi bi-chevron-down opacity-50 text-[10px]"></i>
+                    </div>
+                    <input type="hidden" id="filter-cycle" value="">
+                    <div id="cycle-options" class="select-dropdown-panel hidden scale-95 opacity-0"></div>
+                </div>
             </div>
         </div>
 
