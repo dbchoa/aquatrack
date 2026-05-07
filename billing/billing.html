@@ -400,10 +400,30 @@
         auth.onAuthStateChanged(user => {
             if (!user) return window.location.replace('../index.html');
             
-            // Sync Units first for labels/serials
-            db.ref('Unit').on('value', uSnap => {
-                if(uSnap.exists()) unitsMap = uSnap.val();
+            // --- SURGICAL GRAFT START: Fetch Land Data to Resolve Names ---
+            db.ref('properties').on('value', pSnap => {
+                const props = pSnap.val() || {};
+                
+                // Nesting Unit listener inside Properties listener to ensure we have the names
+                db.ref('Unit').on('value', uSnap => {
+                    if(uSnap.exists()) {
+                        const units = uSnap.val();
+                        unitsMap = {}; // Reset local cache
+                        
+                        // Bridge the Gap: Link Unit data to Parent Property Owner
+                        for(let id in units) {
+                            const parent = props[units[id].propertyId] || {};
+                            unitsMap[id] = {
+                                ...units[id],
+                                // Surgical Fix: If land is not yet claimed, show "Resident"
+                                ownerName: parent.ownerName || "Resident" 
+                            };
+                        }
+                        renderLedger();
+                    }
+                });
             });
+            // --- SURGICAL GRAFT END ---
 
             db.ref('readings').on('value', snap => {
                 if(snap.exists()) {
