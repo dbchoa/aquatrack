@@ -13,12 +13,7 @@
             darkMode: 'class',
             theme: {
                 extend: {
-                    colors: { 
-                        water: '#4facfe', 
-                        waterDark: '#0072ff',
-                        electric: '#4facfe',
-                        warning: '#f59e0b'
-                    },
+                    colors: { water: '#4facfe', waterDark: '#0072ff', warning: '#f59e0b' },
                     borderRadius: { '32': '32px', '48': '48px' }
                 }
             }
@@ -30,153 +25,129 @@
     <style>
         .stat-glow { text-shadow: 0 0 15px rgba(79, 172, 254, 0.4); }
         .glass-card {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             background: rgba(255, 255, 255, 0.9);
             backdrop-blur: 12px;
             border: 1px solid rgba(255, 255, 255, 0.5);
         }
         .dark .glass-card {
             background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(79, 172, 254, 0.4);
-            box-shadow: inset 0 0 12px rgba(79, 172, 254, 0.05);
+            border: 1px solid rgba(79, 172, 254, 0.2);
         }
-        .dash-row { transition: all 0.2s ease; }
-        .dash-row:hover { background: rgba(79, 172, 254, 0.05); }
-        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        #toast-container { position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%); z-index: 999; pointer-events: none; }
 
         /* Custom Select Hijack */
         .custom-select-trigger {
-            background: var(--glass);
-            border: 1px solid var(--border);
-            transition: all 0.2s var(--ease-kinetic);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
             position: relative;
             user-select: none;
+            border: 2px solid transparent;
         }
-        .custom-select-trigger:active { transform: scale(0.98); }
         .custom-select-trigger.is-open {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 4px var(--accent-glow);
+            background: white !important;
+            border: 2px solid #4facfe !important;
+        }
+        .dark .custom-select-trigger.is-open {
+            background: #1e293b !important;
+            border-color: #4facfe !important;
         }
         .select-dropdown-panel {
             position: absolute;
-            top: calc(100% + 8px);
+            top: calc(100% + 4px);
             left: 0;
             width: 100%;
-            background: var(--surface);
+            background: white;
             backdrop-blur: 24px;
-            border: 1px solid var(--accent);
-            border-radius: 22px;
+            border: 1px solid #4facfe;
+            border-radius: 18px;
             z-index: 1000;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             overflow: hidden;
             transform-origin: top;
             transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
+        .dark .select-dropdown-panel { background: #0f172a; }
         .select-option {
             padding: 12px 20px;
             font-size: 11px;
             font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--text-muted);
+            color: #64748b;
             transition: all 0.1s ease;
         }
-        .select-option:hover {
-            background: var(--accent);
-            color: white;
-        }
-        .select-option.is-selected {
-            color: var(--accent);
-            background: var(--accent-glow);
-        }
+        .select-option:hover { background: #4facfe; color: white; }
+        .select-option.is-selected { color: #4facfe; background: rgba(79, 172, 254, 0.1); }
+
+        /* KPI button styling */
+        .kpi-btn { transition: all 0.2s ease; border-right: 1px solid rgba(79, 172, 254, 0.1); }
+        .kpi-btn:hover { background: rgba(79, 172, 254, 0.05); }
+
+        #toast-container { position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%); z-index: 999; pointer-events: none; }
     </style>
 </head>
-<body class="bg-slate-100 dark:bg-[#020617] font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300">
+<body class="bg-slate-50 dark:bg-[#020617] font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300">
     
     <header id="header-container"></header>
     <div id="toast-container"></div>
 
-    <main class="max-w-full h-screen flex flex-col overflow-hidden bg-slate-50 dark:bg-[#020617]">
+    <main class="max-w-full h-screen flex flex-col overflow-hidden">
         <div class="grid grid-cols-3 gap-0 bg-white dark:bg-slate-900 border-b border-water/20">
-            <button onclick="filterBy('today')" class="p-6 border-r border-water/10 hover:bg-water/5 transition-colors group text-left">
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-emerald-500 transition-colors">Daily Collection</p>
+            <button onclick="setFilterStatus('paid')" class="kpi-btn p-6 group text-left">
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-emerald-500">Today's Collection</p>
                 <h4 id="hud-daily" class="text-2xl font-black text-emerald-500 stat-glow">₱ 0.00</h4>
             </button>
-            <button onclick="filterBy('pending')" class="p-6 border-r border-water/10 hover:bg-water/5 transition-colors group text-left">
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-amber-500 transition-colors">Pending Arrears</p>
+            <button onclick="setFilterStatus('pending')" class="kpi-btn p-6 group text-left">
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-amber-500">Unpaid Balance</p>
                 <h4 id="hud-pending" class="text-2xl font-black text-amber-500">₱ 0.00</h4>
             </button>
-            <div class="p-6 flex justify-between items-center bg-waterDark/5">
+            <div class="p-6 flex justify-between items-center bg-water/5">
                 <div>
-                    <p class="text-[9px] font-black text-waterDark dark:text-water uppercase tracking-widest">Cycle Efficiency</p>
-                    <h4 id="display-efficiency-pct" class="text-2xl font-black text-slate-900 dark:text-white">0%</h4>
+                    <p class="text-[9px] font-black text-waterDark uppercase tracking-widest">Efficiency</p>
+                    <h4 id="display-efficiency-pct" class="text-2xl font-black">0%</h4>
                 </div>
-                <button onclick="handleExcelExport()" class="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 shadow-lg flex items-center justify-center text-emerald-500 active:scale-90 transition-all">
+                <button onclick="handleExcelExport()" class="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 shadow-lg flex items-center justify-center text-emerald-500 active:scale-95 transition-all">
                     <i class="bi bi-file-earmark-spreadsheet-fill text-xl"></i>
                 </button>
             </div>
         </div>
-    
-        <div class="flex-1 flex overflow-hidden">
-            <div class="flex-1 flex flex-col min-w-0">
-                <div class="p-4 bg-white dark:bg-slate-900/50 flex gap-4">
-                    <div class="flex-1 relative">
-                        <i class="bi bi-search absolute left-4 top-1/2 -translate-y-1/2 opacity-30"></i>
-                        <input id="search-input" type="text" placeholder="Search by name, serial, or street..." 
-                               class="w-full pl-12 pr-4 py-4 bg-slate-100 dark:bg-slate-800 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-water/40 border-none">
+
+        <div class="p-4 bg-white dark:bg-slate-900/50 flex gap-4 items-end border-b border-water/10">
+            <div class="flex-1 flex flex-col">
+                <label class="text-[9px] font-black text-slate-400 uppercase mb-1 block tracking-tighter ml-2">Search Ledger</label>
+                <div class="relative h-[48px] group">
+                    <div class="absolute left-4 inset-y-0 flex items-center pointer-events-none">
+                        <i class="bi bi-search text-slate-400 group-focus-within:text-water"></i>
                     </div>
-                    <div class="relative w-40" id="cycle-select-wrapper">
-                        <label class="text-[9px] font-black text-slate-400 uppercase mb-1 block tracking-tighter">Cycle</label>
-                        <div id="cycle-trigger" onclick="toggleCycleDropdown()" 
-                             class="custom-select-trigger flex items-center justify-between px-5 py-3 rounded-2xl h-[48px]">
-                            <span id="selected-cycle-label" class="text-xs font-black">---</span>
-                            <i class="bi bi-chevron-down opacity-50"></i>
-                        </div>
-                        <input type="hidden" id="filter-cycle" value="">
-                        
-                        <div id="cycle-options" class="select-dropdown-panel hidden scale-95 opacity-0">
-                            </div>
-                    </div>
+                    <input id="search-input" type="text" placeholder="Search name, serial, street..." 
+                           class="w-full h-full pl-11 pr-4 bg-slate-100 dark:bg-slate-800 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-water/40 border-none transition-all">
                 </div>
-    
-                <div class="flex-1 overflow-y-auto p-4 space-y-3" id="ledger-container">
-                    </div>
             </div>
-    
+
+            <div class="relative w-48 flex flex-col" id="cycle-select-wrapper">
+                <label class="text-[9px] font-black text-slate-400 uppercase mb-1 block tracking-tighter ml-2">Billing Cycle</label>
+                <div id="cycle-trigger" onclick="toggleCycleDropdown()" 
+                     class="custom-select-trigger flex items-center justify-between px-5 rounded-2xl h-[48px] bg-slate-100 dark:bg-slate-800 border-none">
+                    <span id="selected-cycle-label" class="text-xs font-black uppercase">---</span>
+                    <i class="bi bi-chevron-down opacity-50 text-[10px]"></i>
+                </div>
+                <input type="hidden" id="filter-cycle" value="">
+                <div id="cycle-options" class="select-dropdown-panel hidden scale-95 opacity-0"></div>
+            </div>
+        </div>
+
+        <div class="flex-1 flex overflow-hidden">
+            <div class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50 dark:bg-black/20" id="ledger-container">
+                </div>
+
             <div class="w-96 bg-white dark:bg-slate-900 border-l border-water/20 overflow-y-auto hidden lg:block" id="intel-sidebar">
                 <div id="intel-empty" class="h-full flex flex-col items-center justify-center p-10 text-center opacity-20">
                     <i class="bi bi-lightning-charge text-6xl mb-4"></i>
-                    <p class="font-black uppercase tracking-tighter text-xs">Select an account to view intelligence & history</p>
+                    <p class="font-black uppercase tracking-tighter text-xs">Select a unit to process payment</p>
                 </div>
                 <div id="intel-content" class="hidden p-8">
                     </div>
             </div>
         </div>
     </main>
-
-    <div id="paymentModal" class="hidden fixed inset-0 z-[500] bg-black/60 backdrop-blur-sm flex items-start md:items-center justify-center p-6 pt-24 md:pt-6">
-        <div class="bg-white/95 dark:bg-slate-900/90 backdrop-blur-2xl w-full max-w-sm rounded-[2.5rem] p-8 border border-white dark:border-white/10 shadow-2xl relative overflow-hidden">
-            <h3 class="text-xl font-bold mb-2 text-center uppercase tracking-tight">Record Payment</h3>
-            <p id="pay-address" class="text-[10px] text-center font-black text-waterDark uppercase tracking-[0.2em] mb-8">---</p>
-            
-            <div class="mb-8 text-center bg-slate-100 dark:bg-slate-800/50 p-6 rounded-3xl">
-                <p id="pay-account-name" class="font-bold text-slate-500 text-xs uppercase mb-1">---</p>
-                <p id="pay-amount" class="text-3xl font-black text-emerald-600 tracking-tighter">₱ 0.00</p>
-            </div>
-            
-            <div class="mb-8">
-                <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block ml-2">Date Received</label>
-                <input id="pay-date" type="date" class="w-full p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl outline-none font-bold text-sm">
-            </div>
-            
-            <div class="flex flex-col gap-2">
-                <button id="btn-confirm-pay" onclick="confirmPayment()" class="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-emerald-600/20 active:scale-95 transition-all">Submit Payment</button>
-                <button onclick="closePaymentModal()" class="w-full py-3 text-slate-500 font-bold uppercase text-[10px] tracking-widest text-center">Cancel</button>
-            </div>
-        </div>
-    </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
@@ -191,198 +162,221 @@
 
         let allReadings = [];
         let activeReading = null;
+        let currentFilterStatus = 'all';
 
         const calculateAmount = (r) => {
+            if(!r.appliedRates) return 0;
             const consumption = Math.max(0, r.reading - r.prevReading);
             const { threshold, minFee, excessRate } = r.appliedRates;
             return consumption <= threshold ? minFee : minFee + ((consumption - threshold) * excessRate);
         };
 
-        const renderTable = () => {
-            const container = document.getElementById('report-body');
+        const renderLedger = () => {
+            const container = document.getElementById('ledger-container');
             const search = document.getElementById('search-input').value.toLowerCase();
             const cycle = document.getElementById('filter-cycle').value;
-            const status = document.getElementById('filter-status').value;
             
             container.innerHTML = '';
             const filtered = allReadings.filter(r => {
-                const matchesSearch = r.locationAddress.toLowerCase().includes(search);
+                const matchesSearch = r.locationAddress.toLowerCase().includes(search) || 
+                                     (r.readerName && r.readerName.toLowerCase().includes(search));
                 const matchesCycle = r.billingCycle === cycle;
-                const matchesStatus = status === 'all' || r.status === status;
+                const matchesStatus = currentFilterStatus === 'all' || r.status === currentFilterStatus;
                 return matchesSearch && matchesCycle && matchesStatus;
             });
 
-            updateHUD(filtered, cycle);
+            updateKPIs(allReadings.filter(r => r.billingCycle === cycle));
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="p-20 text-center opacity-30 font-bold uppercase text-xs tracking-widest">No records found</div>`;
+                return;
+            }
 
             filtered.forEach(r => {
                 const amount = calculateAmount(r);
-                const tr = document.createElement('tr');
-                tr.className = "dash-row";
-                tr.innerHTML = `
-                    <td class="p-5">
-                        <p class="font-black text-slate-900 dark:text-white uppercase tracking-tighter">${r.locationAddress}</p>
-                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Reader: ${r.readerName}</p>
-                    </td>
-                    <td class="p-5 text-center font-mono font-bold text-xs">
-                        ${(r.reading - r.prevReading).toFixed(1)} <span class="opacity-40">m³</span>
-                    </td>
-                    <td class="p-5 text-right font-black text-slate-900 dark:text-white">
-                        ${formatCurrency(amount)}
-                    </td>
-                    <td class="p-5 text-center">
-                        <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter ${r.status === 'paid' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}">
-                            ${r.status}
-                        </span>
-                    </td>
-                    <td class="p-5 text-right">
-                        <button onclick="openPaymentModal('${r.readingId}')" class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 active:scale-90 transition-transform">
-                            <i class="bi ${r.status === 'paid' ? 'bi-arrow-left-right' : 'bi-cash-stack text-emerald-500'}"></i>
-                        </button>
-                    </td>
+                const isPaid = r.status === 'paid';
+                
+                const card = document.createElement('div');
+                card.className = `glass-card p-4 rounded-2xl flex items-center justify-between cursor-pointer hover:scale-[1.01] active:scale-95 transition-all ${activeReading?.readingId === r.readingId ? 'ring-2 ring-water' : ''}`;
+                card.onclick = () => selectUnit(r);
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center ${isPaid ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}">
+                            <i class="bi ${isPaid ? 'bi-check-circle-fill' : 'bi-clock-history'}"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-black uppercase tracking-tighter">${r.locationAddress}</p>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase">Usage: ${(r.reading - r.prevReading).toFixed(1)} m³</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm font-black ${isPaid ? 'text-emerald-600' : 'text-slate-900 dark:text-white'}">${formatCurrency(amount)}</p>
+                        <p class="text-[8px] font-black uppercase opacity-50">${r.status}</p>
+                    </div>
                 `;
-                container.appendChild(tr);
+                container.appendChild(card);
             });
         };
 
-        const updateHUD = (filteredList, activeCycle) => {
-            const cycleData = allReadings.filter(r => r.billingCycle === activeCycle);
-            let totalExpected = 0; let totalCollected = 0; let unpaidCount = 0;
+        const selectUnit = (r) => {
+            activeReading = r;
+            renderLedger(); // Update selection highlights
+            const sidebar = document.getElementById('intel-content');
+            const empty = document.getElementById('intel-empty');
+            
+            sidebar.classList.remove('hidden');
+            empty.classList.add('hidden');
+
+            const amount = calculateAmount(r);
+            const isPaid = r.status === 'paid';
+
+            sidebar.innerHTML = `
+                <div class="animate-in fade-in slide-in-from-right-4 duration-300">
+                    <h2 class="text-2xl font-black uppercase tracking-tighter mb-1">${r.locationAddress}</h2>
+                    <p class="text-[10px] font-black text-waterDark uppercase tracking-[0.2em] mb-6">${r.billingCycle} Ledger</p>
+                    
+                    <div class="space-y-4 mb-8">
+                        <div class="bg-slate-100 dark:bg-slate-800/50 p-5 rounded-2xl">
+                            <p class="text-[9px] font-black text-slate-400 uppercase mb-2 tracking-widest">Consumption Math</p>
+                            <div class="flex justify-between text-xs font-bold">
+                                <span>Present Reading</span>
+                                <span>${r.reading.toFixed(1)} m³</span>
+                            </div>
+                            <div class="flex justify-between text-xs font-bold opacity-50 mt-1">
+                                <span>Previous Reading</span>
+                                <span>${r.prevReading.toFixed(1)} m³</span>
+                            </div>
+                            <div class="border-t border-slate-200 dark:border-slate-700 mt-2 pt-2 flex justify-between font-black text-waterDark">
+                                <span>Net Usage</span>
+                                <span>${(r.reading - r.prevReading).toFixed(1)} m³</span>
+                            </div>
+                        </div>
+
+                        <div class="${isPaid ? 'bg-emerald-500/10' : 'bg-amber-500/10'} p-5 rounded-2xl border ${isPaid ? 'border-emerald-500/20' : 'border-amber-500/20'}">
+                            <p class="text-[9px] font-black uppercase mb-2 tracking-widest ${isPaid ? 'text-emerald-600' : 'text-amber-600'}">Amount Due</p>
+                            <h3 class="text-3xl font-black tracking-tighter ${isPaid ? 'text-emerald-600' : 'text-slate-900 dark:text-white'}">${formatCurrency(amount)}</h3>
+                            ${isPaid ? `<p class="text-[10px] font-bold text-emerald-600 uppercase mt-1">Paid on ${r.paidDate || 'N/A'}</p>` : ''}
+                        </div>
+                    </div>
+
+                    <button onclick="processPayment()" 
+                            class="w-full py-4 ${isPaid ? 'bg-slate-200 dark:bg-slate-800 text-slate-500' : 'bg-emerald-600 text-white shadow-xl shadow-emerald-600/20'} rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all">
+                        ${isPaid ? 'Undo Payment Status' : 'Mark as Paid'}
+                    </button>
+                </div>
+            `;
+        };
+
+        window.processPayment = async () => {
+            if(!activeReading) return;
+            const isSettling = activeReading.status !== 'paid';
+            const date = new Date().toISOString().slice(0, 10);
+
+            try {
+                await db.ref(`readings/${activeReading.readingId}`).update({
+                    status: isSettling ? 'paid' : 'pending',
+                    paidDate: isSettling ? date : null
+                });
+                toast(isSettling ? "Payment Recorded" : "Status Reset", "success");
+                // The .on('value') listener will auto-refresh the UI
+            } catch (e) {
+                toast("Update Error", "error");
+            }
+        };
+
+        const updateKPIs = (cycleData) => {
+            let totalExpected = 0; let totalCollected = 0;
+            const today = new Date().toISOString().slice(0, 10);
 
             cycleData.forEach(r => {
                 const amt = calculateAmount(r);
                 totalExpected += amt;
                 if (r.status === 'paid') totalCollected += amt;
-                else unpaidCount++;
             });
+
+            // "Collected Today" Logic
+            const dailyTake = allReadings.filter(r => r.status === 'paid' && r.paidDate === today)
+                                        .reduce((acc, r) => acc + calculateAmount(r), 0);
 
             const efficiency = totalExpected > 0 ? Math.round((totalCollected / totalExpected) * 100) : 0;
-            document.getElementById('display-efficiency-pct').innerHTML = `${efficiency}<span class="text-lg opacity-50 ml-1">%</span>`;
-            document.getElementById('efficiency-bar').style.width = `${efficiency}%`;
-            document.getElementById('display-collected-amount').innerText = `${formatCurrency(totalCollected)} Collected`;
-            document.getElementById('hud-receivables').innerText = formatCurrency(totalExpected - totalCollected);
-            document.getElementById('hud-unpaid-units').innerText = `${unpaidCount} Units`;
-        };
-
-        window.handleExcelExport = () => {
-            const cycle = document.getElementById('filter-cycle').value;
-            const data = allReadings.filter(r => r.billingCycle === cycle).map(r => ({
-                Address: r.locationAddress,
-                Consumption: (r.reading - r.prevReading).toFixed(1),
-                Amount: calculateAmount(r),
-                Status: r.status,
-                PaidDate: r.paidDate || 'Unpaid'
-            }));
-            const ws = XLSX.utils.json_to_sheet(data);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Billing");
-            XLSX.writeFile(wb, `AquaTrack_Billing_${cycle}.xlsx`);
-        };
-
-        window.openPaymentModal = (id) => {
-            activeReading = allReadings.find(r => r.readingId === id);
-            document.getElementById('pay-address').innerText = activeReading.locationAddress;
-            document.getElementById('pay-account-name').innerText = `Capturer: ${activeReading.readerName}`;
-            document.getElementById('pay-amount').innerText = formatCurrency(calculateAmount(activeReading));
-            document.getElementById('pay-date').value = new Date().toISOString().slice(0, 10);
-            document.getElementById('paymentModal').classList.remove('hidden');
-        };
-
-        window.closePaymentModal = () => document.getElementById('paymentModal').classList.add('hidden');
-
-        window.confirmPayment = async () => {
-            const btn = document.getElementById('btn-confirm-pay');
-            const date = document.getElementById('pay-date').value;
-            const isSettling = activeReading.status !== 'paid';
-
-            try {
-                btn.disabled = true;
-                await db.ref(`readings/${activeReading.readingId}`).update({
-                    status: isSettling ? 'paid' : 'pending',
-                    paidDate: isSettling ? date : null
-                });
-                toast("Status Updated", "success");
-                closePaymentModal();
-            } catch (e) { toast("Update Failed", "error"); }
-            finally { btn.disabled = false; }
-        };
-
-       // --- Inside your <script type="module"> ---
-
-        auth.onAuthStateChanged(user => {
-            if (!user) return window.location.replace('../index.html');
-            document.getElementById('staff-name-display').innerText = sessionStorage.getItem('aqt_user_name') || "Billing Staff";
             
-            // 1. Listen for Live Ledger Updates
-            db.ref('readings').on('value', snap => {
-                if(snap.exists()) {
-                    allReadings = Object.values(snap.val());
-                    
-                    // 2. Extract Unique Billing Cycles
-                    const cycles = [...new Set(allReadings.map(r => r.billingCycle))].sort().reverse();
-                    
-                    // 3. UI HIJACK: Populate the Custom Dropdown instead of a native select
-                    const optionsContainer = document.getElementById('cycle-options');
-                    const hiddenInput = document.getElementById('filter-cycle');
-                    const label = document.getElementById('selected-cycle-label');
-
-                    // 4. Surgical Auto-Selection (If nothing is selected yet, pick the latest month)
-                    if (!hiddenInput.value && cycles.length > 0) {
-                        hiddenInput.value = cycles[0];
-                        label.innerText = cycles[0];
-                    }
-
-                    // 5. Render the "Gamer-Water" Options
-                    optionsContainer.innerHTML = cycles.map(c => `
-                        <div class="select-option ${hiddenInput.value === c ? 'is-selected' : ''}" 
-                             onclick="selectCycleOption('${c}')">
-                             ${c}
-                        </div>
-                    `).join('');
-
-                    // 6. Refresh the main ledger view
-                    renderTable();
-                }
-            });
-        });
-
-        // --- NEW GLOBAL CONTROLLERS (Add these outside the auth block) ---
+            document.getElementById('hud-daily').innerText = formatCurrency(dailyTake);
+            document.getElementById('hud-pending').innerText = formatCurrency(totalExpected - totalCollected);
+            document.getElementById('display-efficiency-pct').innerText = `${efficiency}%`;
+        };
 
         window.toggleCycleDropdown = () => {
             const panel = document.getElementById('cycle-options');
             const trigger = document.getElementById('cycle-trigger');
             const isOpen = !panel.classList.contains('hidden');
-            
             if (isOpen) {
                 panel.classList.add('scale-95', 'opacity-0');
                 setTimeout(() => panel.classList.add('hidden'), 200);
                 trigger.classList.remove('is-open');
             } else {
                 panel.classList.remove('hidden');
-                // Kinetic entry: Wait for 1 tick to trigger transition
                 setTimeout(() => panel.classList.remove('scale-95', 'opacity-0'), 10);
                 trigger.classList.add('is-open');
             }
         };
 
         window.selectCycleOption = (cycle) => {
-            // Update the state
             document.getElementById('filter-cycle').value = cycle;
             document.getElementById('selected-cycle-label').innerText = cycle;
-            
-            // Close the panel kinetically
             window.toggleCycleDropdown();
-            
-            // Re-filter the ledger
-            renderTable();
+            renderLedger();
         };
 
-        // Search & Filter event mapping
-        document.getElementById('search-input').oninput = renderTable;
-        document.getElementById('filter-cycle').onchange = renderTable;
-        document.getElementById('filter-status').onchange = renderTable;
+        window.setFilterStatus = (status) => {
+            currentFilterStatus = (currentFilterStatus === status) ? 'all' : status;
+            toast(`Filter: ${currentFilterStatus.toUpperCase()}`, "info");
+            renderLedger();
+        };
 
-        // Security block placeholder
-        window.openPasswordModal = () => toast("Security under maintenance", "info");
+        window.handleExcelExport = () => {
+            const cycle = document.getElementById('filter-cycle').value;
+            const data = allReadings.filter(r => r.billingCycle === cycle).map(r => ({
+                Address: r.locationAddress,
+                Usage: (r.reading - r.prevReading).toFixed(1),
+                Amount: calculateAmount(r),
+                Status: r.status,
+                PaidDate: r.paidDate || 'Unpaid'
+            }));
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Collection_Ledger");
+            XLSX.writeFile(wb, `AquaTrack_Ledger_${cycle}.xlsx`);
+        };
+
+        auth.onAuthStateChanged(user => {
+            if (!user) return window.location.replace('../index.html');
+            
+            db.ref('readings').on('value', snap => {
+                if(snap.exists()) {
+                    allReadings = Object.values(snap.val());
+                    const cycles = [...new Set(allReadings.map(r => r.billingCycle))].sort().reverse();
+                    const optionsContainer = document.getElementById('cycle-options');
+                    const hiddenInput = document.getElementById('filter-cycle');
+                    const label = document.getElementById('selected-cycle-label');
+
+                    if (!hiddenInput.value && cycles.length > 0) {
+                        hiddenInput.value = cycles[0];
+                        label.innerText = cycles[0];
+                    }
+
+                    optionsContainer.innerHTML = cycles.map(c => `
+                        <div class="select-option ${hiddenInput.value === c ? 'is-selected' : ''}" 
+                             onclick="selectCycleOption('${c}')">${c}</div>
+                    `).join('');
+
+                    renderLedger();
+                    if(activeReading) selectUnit(allReadings.find(r => r.readingId === activeReading.readingId));
+                }
+            });
+        });
+
+        document.getElementById('search-input').oninput = renderLedger;
     </script>
 </body>
 </html>
