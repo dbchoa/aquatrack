@@ -828,39 +828,32 @@
 
         window.showConfirmation = async () => {
             const reading = parseFloat(document.getElementById('input-reading').value);
-            const billingCycle = getTargetBillingCycle();
-            const readingId = `${activeProperty.propertyId}_${billingCycle}`;
-            
-            // [Verified Fix] OFFLINE-AWARE FLOOR CHECK
-            let monthlyFloor = activeProperty?.lastReading || 0;
-            const outbox = getOutbox();
-            const localEntry = outbox.find(o => o.readingId === readingId);
+            const prevStr = document.getElementById('display-prev').innerText;
+            const floor = parseFloat(prevStr) || 0;
         
-            if (localEntry) {
-                monthlyFloor = localEntry.prevReading;
-            } else if (!isDeviceOffline) {
-                try {
-                    // Only 'await' if we are actually online
-                    const snap = await db.ref(`readings/${readingId}`).once('value');
-                    if (snap.exists()) monthlyFloor = snap.val().prevReading;
-                } catch (e) { console.error("Floor fetch skipped"); }
-            }
-        
-            if(isNaN(reading) || reading < monthlyFloor) {
-                return toast(`Value must be at least ${monthlyFloor} m³`, "info");
+            if(isNaN(reading) || reading < floor) {
+                return toast(`Value must be at least ${floor} m³`, "info");
             }
         
             document.getElementById('modal-stage-reading').classList.add('hidden');
             document.getElementById('modal-stage-confirm').classList.remove('hidden');
             
+            // FIX: Point all data paths to activeUnit
             document.getElementById('confirm-summary').innerHTML = `
                 <div class="flex justify-between items-center">
-                    <span>Property</span>
-                    <span class="font-black text-waterDark uppercase text-right">${activeProperty.street}<br>B${activeProperty.block} L${activeProperty.lot}</span>
+                    <span>Target</span>
+                    <span class="font-black text-waterDark uppercase text-right">
+                        ${activeUnit.street} B${activeUnit.block} L${activeUnit.lot}<br>
+                        ${activeUnit.unitLabel || 'Unit ' + activeUnit.unitNumber}
+                    </span>
+                </div>
+                <div class="flex justify-between text-[10px] opacity-60 mt-2">
+                    <span>Owner</span>
+                    <span class="font-bold">${activeUnit.ownerName || 'Resident'}</span>
                 </div>
                 <div class="flex justify-between text-[10px] opacity-60">
-                    <span>Owner</span>
-                    <span class="font-bold">${activeProperty.ownerName}</span>
+                    <span>Meter Serial</span>
+                    <span class="font-bold">${activeUnit.meterSerial}</span>
                 </div>
                 <div class="border-t border-slate-300 dark:border-slate-700 mt-2 pt-2 flex justify-between text-sm">
                     <span class="font-bold">Captured Reading</span>
