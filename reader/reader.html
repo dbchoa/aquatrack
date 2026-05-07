@@ -727,7 +727,8 @@
 
         // [Surgical] New Controller for multi-stage identification
         window.switchStage = (stage) => {
-            const stages = ['springboard', 'serial', 'address', 'reading', 'confirm'];
+            // FIX: Removed 'springboard' and 'address'
+            const stages = ['serial', 'reading', 'confirm']; 
             stages.forEach(s => {
                 const el = document.getElementById(`modal-stage-${s}`);
                 if(el) el.classList.toggle('hidden', s !== stage);
@@ -875,14 +876,17 @@
         // [Surgical] Updated Reset/Open controllers
         window.openReadingModal = () => { 
             document.getElementById('readingModal').classList.remove('hidden'); 
-            resetModalState(); 
+            window.resetModalState(); 
+            // Surgical Focus: Ensure the keyboard pops up immediately for the Serial
+            setTimeout(() => document.getElementById('input-serial').focus(), 100);
         };
         window.closeReadingModal = () => document.getElementById('readingModal').classList.add('hidden');
         window.resetModalState = () => {
-			document.getElementById('input-serial').value = '';
-			document.getElementById('input-reading').value = '';
-			switchStage('springboard');
-		};
+            document.getElementById('input-serial').value = '';
+            document.getElementById('input-reading').value = '';
+            // FIX: Point directly to the Serial Entry stage
+            switchStage('serial'); 
+        };
         window.backToReading = () => {
 			switchStage('reading');
 		};
