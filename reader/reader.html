@@ -190,61 +190,22 @@
 
     <div id="readingModal" class="hidden fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-start md:items-center justify-center p-6 pt-19 md:pt-6">
         <div class="bg-white/95 dark:bg-slate-900/80 backdrop-blur-2xl w-full max-w-sm rounded-[2.5rem] p-8 border border-white dark:border-white/10 shadow-2xl relative overflow-hidden">
-            <!-- STAGE 0: SPRINGBOARD (The Choice) -->
-            <div id="modal-stage-springboard">
-                <h3 class="text-xl font-bold mb-6 text-center text-slate-900 dark:text-white uppercase tracking-tight">Identify Unit</h3>
-                <div class="space-y-3">
-                    <button onclick="switchStage('serial')" class="w-full p-6 bg-water/10 border border-water/20 rounded-2xl flex items-center justify-between group active:scale-95 transition-all">
-                        <div class="text-left">
-                            <p class="text-[10px] font-black text-waterDark uppercase tracking-widest">Method A</p>
-                            <h4 class="font-bold text-slate-900 dark:text-white">By Serial No.</h4>
-                        </div>
-                        <i class="bi bi-upc-scan text-2xl text-waterDark"></i>
-                    </button>
-
-                    <button onclick="switchStage('address')" class="w-full p-6 bg-water/10 border border-water/20 rounded-2xl flex items-center justify-between group active:scale-95 transition-all">
-                        <div class="text-left">
-                            <p class="text-[10px] font-black text-waterDark uppercase tracking-widest">Method B</p>
-                            <h4 class="font-bold text-slate-900 dark:text-white">By Address</h4>
-                        </div>
-                        <i class="bi bi-geo-alt-fill text-2xl text-waterDark"></i>
-                    </button>
-                </div>
-                <button onclick="closeReadingModal()" class="w-full mt-6 py-3 text-slate-500 font-bold uppercase text-[14px] tracking-widest text-center">Cancel</button>
-            </div>
-
-            <!-- STAGE 1A: SERIAL SEARCH -->
-            <div id="modal-stage-serial" class="hidden text-center">
-                <h3 class="text-xl font-bold mb-6 text-slate-900 dark:text-white uppercase">Enter Serial</h3>
+            
+            <div id="modal-stage-serial" class="text-center">
+                <h3 class="text-xl font-bold mb-6 text-slate-900 dark:text-white uppercase">Identify Unit</h3>
+                <p class="text-[10px] font-black text-waterDark uppercase tracking-widest mb-4">Search by Meter Serial</p>
                 <input id="input-serial" type="text" placeholder="METER-SN" class="w-full p-6 bg-slate-200/50 dark:bg-slate-800/50 rounded-3xl text-2xl font-black outline-none text-slate-900 dark:text-white text-center tracking-widest mb-6 border-2 border-transparent focus:border-water">
                 <div class="flex flex-col gap-2">
-                    <button onclick="identifyPropertyBySerial()" class="w-full py-4 bg-waterDark text-white rounded-2xl font-black uppercase text-xs">Identify Unit</button>
-                    <button onclick="switchStage('springboard')" class="w-full py-2 text-slate-500 font-bold uppercase text-[12px]">Back to Options</button>
+                    <button onclick="identifyUnitBySerial()" class="w-full py-4 bg-waterDark text-white rounded-2xl font-black uppercase text-xs">Identify Unit</button>
+                    <button onclick="closeReadingModal()" class="w-full py-2 text-slate-500 font-bold uppercase text-[12px]">Cancel</button>
                 </div>
             </div>
 
-            <!-- STAGE 1B: ADDRESS SEARCH -->
-            <div id="modal-stage-address" class="hidden">
-                <h3 class="text-xl font-bold mb-6 text-center text-slate-900 dark:text-white uppercase">Locate Property</h3>
-                <div class="space-y-4 mb-8">
-                    <select id="input-street" class="w-full p-4 bg-slate-200/50 dark:bg-slate-800/50 border-none rounded-2xl text-sm font-bold outline-none text-slate-900 dark:text-white">
-                        <option value="" disabled selected>Loading Streets...</option>
-                    </select>
-                    <div class="flex gap-2">
-                        <input id="input-block" type="number" placeholder="Block" class="w-1/2 p-4 bg-slate-200/50 dark:bg-slate-800/50 rounded-2xl text-sm font-bold outline-none text-slate-900 dark:text-white text-center">
-                        <input id="input-lot" type="text" placeholder="Lot" class="w-1/2 p-4 bg-slate-200/50 dark:bg-slate-800/50 rounded-2xl text-sm font-bold outline-none text-slate-900 dark:text-white text-center">
-                    </div>
-                </div>
-                <div class="flex flex-col gap-2">
-                    <button onclick="identifyPropertyByAddress()" class="w-full py-4 bg-waterDark text-white rounded-2xl font-black uppercase text-xs">Identify Unit</button>
-                    <button onclick="switchStage('springboard')" class="w-full py-2 text-slate-500 font-bold uppercase text-[12px]">Back to Options</button>
-                </div>
-            </div>
-            
             <div id="modal-stage-reading" class="hidden">
                 <div class="text-center mb-6">
                     <p id="display-prop-id" class="text-lg font-black text-waterDark dark:text-water stat-glow tracking-widest uppercase">---</p>
                     <h4 id="display-owner" class="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-wider">...</h4>
+                    <span id="display-unit-label" class="inline-block mt-2 px-3 py-1 bg-water/10 text-waterDark text-[9px] font-black rounded-full uppercase tracking-tighter">---</span>
                 </div>
                 <div class="bg-slate-200/50 dark:bg-slate-800/50 p-6 rounded-3xl mb-4 text-center">
                     <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Current Reading (m³)</label>
@@ -335,12 +296,15 @@
 
         injectHeader();
 
-        let activeProperty = null;
-        let billingConfig = { threshold: 15, minFee: 200, excessRate: 15 };
-        let localPropertiesCache = null;
+        let activeUnit = null; // Replaces activeProperty
+        let unitsCache = null; // New Source of Truth
+        let propertiesCache = null; // Stays for Address/Owner lookup
+        let uniqueCapturedUnitIds = new Set(); // Replaces uniqueCapturedUnitIds
+        
+		let billingConfig = { threshold: 15, minFee: 200, excessRate: 15 };
         let isDeviceOffline = false;
         let isProcessingSubmission = false; // [Verified] Prevents race conditions during UI render
-        let uniqueCapturedIds = new Set(); // Global set to track IDs already read
+        //let uniqueCapturedUnitIds = new Set(); // Global set to track IDs already read
 
 		// Helper to get billing cycle (Current Month - 1)
 		const getTargetBillingCycle = () => {
@@ -446,58 +410,66 @@
             }
         }, 30000); 
 
-        const primePropertyCache = () => {
-            db.ref('properties').on('value', (snap) => {
+        const primeCaches = () => {
+            // Monitor Units
+            db.ref('Unit').on('value', (snap) => {
                 if(snap.exists()) {
-                    localPropertiesCache = snap.val();
+                    unitsCache = snap.val();
                     updateHUDStats();
                 }
+            });
+            // Monitor Properties (Static Data)
+            db.ref('properties').on('value', (snap) => {
+                if(snap.exists()) propertiesCache = snap.val();
             });
         };
 
         const updateHUDStats = async () => {
-            if(!localPropertiesCache) return;
+            if(!unitsCache) return;
             
             const rSnap = await db.ref('readings').once('value');
-            const totalSubdivisionUnits = Object.keys(localPropertiesCache).length;
-            
-            // [Surgical Change] We clear the global set instead of re-declaring it locally
-            uniqueCapturedIds.clear(); 
+            const totalUnits = Object.keys(unitsCache).length;
+            uniqueCapturedUnitIds.clear(); 
             const currentCycle = getTargetBillingCycle();
         
+            // 1. Audit Database Readings
             if (rSnap.exists()) {
                 Object.values(rSnap.val()).forEach(r => {
-                    if (r.billingCycle === currentCycle && r.propertyId) {
-                        uniqueCapturedIds.add(r.propertyId);
+                    if (r.billingCycle === currentCycle && r.unitId) {
+                        uniqueCapturedUnitIds.add(r.unitId);
                     }
                 });
             }
         
+            // 2. Audit Local Outbox (Offline Entries)
             getOutbox().forEach(item => {
-                if (item.billingCycle === currentCycle && item.propertyId) {
-                    uniqueCapturedIds.add(item.propertyId);
+                if (item.billingCycle === currentCycle && item.unitId) {
+                    uniqueCapturedUnitIds.add(item.unitId);
                 }
             });
         
-            const subdivisionCapturedCount = uniqueCapturedIds.size;
-            const globalPct = totalSubdivisionUnits > 0 ? Math.min(100, Math.round((subdivisionCapturedCount / totalSubdivisionUnits) * 100)) : 0;
+            const capturedCount = uniqueCapturedUnitIds.size;
+            const globalPct = totalUnits > 0 ? Math.min(100, Math.round((capturedCount / totalUnits) * 100)) : 0;
         
+            // UI Update: Progress
             document.getElementById('display-progress-pct').innerHTML = `${globalPct}<span class="text-lg opacity-50 ml-1">%</span>`;
-            document.getElementById('display-counts').innerText = `${subdivisionCapturedCount} / ${totalSubdivisionUnits} Units`;
+            document.getElementById('display-counts').innerText = `${capturedCount} / ${totalUnits} Units`;
             
             const bar = document.getElementById('progress-bar');
             if(bar) bar.style.width = `${globalPct}%`;
         
+            // 3. Street-Specific Metrics
             const activeStreetDisplay = document.getElementById('active-street').innerText;
             const activeStreetName = activeStreetDisplay.replace(' St.', '').trim();
             
             if(activeStreetName && activeStreetName !== "---") {
-                const streetProperties = Object.keys(localPropertiesCache).filter(id => 
-                    localPropertiesCache[id].street === activeStreetName
+                // Filter unitsCache for units belonging to this street
+                const streetUnitIds = Object.keys(unitsCache).filter(uid => 
+                    uid.split('_')[0] === activeStreetName
                 );
-                const streetTotal = streetProperties.length;
-                const streetCapturedCount = streetProperties.filter(id => uniqueCapturedIds.has(id)).length;
-                const streetRemaining = Math.max(0, streetTotal - streetCapturedCount);
+                const streetTotal = streetUnitIds.length;
+                const streetCaptured = streetUnitIds.filter(uid => uniqueCapturedUnitIds.has(uid)).length;
+                const streetRemaining = Math.max(0, streetTotal - streetCaptured);
                 document.getElementById('remaining-units').innerText = `${streetRemaining} Units`;
             } else {
                 document.getElementById('remaining-units').innerText = `-- Units`;
@@ -505,10 +477,8 @@
         };
 
         const renderFeeds = (snapshot) => {
-            // [Verified Fix] If a submission is in progress, block the listener's UI update.
-            // finishSubmission will manually trigger the refresh once the outbox is stable.
             if (isProcessingSubmission) return;
-        
+            
             const activityContainer = document.getElementById('readings-feed');
             activityContainer.innerHTML = '';
             
@@ -517,19 +487,21 @@
         
             snapshot.forEach(child => {
                 const data = child.val();
-                // Skip synced items if they are still technically in the Outbox to prevent double-display
+                // Deduplication: Don't show if it's still in the local outbox
                 const isPendingSync = outbox.some(o => o.readingId === data.readingId);
                 if (isPendingSync) return; 
         
                 displayItems.push({ ...data, isSynced: true });
             });
         
+            // Sort by timestamp (Server Seconds or Local MS)
             displayItems.sort((a, b) => (b.timestamp?.seconds || b.timestamp) - (a.timestamp?.seconds || a.timestamp));
             const latestItems = displayItems.slice(0, 5);
         
             if(latestItems.length > 0 && latestItems[0].locationAddress) {
                 const fullAddress = latestItems[0].locationAddress;
-                const streetPart = fullAddress.split(/ B\d+/)[0]; 
+                // Surgical split: Get everything before the " B" (Block)
+                const streetPart = fullAddress.split(' B')[0]; 
                 document.getElementById('active-street').innerText = streetPart + ' St.';
             }
         
@@ -569,32 +541,42 @@
             const container = document.getElementById('global-unread-list-container');
             container.innerHTML = '';
             
-            if (!localPropertiesCache) {
+            // FIX: Point to unitsCache as the primary iterator
+            if (!unitsCache || !propertiesCache) {
                 container.innerHTML = '<p class="text-center text-slate-400 text-xs py-4 italic">Waking cache...</p>';
             } else {
-                // Filter entire cache for properties NOT in our captured set
-                const unread = Object.keys(localPropertiesCache)
-                    .filter(id => !uniqueCapturedIds.has(id))
-                    .map(id => localPropertiesCache[id])
-                    // Sort by Street, then Block, then Lot
-                    .sort((a, b) => 
-                        a.street.localeCompare(b.street) || 
-                        a.block - b.block || 
-                        a.lot.localeCompare(b.lot, undefined, {numeric: true})
-                    );
-        
-                if (unread.length === 0) {
+                // 1. Identify unit IDs NOT in our captured set
+                const unreadUnitIds = Object.keys(unitsCache).filter(id => !uniqueCapturedUnitIds.has(id));
+                
+                if (unreadUnitIds.length === 0) {
                     container.innerHTML = '<p class="text-center text-emerald-500 text-xs py-4 font-bold">Subdivision Complete! 🏆</p>';
                 } else {
-                    unread.forEach(p => {
+                    // 2. Map and Sort: Resolve address details for each unread unit
+                    const unreadList = unreadUnitIds.map(id => {
+                        const unit = unitsCache[id];
+                        const prop = propertiesCache[unit.propertyId] || {};
+                        return { id, ...unit, ...prop };
+                    })
+                    .sort((a, b) => 
+                        (a.street || "").localeCompare(b.street || "") || 
+                        (a.block - b.block) || 
+                        (a.lot || "").localeCompare(b.lot || "", undefined, {numeric: true}) ||
+                        (a.unitNumber - b.unitNumber)
+                    );
+
+                    // 3. Render the specific Units
+                    unreadList.forEach(u => {
                         const div = document.createElement('div');
                         div.className = "flex flex-col p-3 bg-slate-100 dark:bg-slate-800/50 rounded-xl mb-1 border border-slate-200 dark:border-slate-700";
                         div.innerHTML = `
                             <div class="flex justify-between items-center">
-                                <span class="text-[9px] font-black text-waterDark uppercase tracking-widest">${p.street}</span>
-                                <span class="text-xs font-black text-slate-900 dark:text-white uppercase">B${p.block} L${p.lot}</span>
+                                <span class="text-[9px] font-black text-waterDark uppercase tracking-widest">${u.street || 'Unknown'}</span>
+                                <span class="text-xs font-black text-slate-900 dark:text-white uppercase">B${u.block} L${u.lot}</span>
                             </div>
-                            <span class="text-[10px] font-bold text-slate-500 truncate mt-1">${p.ownerName || p.name}</span>
+                            <div class="flex justify-between items-end mt-1">
+                                <span class="text-[10px] font-bold text-slate-500 truncate max-w-[150px]">${u.ownerName || 'Resident'}</span>
+                                <span class="text-[9px] font-black bg-water/10 text-waterDark px-2 py-0.5 rounded-md uppercase">${u.unitLabel || 'Unit ' + u.unitNumber}</span>
+                            </div>
                         `;
                         container.appendChild(div);
                     });
@@ -614,28 +596,39 @@
             container.innerHTML = '';
             streetEl.innerText = activeStreetName + " Checklist";
             
-            if (!localPropertiesCache || activeStreetName === "---") {
+            // FIX: Guard with unitsCache and propertiesCache
+            if (!unitsCache || !propertiesCache || activeStreetName === "---") {
                 container.innerHTML = '<p class="text-center text-slate-400 text-xs py-4 italic">No street selected</p>';
             } else {
-                // Filter cache for properties on this street NOT in our captured set
-                const unread = Object.keys(localPropertiesCache)
-                    .filter(id => {
-                        const p = localPropertiesCache[id];
-                        return p.street === activeStreetName && !uniqueCapturedIds.has(id);
-                    })
-                    .map(id => localPropertiesCache[id])
-                    // Sort numerically by Block and Lot for an easy walking path
-                    .sort((a, b) => a.block - b.block || a.lot.localeCompare(b.lot, undefined, {numeric: true}));
+                // 1. Filter unitsCache for this street NOT in our captured set
+                // We use the propertyId link to verify the street
+                const unreadUnitIds = Object.keys(unitsCache).filter(id => {
+                    const unit = unitsCache[id];
+                    const prop = propertiesCache[unit.propertyId];
+                    return prop && prop.street === activeStreetName && !uniqueCapturedUnitIds.has(id);
+                });
         
-                if (unread.length === 0) {
+                if (unreadUnitIds.length === 0) {
                     container.innerHTML = '<p class="text-center text-emerald-500 text-xs py-4 font-bold">Street Complete! ✓</p>';
                 } else {
-                    unread.forEach(p => {
+                    // 2. Map and Sort by Block, Lot, then Unit Number
+                    unreadUnitIds.map(id => {
+                        const unit = unitsCache[id];
+                        const prop = propertiesCache[unit.propertyId];
+                        return { id, ...unit, ...prop };
+                    })
+                    .sort((a, b) => a.block - b.block || a.lot.localeCompare(b.lot, undefined, {numeric: true}) || a.unitNumber - b.unitNumber)
+                    .forEach(u => {
                         const div = document.createElement('div');
-                        div.className = "flex justify-between p-3 bg-slate-100 dark:bg-slate-800/50 rounded-xl mb-1 border border-slate-200 dark:border-slate-700";
+                        div.className = "flex justify-between items-center p-3 bg-slate-100 dark:bg-slate-800/50 rounded-xl mb-1 border border-slate-200 dark:border-slate-700";
                         div.innerHTML = `
-                            <span class="text-xs font-black text-slate-900 dark:text-white uppercase">B${p.block} L${p.lot}</span>
-                            <span class="text-[10px] font-bold text-slate-500 truncate ml-4">${p.ownerName || p.name}</span>
+                            <div class="flex flex-col">
+                                <span class="text-xs font-black text-slate-900 dark:text-white uppercase">B${u.block} L${u.lot}</span>
+                                <span class="text-[9px] font-bold text-slate-500 truncate max-w-[120px]">${u.ownerName || 'Resident'}</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-[9px] font-black bg-water/10 text-waterDark px-2 py-1 rounded-md uppercase">${u.unitLabel || 'Unit ' + u.unitNumber}</span>
+                            </div>
                         `;
                         container.appendChild(div);
                     });
@@ -651,42 +644,35 @@
             const reading = parseFloat(document.getElementById('input-reading').value);
             const btn = document.getElementById('final-submit-btn');
             const billingCycle = getTargetBillingCycle();
-            const readingId = `${activeProperty.propertyId}_${billingCycle}`;
+            
+            // New Composite ID format
+            const readingId = `${activeUnit.unitId}_${billingCycle}`;
             const readingRef = db.ref(`readings/${readingId}`);
 
             btn.innerText = "..."; btn.disabled = true;
 
-            // Step 1: Establish a "Preliminary Baseline" (Local Only)
-            const outbox = getOutbox();
-            const localEntry = outbox.find(item => item.readingId === readingId);
-            let anchorReading = localEntry ? localEntry.prevReading : (activeProperty.lastReading || 0);
-
-            // Step 2: The Surgical Hunt (Online Only)
-            if (!isDeviceOffline) {
-                try {
-                    const historySnap = await db.ref('readings')
-                        .orderByChild('propertyId')
-                        .equalTo(activeProperty.propertyId)
-                        .limitToLast(1)
-                        .once('value');
-
-                    if (historySnap.exists()) {
-                        const latest = Object.values(historySnap.val())[0];
-                        // Resubmit vs New Cycle Logic
-                        anchorReading = (latest.readingId === readingId) ? latest.prevReading : latest.reading;
-                    }
-                } catch (e) { console.warn("Cloud hunt failed, using local baseline"); }
-            }
+            const floor = parseFloat(document.getElementById('display-prev').innerText) || 0;
+            const consumption = parseFloat((reading - floor).toFixed(1));
 
             const readingData = {
-                readingId, propertyId: activeProperty.propertyId,
-                locationAddress: `${activeProperty.street} B${activeProperty.block} L${activeProperty.lot}`,
-                readerId: auth.currentUser.uid, readerName: sessionStorage.getItem('aqt_user_name'),
-                billingCycle, reading, prevReading: anchorReading, timestamp: Date.now(),
-                status: 'pending', fromOffline: isDeviceOffline, appliedRates: { ...billingConfig }
+                readingId, 
+                unitId: activeUnit.unitId,
+                propertyId: activeUnit.propertyId,
+                meterSerial: activeUnit.meterSerial,
+                locationAddress: `${activeUnit.street} B${activeUnit.block} L${activeUnit.lot}`,
+                readerId: auth.currentUser.uid, 
+                readerName: sessionStorage.getItem('aqt_user_name') || "Staff",
+                billingCycle, 
+                reading, 
+                prevReading: floor,
+                consumption: consumption, // RESTORED
+                timestamp: Date.now(),
+                status: 'pending', 
+                fromOffline: isDeviceOffline, 
+                appliedRates: { ...billingConfig }
             };
 
-            // Step 3: Commit to Local Memory
+            // Save to Outbox
             let updatedOutbox = getOutbox();
             const existingIdx = updatedOutbox.findIndex(item => item.readingId === readingId);
             if(existingIdx > -1) updatedOutbox[existingIdx] = readingData;
@@ -694,7 +680,6 @@
             setOutbox(updatedOutbox);
             renderOutboxOnly();
 
-            // Step 4: Finalize
             if (isDeviceOffline) {
                 window.finishSubmission(readingId, true);
             } else {
@@ -749,41 +734,70 @@
             });
         };
 
-        // Path A: Serial Identification
-        window.identifyPropertyBySerial = () => {
+        //Serial Identification
+        window.identifyUnitBySerial = () => {
             const serialInput = document.getElementById('input-serial').value.trim().toLowerCase();
             if(!serialInput) return toast("Input Serial Number", "info");
             
-            activeProperty = null;
-            for(let id in localPropertiesCache) {
-                const p = localPropertiesCache[id];
-                if(p.meterSerial && p.meterSerial.toString().toLowerCase() === serialInput) {
-                    activeProperty = { propertyId: id, ...p };
+            activeUnit = null;
+            // Scan through units, not properties
+            for(let id in unitsCache) {
+                const u = unitsCache[id];
+                if(u.meterSerial && u.meterSerial.toString().toLowerCase() === serialInput) {
+                    // Resolve Parent Property Details
+                    const p = propertiesCache[u.propertyId];
+                    activeUnit = { ...u, ...p };
                     break;
                 }
             }
-            proceedToReading();
-        };
 
-        // Path B: Address Identification (The Fallback)
-        window.identifyPropertyByAddress = () => {
-            const street = document.getElementById('input-street').value;
-            const block = document.getElementById('input-block').value;
-            const lot = document.getElementById('input-lot').value.trim().toLowerCase();
-
-            if(!street || !block || !lot) return toast("Missing details", "info");
-
-            activeProperty = null;
-            for(let id in localPropertiesCache) {
-                const p = localPropertiesCache[id];
-                if(p.street === street && p.block.toString() === block && p.lot.toString().toLowerCase() === lot) {
-                    activeProperty = { propertyId: id, ...p };
-                    break;
-                }
+            if(activeUnit) {
+                switchStage('reading');
+                document.getElementById('display-prop-id').innerText = `${activeUnit.street} B${activeUnit.block} L${activeUnit.lot}`;
+                document.getElementById('display-owner').innerText = activeUnit.ownerName || "Staff Account";
+                document.getElementById('display-unit-label').innerText = activeUnit.unitLabel || `Unit ${activeUnit.unitNumber}`;
+                
+                document.getElementById('display-prev').innerText = `Syncing...`;
+                resolveBaseline(activeUnit.unitId);
+                setTimeout(() => document.getElementById('input-reading').focus(), 100);
+            } else {
+                toast("Meter Serial not found", "error");
             }
-            proceedToReading();
         };
+		
+		const resolveBaseline = async (unitId) => {
+            const currentCycle = getTargetBillingCycle();
+            const outbox = getOutbox();
+            const localEntry = outbox.find(o => o.unitId === unitId && o.billingCycle === currentCycle);
+            
+            // 1. Check Offline Outbox first
+            if (localEntry) {
+                document.getElementById('display-prev').innerText = `${localEntry.prevReading} m³`;
+                return;
+            }
 
+            // 2. Check Database History
+            try {
+                const historySnap = await db.ref('readings')
+                    .orderByChild('unitId')
+                    .equalTo(unitId)
+                    .limitToLast(1)
+                    .once('value');
+
+                if (historySnap.exists()) {
+                    const latest = Object.values(historySnap.val())[0];
+                    // Logic: If same month, use ITS prev. If new month, use its reading.
+                    const baseline = (latest.billingCycle === currentCycle) ? latest.prevReading : latest.reading;
+                    document.getElementById('display-prev').innerText = `${baseline} m³`;
+                } else {
+                    // 3. Absolute Fallback: Unit Onboarding Seed
+                    document.getElementById('display-prev').innerText = `${activeUnit.lastReading} m³`;
+                }
+            } catch (e) {
+                document.getElementById('display-prev').innerText = `${activeUnit.lastReading} m³`;
+            }
+        };
+		
         // Internal helper to handle successful lookup
         const proceedToReading = () => {
             if(activeProperty) {
@@ -903,7 +917,7 @@
             const nameEl = document.getElementById('reader-name-display');
             if(nameEl) nameEl.innerText = readerName;
 
-            primePropertyCache();
+            primeCaches();
             processSyncCleanup();
             const snap = await db.ref('config/billing').once('value');
             if (snap.exists()) billingConfig = snap.val();
@@ -922,37 +936,6 @@
             }
         });
 		
-		// [Surgical] One-time Data Migration Function
-        window.runSerialMigration = async () => {
-            if (!localPropertiesCache) {
-                return toast("Wait for cache to sync...", "warning");
-            }
-
-            const propertyIds = Object.keys(localPropertiesCache).sort((a, b) => {
-                const pA = localPropertiesCache[a];
-                const pB = localPropertiesCache[b];
-                // Sort by Street -> Block -> Lot for a logical 1-49 sequence
-                return pA.street.localeCompare(pB.street) || 
-                       pA.block - pB.block || 
-                       pA.lot.localeCompare(pB.lot, undefined, {numeric: true});
-            });
-
-            const updates = {};
-            propertyIds.forEach((id, index) => {
-                // Assigns numeric string "1", "2", etc.
-                updates[`properties/${id}/meterSerial`] = (index + 1).toString();
-            });
-
-            try {
-                await db.ref().update(updates);
-                toast(`Assigned serials 1 to ${propertyIds.length}`, "success");
-                console.log("Migration Complete:", updates);
-            } catch (e) {
-                console.error("Migration Failed:", e);
-                toast("Migration Failed", "error");
-            }
-        };
-
 		// Security Logic
 		window.openPasswordModal = () => document.getElementById('passwordModal').classList.remove('hidden');
 		
@@ -989,101 +972,7 @@
 		        btn.disabled = false;
 		        btn.innerText = "Update Password";
 		    }
-		};
-
-		// [Surgical] Test Data Generator (Target: 2026-03)
-        window.generateTestData = async () => {
-            if (!localPropertiesCache) return toast("Syncing cache, try again...", "warning");
-            
-            const updates = {};
-            const cycle = "2026-03"; // The cycle BEFORE our current April target
-            const dummyConfig = { threshold: 15, minFee: 200, excessRate: 15 };
-            const propIds = Object.keys(localPropertiesCache);
-
-            propIds.forEach(id => {
-                const p = localPropertiesCache[id];
-                const readingId = `${id}_${cycle}`;
-                
-                // Start from property seed, add random usage (5-20 m3)
-                const seed = p.lastReading || 0;
-                const consumption = parseFloat((Math.random() * 15 + 5).toFixed(1)); 
-                const currentReading = seed + consumption;
-
-                updates[`readings/${readingId}`] = {
-                    readingId,
-                    propertyId: id,
-                    locationAddress: `${p.street} B${p.block} L${p.lot}`,
-                    readerId: "SYS_GEN_TEST",
-                    readerName: "System Generator",
-                    billingCycle: cycle,
-                    reading: currentReading,
-                    prevReading: seed,
-                    timestamp: new Date("2026-03-31T17:00:00Z").getTime(),
-                    status: 'paid', // Mark as paid to keep March financials closed
-                    fromOffline: false,
-                    appliedRates: dummyConfig
-                };
-            });
-
-            try {
-                await db.ref().update(updates);
-                toast(`Generated March readings for ${propIds.length} units`, "success");
-                console.log("March Baseline Seeded:", updates);
-            } catch (e) {
-                console.error("Generator Failed:", e);
-                toast("Generation Failed", "error");
-            }
-        };
-
-		// [Surgical Patch] Stage 1.5: Readings Data Enrichment (One-Time Use)
-        window.patchReadingsV2 = async () => {
-            console.log("🛠️ Initializing Readings Patch for v2.0...");
-            
-            try {
-                // 1. Fetch all existing readings
-                const readingsSnap = await db.ref('readings').once('value');
-                if (!readingsSnap.exists()) return toast("No readings found to patch", "error");
-
-                const readings = readingsSnap.val();
-                const updates = {};
-                let count = 0;
-
-                Object.keys(readings).forEach(readingId => {
-                    const r = readings[readingId];
-                    
-                    // Logic: If consumption or unitId is missing, calculate and prepare update
-                    // We assume existing readings were for the primary unit (_1)
-                    if (r.consumption === undefined || !r.unitId) {
-                        const calculatedConsumption = parseFloat((r.reading - r.prevReading).toFixed(1));
-                        const assignedUnitId = `${r.propertyId}_1`;
-
-                        // Apply the patch to this specific record
-                        updates[`readings/${readingId}/consumption`] = calculatedConsumption;
-                        updates[`readings/${readingId}/unitId`] = assignedUnitId;
-                        
-                        count++;
-                    }
-                });
-
-                if (count === 0) {
-                    console.log("✨ All readings are already up to date.");
-                    return toast("Readings already patched", "info");
-                }
-
-                // 2. Atomic Batch Update
-                await db.ref().update(updates);
-
-                console.log(`✅ Success! Patched ${count} reading entries.`);
-                toast(`v2.0 Patch Complete: ${count} Entries Updated`, "success");
-                
-                // Safety: Disable function
-                window.patchReadingsV2 = () => console.warn("Patch already applied.");
-
-            } catch (error) {
-                console.error("❌ Patch Failed:", error);
-                toast("Patch Error: Check Console", "error");
-            }
-        };
+		};		
     </script>
 </body>
 </html>
