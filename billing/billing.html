@@ -133,19 +133,37 @@
                         <div class="absolute left-4 inset-y-0 flex items-center pointer-events-none">
                             <i id="search-icon" class="bi bi-geo-alt text-slate-400 group-focus-within:text-water"></i>
                         </div>
-                        <input id="search-input" type="text" placeholder="Search by address..." 
+                        <input id="search-input" type="text" placeholder="Search..." 
                                class="w-full h-full pl-11 pr-4 bg-slate-100 dark:bg-slate-800 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-water/40 border-none transition-all">
                     </div>
                 </div>
         
-                <div class="relative w-48 flex flex-col" id="cycle-select-wrapper">
-                    <div id="cycle-trigger" onclick="toggleCycleDropdown()" 
-                         class="custom-select-trigger flex items-center justify-between px-5 rounded-2xl h-[48px] bg-slate-100 dark:bg-slate-800 border-none">
-                        <span id="selected-cycle-label" class="text-xs font-black uppercase">---</span>
-                        <i class="bi bi-chevron-down opacity-50 text-[10px]"></i>
+                <div class="relative w-64 flex flex-col">
+                    <div class="flex justify-between items-center mb-1 px-2">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Billing Cycle</label>
+                        <div onclick="toggleTimeMode()" class="flex items-center gap-1 cursor-pointer bg-slate-200 dark:bg-slate-800 p-0.5 rounded-lg select-none">
+                            <span id="label-cycle" class="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-water text-white transition-all">CYCLE</span>
+                            <span id="label-year" class="text-[8px] font-black px-1.5 py-0.5 rounded-md text-slate-400 transition-all">YEAR</span>
+                        </div>
                     </div>
-                    <input type="hidden" id="filter-cycle" value="">
-                    <div id="cycle-options" class="select-dropdown-panel hidden scale-95 opacity-0"></div>
+        
+                    <div id="wrapper-cycle" class="relative">
+                        <div id="cycle-trigger" onclick="toggleCycleDropdown()" 
+                             class="custom-select-trigger flex items-center justify-between px-5 rounded-2xl h-[48px] bg-slate-100 dark:bg-slate-800 border-none">
+                            <span id="selected-cycle-label" class="text-xs font-black uppercase">---</span>
+                            <i class="bi bi-chevron-down opacity-50 text-[10px]"></i>
+                        </div>
+                        <input type="hidden" id="filter-cycle" value="">
+                        <div id="cycle-options" class="select-dropdown-panel hidden scale-95 opacity-0"></div>
+                    </div>
+        
+                    <div id="wrapper-year" class="hidden relative h-[48px]">
+                        <input id="filter-year" type="number" placeholder="2026" 
+                               class="w-full h-full px-5 bg-slate-100 dark:bg-slate-800 rounded-2xl text-xs font-black outline-none focus:ring-2 ring-water/40 border-none">
+                        <div class="absolute right-4 inset-y-0 flex items-center pointer-events-none opacity-30">
+                            <i class="bi bi-calendar3"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -228,7 +246,8 @@
         let unitsMap = {}; // Cache for Unit labels/serials
         let activeReading = null;
         let currentFilterStatus = 'all';
-
+        let timeMode = 'cycle'; // 'cycle' or 'year'
+        
         const calculateAmount = (r) => {
             if(!r.appliedRates) return 0;
             const consumption = Math.max(0, r.reading - r.prevReading);
@@ -259,34 +278,63 @@
             input.focus();
         };
 
+        
+
+        window.toggleTimeMode = () => {
+            timeMode = (timeMode === 'cycle') ? 'year' : 'cycle';
+            
+            // Toggle UI Visibility
+            document.getElementById('wrapper-cycle').classList.toggle('hidden', timeMode !== 'cycle');
+            document.getElementById('wrapper-year').classList.toggle('hidden', timeMode !== 'year');
+            
+            // Toggle Label Highlights
+            document.getElementById('label-cycle').className = `text-[8px] font-black px-1.5 py-0.5 rounded-md ${timeMode === 'cycle' ? 'bg-water text-white' : 'text-slate-400'}`;
+            document.getElementById('label-year').className = `text-[8px] font-black px-1.5 py-0.5 rounded-md ${timeMode === 'year' ? 'bg-water text-white' : 'text-slate-400'}`;
+            
+            renderLedger();
+        };
+
         const renderLedger = () => {
             const container = document.getElementById('ledger-container');
             const search = document.getElementById('search-input').value.toLowerCase();
             const cycle = document.getElementById('filter-cycle').value;
+            const year = document.getElementById('filter-year').value || new Date().getFullYear().toString();
             
             container.innerHTML = '';
             const filtered = allReadings.filter(r => {
                 const unit = unitsMap[r.unitId] || {};
-                const matchesCycle = r.billingCycle === cycle;
+                
+                // 1. TEMPORAL FILTER
+                let matchesTime = false;
+                if (timeMode === 'cycle') {
+                    matchesTime = r.billingCycle === cycle;
+                } else {
+                    // Logic: match if the cycle starts with the year (e.g. "2026-05" starts with "2026")
+                    matchesTime = r.billingCycle.startsWith(year);
+                }
+
+                // 2. STATUS FILTER
                 const matchesStatus = currentFilterStatus === 'all' || r.status === currentFilterStatus;
                 
-                if(!matchesCycle || !matchesStatus) return false;
+                if(!matchesTime || !matchesStatus) return false;
                 if(!search) return true;
 
-                // SURGICAL SEARCH LOGIC
+                // 3. SEARCH MODE FILTER (Combined)
                 if (searchMode === 'address') {
                     return r.locationAddress.toLowerCase().includes(search);
                 } else if (searchMode === 'serial') {
                     return unit.meterSerial && unit.meterSerial.toString().toLowerCase().includes(search);
                 } else if (searchMode === 'name') {
-                    // Pulling owner name from the unit's parent property data
                     const owner = unit.ownerName || "Resident";
                     return owner.toLowerCase().includes(search);
                 }
                 return false;
             });
 
-            updateKPIs(allReadings.filter(r => r.billingCycle === cycle));
+            updateKPIs(allReadings.filter(r => {
+                 if(timeMode === 'cycle') return r.billingCycle === cycle;
+                 return r.billingCycle.startsWith(year);
+            }));
 
             filtered.forEach(r => {
                 const amount = calculateAmount(r);
@@ -320,6 +368,9 @@
             });
         };
 
+        // Add event listener for year input
+        document.getElementById('filter-year').oninput = renderLedger;
+        
         const selectUnit = (r) => {
             activeReading = r;
             const sidebar = document.getElementById('intel-content');
