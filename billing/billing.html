@@ -284,15 +284,17 @@
             return consumption <= threshold ? minFee : minFee + ((consumption - threshold) * excessRate);
         };
 
+       // --- SURGICAL REPLACEMENT: SEARCH & TEMPORAL CONTROLLERS ---
         let searchMode = 'address';
-
+        
         window.setSearchMode = (mode) => {
             searchMode = mode;
-            // Update UI Toggles
-            document.querySelectorAll('.search-mode-btn').forEach(btn => btn.classList.remove('is-active'));
-            document.getElementById(`mode-${mode}`).classList.add('is-active');
-            
-            // Update Placeholder & Icon
+            // Update the UI segments for search
+            document.querySelectorAll('.segmented-control .segment-btn').forEach(btn => {
+                if(['mode-address', 'mode-serial', 'mode-name'].includes(btn.id)) {
+                    btn.classList.toggle('is-active', btn.id === `mode-${mode}`);
+                }
+            });
             const input = document.getElementById('search-input');
             const icon = document.getElementById('search-icon');
             const configs = {
@@ -302,14 +304,28 @@
             };
             input.placeholder = configs[mode].p;
             icon.className = `bi ${configs[mode].i} text-slate-400 group-focus-within:text-water transition-colors`;
-            
             renderLedger();
             input.focus();
         };
 
+        window.setTimeMode = (mode) => {
+            timeMode = mode;
+            // Toggle visibility of the input wrappers
+            document.getElementById('wrapper-cycle').classList.toggle('hidden', mode !== 'cycle');
+            document.getElementById('wrapper-year').classList.toggle('hidden', mode !== 'year');
+            // Toggle active state of the segmented buttons
+            document.getElementById('btn-mode-cycle').classList.toggle('is-active', mode === 'cycle');
+            document.getElementById('mode-year-trigger').classList.toggle('is-active', mode === 'year');
+            
+            if(mode === 'year' && !document.getElementById('filter-year').value) {
+                document.getElementById('filter-year').value = new Date().getFullYear();
+            }
+            renderLedger();
+        };
+
         
 
-        window.toggleTimeMode = () => {
+        /*window.toggleTimeMode = () => {
             timeMode = (timeMode === 'cycle') ? 'year' : 'cycle';
             
             // Toggle UI Visibility
@@ -321,7 +337,7 @@
             document.getElementById('label-year').className = `text-[8px] font-black px-1.5 py-0.5 rounded-md ${timeMode === 'year' ? 'bg-water text-white' : 'text-slate-400'}`;
             
             renderLedger();
-        };
+        };*/
 
         const renderLedger = () => {
             const container = document.getElementById('ledger-container');
@@ -333,14 +349,8 @@
             const filtered = allReadings.filter(r => {
                 const unit = unitsMap[r.unitId] || {};
                 
-                // 1. TEMPORAL FILTER
-                let matchesTime = false;
-                if (timeMode === 'cycle') {
-                    matchesTime = r.billingCycle === cycle;
-                } else {
-                    // Logic: match if the cycle starts with the year (e.g. "2026-05" starts with "2026")
-                    matchesTime = r.billingCycle.startsWith(year);
-                }
+                // 1. TEMPORAL FILTER (Cycle vs Year logic)
+                let matchesTime = (timeMode === 'cycle') ? (r.billingCycle === cycle) : r.billingCycle.startsWith(year);
 
                 // 2. STATUS FILTER
                 const matchesStatus = currentFilterStatus === 'all' || r.status === currentFilterStatus;
@@ -348,22 +358,15 @@
                 if(!matchesTime || !matchesStatus) return false;
                 if(!search) return true;
 
-                // 3. SEARCH MODE FILTER (Combined)
-                if (searchMode === 'address') {
-                    return r.locationAddress.toLowerCase().includes(search);
-                } else if (searchMode === 'serial') {
-                    return unit.meterSerial && unit.meterSerial.toString().toLowerCase().includes(search);
-                } else if (searchMode === 'name') {
-                    const owner = unit.ownerName || "Resident";
-                    return owner.toLowerCase().includes(search);
-                }
+                // 3. SEARCH MODE FILTER
+                if (searchMode === 'address') return r.locationAddress.toLowerCase().includes(search);
+                if (searchMode === 'serial') return unit.meterSerial && unit.meterSerial.toString().toLowerCase().includes(search);
+                if (searchMode === 'name') return (unit.ownerName || "").toLowerCase().includes(search);
                 return false;
             });
 
-            updateKPIs(allReadings.filter(r => {
-                 if(timeMode === 'cycle') return r.billingCycle === cycle;
-                 return r.billingCycle.startsWith(year);
-            }));
+            // Update KPIs based on the filtered timeframe
+            updateKPIs(allReadings.filter(r => (timeMode === 'cycle') ? (r.billingCycle === cycle) : r.billingCycle.startsWith(year)));
 
             filtered.forEach(r => {
                 const amount = calculateAmount(r);
@@ -672,6 +675,7 @@
         });
 
         document.getElementById('search-input').oninput = renderLedger;
+        document.getElementById('filter-year').oninput = renderLedger;
     </script>
 </body>
 </html>
