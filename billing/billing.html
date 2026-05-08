@@ -510,19 +510,18 @@
         window.processPayment = async () => {
             if(!activeReading) return;
             const isSettling = activeReading.status !== 'paid';
-            const date = new Date().toISOString().slice(0, 10);
+            
+            // SURGICAL FIX: Capturing full ISO (Date + Time)
+            // Instead of .slice(0,10), we keep the whole string: 2026-05-08T14:10:00.000Z
+            const fullTimestamp = new Date().toISOString(); 
             
             try {
-                // Perform the update
                 await db.ref(`readings/${activeReading.readingId}`).update({
                     status: isSettling ? 'paid' : 'pending',
-                    paidDate: isSettling ? date : null
+                    paidDate: isSettling ? fullTimestamp : null
                 });
                 
-                toast(isSettling ? "Payment Saved" : "Status Reset", "success");
-                
-                // Real-time listener will trigger renderLedger, 
-                // but we keep the sidebar updated for immediate feedback
+                toast(isSettling ? "Payment Saved with Time" : "Status Reset", "success");
             } catch (e) { 
                 console.error(e);
                 toast("Error updating ledger", "error"); 
