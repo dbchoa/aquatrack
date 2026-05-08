@@ -123,6 +123,48 @@
         
         /* Hide Search Mode Overrides */
         .search-mode-btn { background: transparent; }
+
+        /* --- SURGICAL SCROLLBAR HIJACK --- */
+
+        /* 1. Target the main ledger container specifically (or the whole body) */
+        #ledger-container::-webkit-scrollbar,
+        main::-webkit-scrollbar,
+        #intel-sidebar::-webkit-scrollbar {
+            width: 6px; /* Ultra-thin profile */
+            height: 6px;
+        }
+        
+        /* 2. The Track (The "Background" of the scrollbar) */
+        #ledger-container::-webkit-scrollbar-track,
+        main::-webkit-scrollbar-track,
+        #intel-sidebar::-webkit-scrollbar-track {
+            background: transparent; /* Makes it look like it's floating */
+        }
+        
+        /* 3. The Thumb (The part you actually move) */
+        #ledger-container::-webkit-scrollbar-thumb,
+        main::-webkit-scrollbar-thumb,
+        #intel-sidebar::-webkit-scrollbar-thumb {
+            background: rgba(79, 172, 254, 0.2); /* Faded 'Water' Blue */
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        /* 4. The Interaction Glow (Hover State) */
+        #ledger-container::-webkit-scrollbar-thumb:hover,
+        main::-webkit-scrollbar-thumb:hover,
+        #intel-sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(79, 172, 254, 0.6); /* Dominant Glow when touched */
+            box-shadow: 0 0 10px rgba(79, 172, 254, 0.4);
+        }
+        
+        /* 5. Dark Mode Adjustments */
+        .dark #ledger-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .dark #ledger-container::-webkit-scrollbar-thumb:hover {
+            background: #4facfe;
+        }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-[#020617] font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300">
