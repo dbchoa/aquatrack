@@ -151,7 +151,7 @@
         </div>
 
         <div class="flex-1 flex overflow-hidden">
-            <div class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50 dark:bg-black/20" id="ledger-container">
+            <div class="flex-1 overflow-y-auto p-4 space-y-2 bg-slate-50 dark:bg-black/20" id="ledger-container">
                 </div>
 
             <div class="w-96 bg-white dark:bg-slate-900 border-l border-water/20 overflow-y-auto hidden lg:block" id="intel-sidebar">
@@ -294,7 +294,7 @@
                 const owner = unit.ownerName || "Resident";
                 
                 const card = document.createElement('div');
-                card.className = `glass-card p-3 rounded-2xl flex items-center justify-between cursor-pointer hover:scale-[1.01] active:scale-95 transition-all ${activeReading?.readingId === r.readingId ? 'ring-2 ring-water' : ''}`;
+                card.className = `glass-card p-2 rounded-2xl flex items-center justify-between cursor-pointer hover:scale-[1.01] active:scale-95 transition-all ${activeReading?.readingId === r.readingId ? 'ring-2 ring-water' : ''}`;
                 card.onclick = () => selectUnit(r);
 
                 card.innerHTML = `
