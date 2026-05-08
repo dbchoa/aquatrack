@@ -246,12 +246,12 @@
                 const owner = unit.ownerName || "Resident";
                 
                 const card = document.createElement('div');
-                card.className = `glass-card p-4 rounded-2xl flex items-center justify-between cursor-pointer hover:scale-[1.01] active:scale-95 transition-all ${activeReading?.readingId === r.readingId ? 'ring-2 ring-water' : ''}`;
+                card.className = `glass-card p-3 rounded-2xl flex items-center justify-between cursor-pointer hover:scale-[1.01] active:scale-95 transition-all ${activeReading?.readingId === r.readingId ? 'ring-2 ring-water' : ''}`;
                 card.onclick = () => selectUnit(r);
 
                 card.innerHTML = `
                     <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center ${isPaid ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center ${isPaid ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}">
                             <i class="bi ${isPaid ? 'bi-check-circle-fill' : 'bi-clock-history'}"></i>
                         </div>
                         <div>
