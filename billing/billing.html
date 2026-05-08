@@ -92,6 +92,37 @@
             color: white;
             box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
         }
+
+        /* Unified Segmented Controls */
+        .segmented-control {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 3px;
+            border-radius: 14px;
+            display: flex;
+            gap: 2px;
+        }
+        .dark .segmented-control { background: rgba(255, 255, 255, 0.05); }
+        
+        .segment-btn {
+            flex: 1;
+            padding: 8px 0;
+            font-size: 9px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            border-radius: 11px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+        }
+        .segment-btn.is-active {
+            background: #4facfe;
+            color: white;
+            box-shadow: 0 4px 12px rgba(79, 172, 254, 0.2);
+        }
+        
+        /* Hide Search Mode Overrides */
+        .search-mode-btn { background: transparent; }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-[#020617] font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300">
@@ -120,52 +151,50 @@
             </div>
         </div>
 
-        <div class="p-4 bg-white dark:bg-slate-900/50 border-b border-water/10">
-            <div class="flex gap-2 mb-3 ml-2">
-                <button onclick="setSearchMode('address')" id="mode-address" class="search-mode-btn is-active">Address</button>
-                <button onclick="setSearchMode('serial')" id="mode-serial" class="search-mode-btn">Serial</button>
-                <button onclick="setSearchMode('name')" id="mode-name" class="search-mode-btn">Name</button>
-            </div>
-        
-            <div class="flex gap-4 items-end">
-                <div class="flex-1 flex flex-col">
-                    <div class="relative h-[48px] group">
-                        <div class="absolute left-4 inset-y-0 flex items-center pointer-events-none">
-                            <i id="search-icon" class="bi bi-geo-alt text-slate-400 group-focus-within:text-water"></i>
-                        </div>
-                        <input id="search-input" type="text" placeholder="Search..." 
-                               class="w-full h-full pl-11 pr-4 bg-slate-100 dark:bg-slate-800 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-water/40 border-none transition-all">
-                    </div>
+        <div class="p-4 bg-white dark:bg-slate-900/50 border-b border-water/10 space-y-4">
+            <div class="flex justify-between items-center px-2">
+                <div class="segmented-control w-72">
+                    <button onclick="setSearchMode('address')" id="mode-address" class="search-mode-btn segment-btn is-active">Address</button>
+                    <button onclick="setSearchMode('serial')" id="mode-serial" class="search-mode-btn segment-btn">Serial</button>
+                    <button onclick="setSearchMode('name')" id="mode-name" class="search-mode-btn segment-btn">Name</button>
                 </div>
         
-                <div class="relative w-64 flex flex-col">
-                    <div class="flex justify-between items-center mb-1 px-2">
-                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Billing Cycle</label>
-                        <div onclick="toggleTimeMode()" class="flex items-center gap-1 cursor-pointer bg-slate-200 dark:bg-slate-800 p-0.5 rounded-lg select-none">
-                            <span id="label-cycle" class="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-water text-white transition-all">CYCLE</span>
-                            <span id="label-year" class="text-[8px] font-black px-1.5 py-0.5 rounded-md text-slate-400 transition-all">YEAR</span>
-                        </div>
-                    </div>
+                <div class="segmented-control w-48">
+                    <button onclick="setTimeMode('cycle')" id="btn-mode-cycle" class="segment-btn is-active">Cycle</button>
+                    <button onclick="setTimeMode('year')" id="mode-year-trigger" class="segment-btn">Year</button>
+                </div>
+            </div>
         
-                    <div id="wrapper-cycle" class="relative">
-                        <div id="cycle-trigger" onclick="toggleCycleDropdown()" 
-                             class="custom-select-trigger flex items-center justify-between px-5 rounded-2xl h-[48px] bg-slate-100 dark:bg-slate-800 border-none">
+            <div class="flex gap-4 items-center">
+                <div class="flex-1 relative h-[48px] group">
+                    <div class="absolute left-4 inset-y-0 flex items-center pointer-events-none">
+                        <i id="search-icon" class="bi bi-geo-alt text-slate-400 group-focus-within:text-water transition-colors"></i>
+                    </div>
+                    <input id="search-input" type="text" placeholder="Search by address..." 
+                           class="w-full h-full pl-11 pr-4 bg-slate-100 dark:bg-slate-800 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-water/40 border-none transition-all">
+                </div>
+        
+                <div class="relative w-48 h-[48px]">
+                    <div id="wrapper-cycle" class="absolute inset-0">
+                        <div onclick="toggleCycleDropdown()" class="custom-select-trigger flex items-center justify-between px-5 rounded-2xl h-full bg-slate-100 dark:bg-slate-800 border-none">
                             <span id="selected-cycle-label" class="text-xs font-black uppercase">---</span>
                             <i class="bi bi-chevron-down opacity-50 text-[10px]"></i>
                         </div>
-                        <input type="hidden" id="filter-cycle" value="">
-                        <div id="cycle-options" class="select-dropdown-panel hidden scale-95 opacity-0"></div>
+                        <div id="cycle-options" class="select-dropdown-panel hidden"></div>
                     </div>
         
-                    <div id="wrapper-year" class="hidden relative h-[48px]">
-                        <input id="filter-year" type="number" placeholder="2026" 
-                               class="w-full h-full px-5 bg-slate-100 dark:bg-slate-800 rounded-2xl text-xs font-black outline-none focus:ring-2 ring-water/40 border-none">
-                        <div class="absolute right-4 inset-y-0 flex items-center pointer-events-none opacity-30">
-                            <i class="bi bi-calendar3"></i>
+                    <div id="wrapper-year" class="hidden absolute inset-0">
+                        <input id="filter-year" type="number" 
+                               oninput="if(this.value.length > 4) this.value = this.value.slice(0, 4); renderLedger();" 
+                               placeholder="2026" 
+                               class="w-full h-full px-5 bg-slate-100 dark:bg-slate-800 rounded-2xl text-sm font-black outline-none focus:ring-2 ring-water/40 border-none text-center tracking-[0.3em]">
+                        <div class="absolute left-4 inset-y-0 flex items-center pointer-events-none opacity-30">
+                            <i class="bi bi-calendar3 text-[10px]"></i>
                         </div>
                     </div>
                 </div>
             </div>
+            <input type="hidden" id="filter-cycle" value="">
         </div>
 
         <div class="flex-1 flex overflow-hidden">
