@@ -180,6 +180,27 @@
             display: flex;
             flex-direction: column;
         }
+
+        /* --- SURGICAL SPINNER REMOVAL --- */
+
+        /* 1. Kill for Chrome, Safari, Edge, and Opera */
+        #filter-year::-webkit-outer-spin-button,
+        #filter-year::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        
+        /* 2. Kill for Firefox */
+        #filter-year {
+            -moz-appearance: textfield;
+        }
+        
+        /* 3. Explicitly disable the hover state to be safe */
+        #filter-year:hover, 
+        #filter-year:focus {
+            -webkit-appearance: none;
+            -moz-appearance: textfield;
+        }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-[#020617] font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300">
