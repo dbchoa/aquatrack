@@ -208,7 +208,7 @@ main { height: 100vh; display: flex; flex-direction: column; }
     <!-- FILTER BAR -->
     <div class="flex-none p-3 lg:p-4 bg-white dark:bg-slate-900/50 border-b border-water/10 space-y-3">
 
-        <!-- Row 1: Ledger/Arrears toggle → Search mode toggle → export far right -->
+        <!-- Row 1: Ledger/Arrears → divider → Address/Serial/Name → divider → Export -->
         <div class="flex items-center gap-2 px-1">
             <!-- View mode: Ledger / Arrears — first -->
             <div class="segmented-control flex-shrink-0">
@@ -219,20 +219,21 @@ main { height: 100vh; display: flex; flex-direction: column; }
             <!-- Divider -->
             <div class="w-px h-5 bg-slate-200 dark:bg-slate-700 flex-shrink-0"></div>
 
-            <!-- Search mode: Address / Serial / Name — second -->
+            <!-- Search mode: Address / Serial / Name -->
             <div class="segmented-control flex-shrink-0 w-56 lg:w-64">
                 <button onclick="setSearchMode('address')" id="mode-address" class="search-mode-btn segment-btn is-active">Address</button>
                 <button onclick="setSearchMode('serial')"  id="mode-serial"  class="search-mode-btn segment-btn">Serial</button>
                 <button onclick="setSearchMode('name')"    id="mode-name"    class="search-mode-btn segment-btn">Name</button>
             </div>
 
-            <!-- Spacer -->
-            <div class="flex-1"></div>
+            <!-- Divider -->
+            <div class="w-px h-5 bg-slate-200 dark:bg-slate-700 flex-shrink-0"></div>
 
-            <!-- Export button — far right -->
+            <!-- Export to Excel — beside the toggles -->
             <button onclick="handleExcelExport()" title="Export to Excel"
-                class="w-9 h-9 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-emerald-500 active:scale-95 transition-all flex-shrink-0 hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
-                <i class="bi bi-file-earmark-spreadsheet-fill text-base"></i>
+                class="flex items-center gap-2 h-9 px-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 font-black uppercase text-[9px] tracking-widest active:scale-95 transition-all flex-shrink-0 hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
+                <i class="bi bi-file-earmark-spreadsheet-fill text-sm"></i>
+                <span class="hidden lg:inline">Export to Excel</span>
             </button>
         </div>
 
@@ -382,6 +383,7 @@ let timeScopeOverride   = null;   // 'mtd' | 'ytd' | null — set by KPI cell cl
 let searchMode          = 'address';
 let viewMode            = 'ledger';   // 'ledger' | 'arrears'
 let dataLoaded          = false;
+let orgConfig           = { name: 'AquaTrack', subname: '' };  // populated from config/org
 
 // Tracks which arrears groups are expanded: Set of propertyId strings
 const expandedArrears = new Set();
@@ -737,7 +739,7 @@ const renderLedger = () => {
     const filtered = allReadings.filter(r => {
         const unit = unitsMap[r.unitId] || {};
 
-        // ── KPI date filter overrides normal time+status filters
+        // ── KPI date filter overrides normal time+status filter
         if (kpiDateFilter) {
             const today     = new Date().toISOString().slice(0, 10);
             const thisMonth = new Date().toISOString().slice(0, 7);
@@ -809,7 +811,288 @@ const renderLedger = () => {
 
 // ─── SIDEBAR CONTENT BUILDER ──────────────────────────────────────────────────
 
-const buildSidebarHTML = (r) => {
+// ─── SOA GENERATOR ───────────────────────────────────────────────────────────
+
+window.generateSOA = () => {
+    if (!activeReading) return;
+    const r      = activeReading;
+    const unit   = unitsMap[r.unitId] || {};
+    const owner  = unit.ownerName || 'Resident';
+    const amount = calculateAmount(r);
+    const isPaid = r.status === 'paid';
+
+    const { threshold, minFee, excessRate } = r.appliedRates || { threshold: 15, minFee: 200, excessRate: 15 };
+    const consumption = Math.max(0, r.reading - r.prevReading);
+    const excessUnits = Math.max(0, consumption - threshold);
+    const excessCharge = excessUnits * excessRate;
+
+    // Due date = last day of the billing month
+    const [yr, mo]   = r.billingCycle.split('-').map(Number);
+    const dueDate    = new Date(yr, mo, 0); // day 0 of next month = last day of billing month
+    const dueDateStr = dueDate.toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' });
+
+    // Reading timestamp
+    const readingDate = r.timestamp
+        ? new Date(r.timestamp).toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' })
+        : '—';
+
+    // Paid date
+    const paidDateStr = r.paidDate
+        ? new Date(r.paidDate).toLocaleString([], { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : null;
+
+    const orgName    = orgConfig.name    || 'AquaTrack';
+    const orgSubname = orgConfig.subname || '';
+
+    const gapNote = r.isGapFill
+        ? `<div class="gap-note">⚠ Default record — no field reading was captured for this cycle. Minimum fee applies.</div>`
+        : '';
+
+    const statusBlock = isPaid
+        ? `<div class="status-block paid">
+               <span class="status-badge paid">PAID</span>
+               <span class="status-detail">Received: ${paidDateStr}</span>
+           </div>`
+        : `<div class="status-block pending">
+               <span class="status-badge pending">PAYMENT DUE</span>
+               <span class="status-detail">Please pay on or before ${dueDateStr}</span>
+           </div>`;
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SOA — ${owner} — ${r.billingCycle}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f8fafc;
+    color: #1e293b;
+    padding: 40px;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .soa-wrapper {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  }
+
+  /* HEADER */
+  .soa-header {
+    background: linear-gradient(135deg, #0072ff 0%, #4facfe 100%);
+    color: white;
+    padding: 28px 32px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .soa-logo svg { width: 48px; height: 48px; flex-shrink: 0; }
+  .soa-org-name { font-size: 20px; font-weight: 900; letter-spacing: -0.5px; line-height: 1.1; }
+  .soa-org-sub  { font-size: 11px; font-weight: 600; opacity: 0.8; margin-top: 3px; letter-spacing: 0.05em; text-transform: uppercase; }
+  .soa-doc-label {
+    margin-left: auto;
+    text-align: right;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    opacity: 0.85;
+  }
+  .soa-doc-label span { display: block; font-size: 22px; font-weight: 900; letter-spacing: -0.5px; opacity: 1; margin-top: 2px; }
+
+  /* BODY */
+  .soa-body { padding: 28px 32px; }
+
+  /* SECTION */
+  .soa-section { margin-bottom: 20px; }
+  .soa-section-title {
+    font-size: 8px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: #94a3b8;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 6px;
+    margin-bottom: 12px;
+  }
+  .soa-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 12px;
+    padding: 3px 0;
+  }
+  .soa-row .label { color: #64748b; font-weight: 600; }
+  .soa-row .value { font-weight: 800; text-align: right; }
+
+  /* TOTAL */
+  .soa-total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 2px solid #e2e8f0;
+  }
+  .soa-total-label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #475569; }
+  .soa-total-amount { font-size: 28px; font-weight: 900; color: #0072ff; letter-spacing: -1px; }
+
+  /* STATUS */
+  .status-block {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+  }
+  .status-block.paid    { background: #f0fdf4; border: 1.5px solid #bbf7d0; }
+  .status-block.pending { background: #fffbeb; border: 1.5px solid #fde68a; }
+  .status-badge {
+    font-size: 9px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    padding: 4px 10px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+  .status-badge.paid    { background: #dcfce7; color: #16a34a; }
+  .status-badge.pending { background: #fef9c3; color: #b45309; }
+  .status-detail { font-size: 11px; font-weight: 700; color: #475569; }
+
+  /* GAP NOTE */
+  .gap-note {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #92400e;
+    margin-bottom: 20px;
+  }
+
+  /* DIVIDER */
+  .soa-divider { border: none; border-top: 1px solid #f1f5f9; margin: 16px 0; }
+
+  /* FOOTER */
+  .soa-footer {
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    padding: 16px 32px;
+    font-size: 9px;
+    color: #94a3b8;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  @media print {
+    body { background: white; padding: 0; }
+    .soa-wrapper { border: none; box-shadow: none; border-radius: 0; }
+    @page { margin: 1.5cm; size: A4; }
+  }
+</style>
+</head>
+<body>
+<div class="soa-wrapper">
+
+  <!-- HEADER -->
+  <div class="soa-header">
+    <div class="soa-logo">
+      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M24 4C24 4 8 20 8 30C8 38.837 15.163 46 24 46C32.837 46 40 38.837 40 30C40 20 24 4 24 4Z" fill="rgba(255,255,255,0.9)"/>
+        <path d="M24 12C24 12 13 24 13 31C13 37.075 17.925 42 24 42C30.075 42 35 37.075 35 31C35 24 24 12 24 12Z" fill="rgba(79,172,254,0.6)"/>
+        <path d="M24 22C24 22 18 29 18 33C18 36.314 20.686 39 24 39C27.314 39 30 36.314 30 33C30 29 24 22 24 22Z" fill="white"/>
+      </svg>
+    </div>
+    <div>
+      <div class="soa-org-name">${orgName}</div>
+      ${orgSubname ? `<div class="soa-org-sub">${orgSubname}</div>` : ''}
+    </div>
+    <div class="soa-doc-label">
+      Statement of Account
+      <span>${r.billingCycle}</span>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div class="soa-body">
+
+    ${gapNote}
+    ${statusBlock}
+
+    <!-- ACCOUNT INFORMATION -->
+    <div class="soa-section">
+      <div class="soa-section-title">Account Information</div>
+      <div class="soa-row"><span class="label">Homeowner</span><span class="value">${owner}</span></div>
+      <div class="soa-row"><span class="label">Address</span><span class="value">${r.locationAddress}</span></div>
+      <div class="soa-row"><span class="label">Unit</span><span class="value">${unit.unitLabel || 'Main House'}</span></div>
+      <div class="soa-row"><span class="label">Meter Serial No.</span><span class="value">${r.meterSerial || unit.meterSerial || '—'}</span></div>
+    </div>
+
+    <!-- BILLING PERIOD -->
+    <div class="soa-section">
+      <div class="soa-section-title">Billing Period</div>
+      <div class="soa-row"><span class="label">Billing Cycle</span><span class="value">${r.billingCycle}</span></div>
+      <div class="soa-row"><span class="label">Reading Date</span><span class="value">${readingDate}</span></div>
+      <div class="soa-row"><span class="label">Read By</span><span class="value">${r.readerName || '—'}</span></div>
+    </div>
+
+    <!-- CONSUMPTION -->
+    <div class="soa-section">
+      <div class="soa-section-title">Consumption Details</div>
+      <div class="soa-row"><span class="label">Previous Reading</span><span class="value">${r.prevReading.toFixed(1)} m³</span></div>
+      <div class="soa-row"><span class="label">Present Reading</span><span class="value">${r.reading.toFixed(1)} m³</span></div>
+      <div class="soa-row" style="border-top:1px solid #f1f5f9;margin-top:6px;padding-top:8px;">
+        <span class="label" style="color:#0072ff;font-weight:900;">Consumption</span>
+        <span class="value" style="color:#0072ff;">${consumption.toFixed(1)} m³</span>
+      </div>
+    </div>
+
+    <!-- BILL COMPUTATION -->
+    <div class="soa-section">
+      <div class="soa-section-title">Bill Computation</div>
+      <div class="soa-row">
+        <span class="label">Minimum Fee (≤${threshold} m³)</span>
+        <span class="value">${formatCurrency(minFee)}</span>
+      </div>
+      <div class="soa-row">
+        <span class="label">Excess (${excessUnits.toFixed(1)} m³ × ₱${excessRate})</span>
+        <span class="value">${formatCurrency(excessCharge)}</span>
+      </div>
+      <div class="soa-total-row">
+        <span class="soa-total-label">Total Due</span>
+        <span class="soa-total-amount">${formatCurrency(amount)}</span>
+      </div>
+    </div>
+
+  </div><!-- /soa-body -->
+
+  <!-- FOOTER -->
+  <div class="soa-footer">
+    <span>This is a system-generated document · AquaTrack v2.2</span>
+    <span>Generated: ${new Date().toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+  </div>
+
+</div>
+<script>window.onload = () => window.print();<\/script>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank');
+    if (!win) { toast('Pop-up blocked — allow pop-ups for this page', 'error'); return; }
+    win.document.write(html);
+    win.document.close();
+};
+
+
     const amount  = calculateAmount(r);
     const isPaid  = r.status === 'paid';
     const unit    = unitsMap[r.unitId] || {};
@@ -859,8 +1142,13 @@ const buildSidebarHTML = (r) => {
                 class="w-full py-4 ${isPaid
                     ? 'bg-amber-500 text-white shadow-xl shadow-amber-500/20'
                     : 'bg-emerald-600 text-white shadow-xl shadow-emerald-600/20'}
-                rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all">
+                rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all mb-2">
                 ${isPaid ? 'Undo Payment' : 'Mark as Paid'}
+            </button>
+            <button onclick="generateSOA()"
+                class="w-full py-4 bg-water/10 hover:bg-water/20 text-waterDark rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
+                <i class="bi bi-printer-fill text-sm"></i>
+                Generate SOA
             </button>
         </div>
     `;
@@ -1068,6 +1356,17 @@ window.closeConfirmModal = () => {
 
 auth.onAuthStateChanged(user => {
     if (!user) return window.location.replace('../index.html');
+
+    // Load org config for SOA header
+    db.ref('config/org').on('value', snap => {
+        if (snap.exists()) {
+            const val = snap.val();
+            orgConfig = {
+                name:    val.name    || 'AquaTrack',
+                subname: val.subname || ''
+            };
+        }
+    });
 
     db.ref('properties').on('value', pSnap => {
         const props = pSnap.val() || {};
