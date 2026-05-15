@@ -197,37 +197,46 @@ main { height: 100vh; display: flex; flex-direction: column; }
             <p id="hud-ytd-sub" class="text-[8px] font-bold text-slate-400 mt-0.5">0% · -- / -- units</p>
         </button>
 
-        <!-- Pending Receivables — dynamic label + export -->
-        <div class="p-3 lg:p-5 flex justify-between items-start bg-amber-500/5">
-            <button id="kpi-pending" onclick="setFilterStatus('pending')" class="group text-left">
-                <p id="hud-pending-label" class="text-[8px] font-black text-slate-400 uppercase tracking-widest group-hover:text-amber-500 leading-tight">Cycle Pending</p>
-                <h4 id="hud-pending" class="text-xl lg:text-2xl font-black text-amber-500 mt-1">₱ 0.00</h4>
-                <p id="hud-pending-sub" class="text-[8px] font-bold text-slate-400 mt-0.5">-- units unpaid</p>
-            </button>
-            <button onclick="handleExcelExport()" class="w-9 h-9 lg:w-11 lg:h-11 rounded-2xl bg-white dark:bg-slate-800 shadow-lg flex items-center justify-center text-emerald-500 active:scale-95 transition-all flex-shrink-0 mt-1">
-                <i class="bi bi-file-earmark-spreadsheet-fill text-base lg:text-lg"></i>
-            </button>
-        </div>
+        <!-- Pending Receivables — dynamic label, now a proper kpi-btn -->
+        <button id="kpi-pending" onclick="setFilterStatus('pending')" class="kpi-btn p-3 lg:p-5 group text-left bg-amber-500/5">
+            <p id="hud-pending-label" class="text-[8px] font-black text-slate-400 uppercase tracking-widest group-hover:text-amber-500 leading-tight">Cycle Pending</p>
+            <h4 id="hud-pending" class="text-xl lg:text-2xl font-black text-amber-500 mt-1">₱ 0.00</h4>
+            <p id="hud-pending-sub" class="text-[8px] font-bold text-slate-400 mt-0.5">-- units unpaid</p>
+        </button>
     </div>
 
     <!-- FILTER BAR -->
     <div class="flex-none p-3 lg:p-4 bg-white dark:bg-slate-900/50 border-b border-water/10 space-y-3">
-        <div class="flex justify-between items-center px-1">
-            <!-- Search mode buttons — shown in both ledger and arrears -->
-            <div id="filter-left-normal" class="segmented-control w-60 lg:w-72">
+
+        <!-- Row 1: Ledger/Arrears toggle → Search mode toggle → export far right -->
+        <div class="flex items-center gap-2 px-1">
+            <!-- View mode: Ledger / Arrears — first -->
+            <div class="segmented-control flex-shrink-0">
+                <button onclick="setViewMode('ledger')"  id="btn-view-ledger"  class="segment-btn is-active px-3">Ledger</button>
+                <button onclick="setViewMode('arrears')" id="btn-view-arrears" class="segment-btn px-3">Arrears</button>
+            </div>
+
+            <!-- Divider -->
+            <div class="w-px h-5 bg-slate-200 dark:bg-slate-700 flex-shrink-0"></div>
+
+            <!-- Search mode: Address / Serial / Name — second -->
+            <div class="segmented-control flex-shrink-0 w-56 lg:w-64">
                 <button onclick="setSearchMode('address')" id="mode-address" class="search-mode-btn segment-btn is-active">Address</button>
                 <button onclick="setSearchMode('serial')"  id="mode-serial"  class="search-mode-btn segment-btn">Serial</button>
                 <button onclick="setSearchMode('name')"    id="mode-name"    class="search-mode-btn segment-btn">Name</button>
             </div>
 
-            <!-- Right: view mode tabs -->
-            <div class="segmented-control">
-                <button onclick="setViewMode('ledger')"  id="btn-view-ledger"  class="segment-btn is-active px-3">Ledger</button>
-                <button onclick="setViewMode('arrears')" id="btn-view-arrears" class="segment-btn px-3">Arrears</button>
-            </div>
+            <!-- Spacer -->
+            <div class="flex-1"></div>
+
+            <!-- Export button — far right -->
+            <button onclick="handleExcelExport()" title="Export to Excel"
+                class="w-9 h-9 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-emerald-500 active:scale-95 transition-all flex-shrink-0 hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
+                <i class="bi bi-file-earmark-spreadsheet-fill text-base"></i>
+            </button>
         </div>
 
-        <!-- Search + time filter row -->
+        <!-- Row 2: search input + time selector (time selector hidden in arrears) -->
         <div id="filter-row-controls" class="flex gap-3 items-center">
             <div class="flex-1 relative h-[44px] group">
                 <div class="absolute left-4 inset-y-0 flex items-center pointer-events-none">
