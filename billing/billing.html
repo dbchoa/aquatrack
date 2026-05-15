@@ -511,19 +511,28 @@ window.setKpiDateFilter = (scope) => {
 
 // ─── KPI UPDATE ───────────────────────────────────────────────────────────────
 
-const updateKPIs = (cycleData) => {
-    const today     = new Date().toISOString().slice(0, 10);   // YYYY-MM-DD
-    const thisMonth = new Date().toISOString().slice(0, 7);    // YYYY-MM
-    const thisYear  = new Date().getFullYear().toString();     // YYYY
+const updateKPIs = () => {
+    // Derive date prefixes in LOCAL timezone so "Today" means today on the user's calendar,
+    // not UTC. paidDate is stored as UTC ISO string — convert to local date for comparison.
+    const pad         = n => String(n).padStart(2, '0');
+    const now         = new Date();
+    const today       = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+    const thisMonth   = `${now.getFullYear()}-${pad(now.getMonth()+1)}`;
+    const thisYear    = now.getFullYear().toString();
+
+    // Convert a stored UTC paidDate string to a local YYYY-MM-DD prefix for comparison
+    const localDate  = (pd) => { const d = new Date(pd); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+    const localMonth = (pd) => { const d = new Date(pd); return `${d.getFullYear()}-${pad(d.getMonth()+1)}`; };
+    const localYear  = (pd) => String(new Date(pd).getFullYear());
 
     // ── Today
     const daily = allReadings
-        .filter(r => r.status === 'paid' && r.paidDate && r.paidDate.startsWith(today))
+        .filter(r => r.status === 'paid' && r.paidDate && localDate(r.paidDate) === today)
         .reduce((acc, r) => acc + calculateAmount(r), 0);
     document.getElementById('hud-daily').innerText = formatCurrency(daily);
 
     // ── MTD: collected via paidDate in current month
-    const mtdReadings  = allReadings.filter(r => r.status === 'paid' && r.paidDate && r.paidDate.startsWith(thisMonth));
+    const mtdReadings  = allReadings.filter(r => r.status === 'paid' && r.paidDate && localMonth(r.paidDate) === thisMonth);
     // Billed in current month (billingCycle prefix)
     const mtdBilled    = allReadings.filter(r => r.billingCycle.startsWith(thisMonth));
     const mtdCollected = mtdReadings.reduce((s, r) => s + calculateAmount(r), 0);
@@ -535,7 +544,7 @@ const updateKPIs = (cycleData) => {
     document.getElementById('hud-mtd-sub').innerText = `${mtdEff}% · ${mtdPaidCount} / ${mtdTotal} units`;
 
     // ── YTD: collected via paidDate in current year
-    const ytdReadings  = allReadings.filter(r => r.status === 'paid' && r.paidDate && r.paidDate.startsWith(thisYear));
+    const ytdReadings  = allReadings.filter(r => r.status === 'paid' && r.paidDate && localYear(r.paidDate) === thisYear);
     const ytdBilled    = allReadings.filter(r => r.billingCycle.startsWith(thisYear));
     const ytdCollected = ytdReadings.reduce((s, r) => s + calculateAmount(r), 0);
     const ytdExpected  = ytdBilled.reduce((s, r) => s + calculateAmount(r), 0);
@@ -741,12 +750,19 @@ const renderLedger = () => {
 
         // ── KPI date filter overrides normal time+status filter
         if (kpiDateFilter) {
-            const today     = new Date().toISOString().slice(0, 10);
-            const thisMonth = new Date().toISOString().slice(0, 7);
-            const thisYear  = new Date().getFullYear().toString();
-            const prefixMap = { today, mtd: thisMonth, ytd: thisYear };
-            const prefix    = prefixMap[kpiDateFilter];
-            if (r.status !== 'paid' || !r.paidDate || !r.paidDate.startsWith(prefix)) return false;
+            const pad      = n => String(n).padStart(2, '0');
+            const now      = new Date();
+            const todayLocal  = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+            const monthLocal  = `${now.getFullYear()}-${pad(now.getMonth()+1)}`;
+            const yearLocal   = now.getFullYear().toString();
+            const toLocal     = (pd) => { const d = new Date(pd); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+            const toLocalMo   = (pd) => { const d = new Date(pd); return `${d.getFullYear()}-${pad(d.getMonth()+1)}`; };
+            const toLocalYr   = (pd) => String(new Date(pd).getFullYear());
+            if (r.status !== 'paid' || !r.paidDate) return false;
+            if (kpiDateFilter === 'today') return toLocal(r.paidDate) === todayLocal;
+            if (kpiDateFilter === 'mtd')   return toLocalMo(r.paidDate) === monthLocal;
+            if (kpiDateFilter === 'ytd')   return toLocalYr(r.paidDate) === yearLocal;
+            return false;
         } else {
             const matchesTime   = (timeMode === 'cycle') ? (r.billingCycle === cycle) : r.billingCycle.startsWith(year);
             const matchesStatus = currentFilterStatus === 'all' || r.status === currentFilterStatus;
@@ -779,9 +795,10 @@ const renderLedger = () => {
         const unit    = unitsMap[r.unitId] || {};
         const owner   = unit.ownerName || 'Resident';
 
-        // Paid date — short format e.g. "May 6, 2026"
+        // Paid date — short format e.g. "May 6, 2026" in local timezone
+        // Filter is also local-timezone-aware so display and filter are consistent.
         const paidDateShort = r.paidDate
-            ? new Date(r.paidDate).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })
+            ? new Date(r.paidDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
             : null;
 
         const gapBadge = r.isGapFill
@@ -1112,7 +1129,7 @@ const buildSidebarHTML = (r) => {
     const owner   = unit.ownerName || 'Resident';
 
     const paidDateDisplay = r.paidDate
-        ? new Date(r.paidDate).toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        ? new Date(r.paidDate).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
         : null;
 
     const gapNotice = r.isGapFill ? `
@@ -1262,7 +1279,7 @@ window.handleExcelExport = () => {
             Status:   r.status,
             GapFill:  r.isGapFill ? 'Yes' : 'No',
             PaidDate: r.paidDate
-                ? new Date(r.paidDate).toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                ? new Date(r.paidDate).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
                 : 'N/A'
         }));
 
