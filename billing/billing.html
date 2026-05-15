@@ -108,6 +108,13 @@ tailwind.config = {
 }
 .segment-btn.is-active { background: #4facfe; color: white; box-shadow: 0 4px 12px rgba(79,172,254,0.2); }
 
+/* Arrears view */
+.arrears-group { transition: all 0.2s ease; }
+.arrears-children { overflow: hidden; transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1); max-height: 0; }
+.arrears-children.is-open { max-height: 1000px; }
+.arrears-group-header { cursor: pointer; }
+.arrears-group-header:hover { background: rgba(79, 172, 254, 0.04); }
+
 /* Skeleton loader */
 @keyframes shimmer {
     0%   { background-position: -600px 0; }
@@ -165,24 +172,42 @@ main { height: 100vh; display: flex; flex-direction: column; }
 
 <main class="max-w-full h-screen flex flex-col overflow-hidden">
 
-    <!-- KPI BAR -->
-    <div class="flex-none grid grid-cols-3 gap-0 bg-white dark:bg-slate-900 border-b border-water/20">
-        <button id="kpi-paid" onclick="setFilterStatus('paid')" class="kpi-btn p-4 lg:p-6 group text-left">
-            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-emerald-500">Today's Collection</p>
-            <h4 id="hud-daily" class="text-xl lg:text-2xl font-black text-emerald-500 stat-glow">₱ 0.00</h4>
+    <!-- KPI BAR — 5 columns -->
+    <div class="flex-none grid grid-cols-5 gap-0 bg-white dark:bg-slate-900 border-b border-water/20">
+
+        <!-- Today's Collection -->
+        <button id="kpi-paid" onclick="setFilterStatus('paid')" class="kpi-btn p-3 lg:p-5 group text-left">
+            <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest group-hover:text-emerald-500 leading-tight">Today's<br>Collection</p>
+            <h4 id="hud-daily" class="text-lg lg:text-xl font-black text-emerald-500 stat-glow mt-1">₱ 0.00</h4>
         </button>
-        <button id="kpi-pending" onclick="setFilterStatus('pending')" class="kpi-btn p-4 lg:p-6 group text-left">
-            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-amber-500">Pending Receivables</p>
-            <h4 id="hud-pending" class="text-xl lg:text-2xl font-black text-amber-500">₱ 0.00</h4>
+
+        <!-- MTD Collection -->
+        <div class="kpi-btn p-3 lg:p-5 text-left">
+            <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-tight">Month<br>to Date</p>
+            <h4 id="hud-mtd" class="text-lg lg:text-xl font-black text-water stat-glow mt-1">₱ 0.00</h4>
+        </div>
+
+        <!-- YTD Collection -->
+        <div class="kpi-btn p-3 lg:p-5 text-left">
+            <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-tight">Year<br>to Date</p>
+            <h4 id="hud-ytd" class="text-lg lg:text-xl font-black text-waterDark stat-glow mt-1">₱ 0.00</h4>
+        </div>
+
+        <!-- Pending Receivables -->
+        <button id="kpi-pending" onclick="setFilterStatus('pending')" class="kpi-btn p-3 lg:p-5 group text-left">
+            <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest group-hover:text-amber-500 leading-tight">Pending<br>Receivables</p>
+            <h4 id="hud-pending" class="text-lg lg:text-xl font-black text-amber-500 mt-1">₱ 0.00</h4>
         </button>
-        <div class="p-4 lg:p-6 flex justify-between items-center bg-water/5">
+
+        <!-- Efficiency + Export -->
+        <div class="p-3 lg:p-5 flex justify-between items-center bg-water/5">
             <div>
-                <p class="text-[9px] font-black text-waterDark uppercase tracking-widest">Efficiency</p>
-                <h4 id="display-efficiency-pct" class="text-xl lg:text-2xl font-black">0%</h4>
+                <p class="text-[8px] font-black text-waterDark uppercase tracking-widest leading-tight">Collection<br>Efficiency</p>
+                <h4 id="display-efficiency-pct" class="text-lg lg:text-xl font-black mt-1">0%</h4>
                 <p id="display-efficiency-counts" class="text-[8px] font-bold text-slate-400 mt-0.5">-- / -- units</p>
             </div>
-            <button onclick="handleExcelExport()" class="w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-white dark:bg-slate-800 shadow-lg flex items-center justify-center text-emerald-500 active:scale-95 transition-all">
-                <i class="bi bi-file-earmark-spreadsheet-fill text-lg lg:text-xl"></i>
+            <button onclick="handleExcelExport()" class="w-9 h-9 lg:w-11 lg:h-11 rounded-2xl bg-white dark:bg-slate-800 shadow-lg flex items-center justify-center text-emerald-500 active:scale-95 transition-all flex-shrink-0">
+                <i class="bi bi-file-earmark-spreadsheet-fill text-base lg:text-lg"></i>
             </button>
         </div>
     </div>
@@ -190,17 +215,26 @@ main { height: 100vh; display: flex; flex-direction: column; }
     <!-- FILTER BAR -->
     <div class="flex-none p-3 lg:p-4 bg-white dark:bg-slate-900/50 border-b border-water/10 space-y-3">
         <div class="flex justify-between items-center px-1">
-            <div class="segmented-control w-60 lg:w-72">
+            <!-- Left: search mode OR arrears indicator -->
+            <div id="filter-left-normal" class="segmented-control w-60 lg:w-72">
                 <button onclick="setSearchMode('address')" id="mode-address" class="search-mode-btn segment-btn is-active">Address</button>
                 <button onclick="setSearchMode('serial')"  id="mode-serial"  class="search-mode-btn segment-btn">Serial</button>
                 <button onclick="setSearchMode('name')"    id="mode-name"    class="search-mode-btn segment-btn">Name</button>
             </div>
-            <div class="segmented-control w-40 lg:w-48">
-                <button onclick="setTimeMode('cycle')" id="btn-mode-cycle"    class="segment-btn is-active">Cycle</button>
-                <button onclick="setTimeMode('year')"  id="mode-year-trigger" class="segment-btn">Year</button>
+            <div id="filter-left-arrears" class="hidden items-center gap-2">
+                <span class="text-[9px] font-black text-rose-500 uppercase tracking-widest">Arrears View</span>
+                <span class="text-[8px] bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 px-2 py-0.5 rounded-lg font-black uppercase">All Cycles</span>
+            </div>
+
+            <!-- Right: view mode tabs -->
+            <div class="segmented-control">
+                <button onclick="setViewMode('ledger')"  id="btn-view-ledger"  class="segment-btn is-active px-3">Ledger</button>
+                <button onclick="setViewMode('arrears')" id="btn-view-arrears" class="segment-btn px-3">Arrears</button>
             </div>
         </div>
-        <div class="flex gap-3 items-center">
+
+        <!-- Search + time filter row — hidden in arrears mode -->
+        <div id="filter-row-controls" class="flex gap-3 items-center">
             <div class="flex-1 relative h-[44px] group">
                 <div class="absolute left-4 inset-y-0 flex items-center pointer-events-none">
                     <i id="search-icon" class="bi bi-geo-alt text-slate-400 group-focus-within:text-water transition-colors"></i>
@@ -220,6 +254,11 @@ main { height: 100vh; display: flex; flex-direction: column; }
                     <input id="filter-year" type="number" placeholder="2026"
                         class="w-full h-full px-4 bg-slate-100 dark:bg-slate-800 rounded-2xl text-sm font-black outline-none focus:ring-2 ring-water/40 border-none text-center tracking-[0.3em]">
                 </div>
+            </div>
+            <!-- Time mode toggle — shown only in ledger mode -->
+            <div class="segmented-control w-36 flex-shrink-0">
+                <button onclick="setTimeMode('cycle')" id="btn-mode-cycle"    class="segment-btn is-active">Cycle</button>
+                <button onclick="setTimeMode('year')"  id="mode-year-trigger" class="segment-btn">Year</button>
             </div>
         </div>
         <input type="hidden" id="filter-cycle" value="">
@@ -299,7 +338,9 @@ main { height: 100vh; display: flex; flex-direction: column; }
                 </div>
             </div>
         </div>
-        <div id="lockout-container" class="hidden flex-col items-center justify-center mb-6">
+
+        <!-- FIX: lockout container — full-width, centered, flex column -->
+        <div id="lockout-container" class="hidden w-full flex-col items-center justify-center mb-6">
             <div class="relative w-12 h-12">
                 <svg class="w-full h-full -rotate-90">
                     <circle cx="24" cy="24" r="20" stroke="currentColor" stroke-width="4" fill="transparent" class="text-slate-200 dark:text-slate-800"/>
@@ -309,6 +350,7 @@ main { height: 100vh; display: flex; flex-direction: column; }
             </div>
             <p class="text-[8px] font-black text-slate-400 uppercase mt-2 tracking-[0.2em]">Safety Lock Active</p>
         </div>
+
         <div id="modal-actions" class="flex flex-col gap-2">
             <button id="btn-modal-confirm" class="w-full py-4 rounded-2xl font-black uppercase text-xs tracking-widest text-white transition-all active:scale-95"></button>
             <button onclick="closeConfirmModal()" class="w-full py-3 text-slate-400 font-bold uppercase text-[10px] tracking-widest text-center">Cancel</button>
@@ -326,13 +368,17 @@ import { toast, formatCurrency } from '../js/utils.js';
 
 injectHeader();
 
-let allReadings        = [];
-let unitsMap           = {};
-let activeReading      = null;
+let allReadings         = [];
+let unitsMap            = {};
+let activeReading       = null;
 let currentFilterStatus = 'all';
-let timeMode           = 'cycle';
-let searchMode         = 'address';
-let dataLoaded         = false;
+let timeMode            = 'cycle';
+let searchMode          = 'address';
+let viewMode            = 'ledger';   // 'ledger' | 'arrears'
+let dataLoaded          = false;
+
+// Tracks which arrears groups are expanded: Set of propertyId strings
+const expandedArrears = new Set();
 
 // ─── BILLING CALCULATION ──────────────────────────────────────────────────────
 
@@ -353,9 +399,9 @@ window.setSearchMode = (mode) => {
         }
     });
     const configs = {
-        address: { p: 'Search by address...',      i: 'bi-geo-alt' },
-        serial:  { p: 'Search by meter serial...', i: 'bi-hash' },
-        name:    { p: 'Search by resident name...', i: 'bi-person-fill' }
+        address: { p: 'Search by address...',       i: 'bi-geo-alt' },
+        serial:  { p: 'Search by meter serial...',  i: 'bi-hash' },
+        name:    { p: 'Search by resident name...',  i: 'bi-person-fill' }
     };
     document.getElementById('search-input').placeholder = configs[mode].p;
     document.getElementById('search-icon').className    = `bi ${configs[mode].i} text-slate-400 group-focus-within:text-water transition-colors`;
@@ -375,12 +421,44 @@ window.setTimeMode = (mode) => {
     renderLedger();
 };
 
+// ─── VIEW MODE (LEDGER / ARREARS) ─────────────────────────────────────────────
+
+window.setViewMode = (mode) => {
+    viewMode = mode;
+
+    document.getElementById('btn-view-ledger').classList.toggle('is-active', mode === 'ledger');
+    document.getElementById('btn-view-arrears').classList.toggle('is-active', mode === 'arrears');
+
+    // Toggle left-side filter controls
+    const normalLeft  = document.getElementById('filter-left-normal');
+    const arrearsLeft = document.getElementById('filter-left-arrears');
+    normalLeft.classList.toggle('hidden', mode === 'arrears');
+    arrearsLeft.classList.toggle('hidden', mode === 'ledger');
+    arrearsLeft.classList.toggle('flex', mode === 'arrears');
+
+    // Toggle search / time-selector row
+    document.getElementById('filter-row-controls').classList.toggle('hidden', mode === 'arrears');
+
+    // Also clear status filter when entering arrears — arrears always shows pending
+    if (mode === 'arrears') {
+        currentFilterStatus = 'all';
+        const paidBtn    = document.getElementById('kpi-paid');
+        const pendingBtn = document.getElementById('kpi-pending');
+        paidBtn.classList.remove('is-active', 'is-active-paid');
+        pendingBtn.classList.remove('is-active', 'is-active-pending');
+    }
+
+    renderLedger();
+};
+
 // ─── KPI FILTER WITH ACTIVE STATE ─────────────────────────────────────────────
 
 window.setFilterStatus = (status) => {
+    // Arrears mode doesn't use status filter
+    if (viewMode === 'arrears') return;
+
     currentFilterStatus = (currentFilterStatus === status) ? 'all' : status;
 
-    // Clear active state from both buttons
     const paidBtn    = document.getElementById('kpi-paid');
     const pendingBtn = document.getElementById('kpi-pending');
     paidBtn.classList.remove('is-active', 'is-active-paid');
@@ -399,45 +477,202 @@ window.setFilterStatus = (status) => {
 // ─── KPI UPDATE ───────────────────────────────────────────────────────────────
 
 const updateKPIs = (cycleData) => {
+    // Efficiency is always cycle/year-scoped
     let expected = 0; let collected = 0; let paidCount = 0;
-
-    // FIX: prefix match against full ISO paidDate for Today's Collection
-    const todayPrefix = new Date().toISOString().slice(0, 10);
-
     cycleData.forEach(r => {
         const amt = calculateAmount(r);
         expected += amt;
         if (r.status === 'paid') { collected += amt; paidCount++; }
     });
 
+    // Today / MTD / YTD are always computed from ALL readings regardless of filter
+    const today     = new Date().toISOString().slice(0, 10);           // YYYY-MM-DD
+    const thisMonth = new Date().toISOString().slice(0, 7);            // YYYY-MM
+    const thisYear  = new Date().getFullYear().toString();             // YYYY
+
     const daily = allReadings
-        .filter(r => r.status === 'paid' && r.paidDate && r.paidDate.startsWith(todayPrefix))
-        .reduce((acc, curr) => acc + calculateAmount(curr), 0);
+        .filter(r => r.status === 'paid' && r.paidDate && r.paidDate.startsWith(today))
+        .reduce((acc, r) => acc + calculateAmount(r), 0);
+
+    const mtd = allReadings
+        .filter(r => r.status === 'paid' && r.paidDate && r.paidDate.startsWith(thisMonth))
+        .reduce((acc, r) => acc + calculateAmount(r), 0);
+
+    const ytd = allReadings
+        .filter(r => r.status === 'paid' && r.paidDate && r.paidDate.startsWith(thisYear))
+        .reduce((acc, r) => acc + calculateAmount(r), 0);
 
     document.getElementById('hud-daily').innerText   = formatCurrency(daily);
+    document.getElementById('hud-mtd').innerText     = formatCurrency(mtd);
+    document.getElementById('hud-ytd').innerText     = formatCurrency(ytd);
     document.getElementById('hud-pending').innerText = formatCurrency(expected - collected);
 
     const effPct    = expected > 0 ? Math.round((collected / expected) * 100) : 0;
     const totalUnits = cycleData.length;
     document.getElementById('display-efficiency-pct').innerText    = `${effPct}%`;
-    // Suggestion 9: show unit counts alongside percentage
     document.getElementById('display-efficiency-counts').innerText = `${paidCount} / ${totalUnits} units`;
+};
+
+// ─── ARREARS RENDER ───────────────────────────────────────────────────────────
+
+const renderArrears = () => {
+    const container = document.getElementById('ledger-container');
+    const skeleton  = document.getElementById('ledger-skeleton');
+    if (skeleton) skeleton.remove();
+    container.innerHTML = '';
+
+    // All pending readings across all cycles
+    const pending = allReadings.filter(r => r.status === 'pending');
+
+    if (pending.length === 0) {
+        container.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-20 text-center opacity-30">
+                <i class="bi bi-check-circle text-5xl mb-4 text-emerald-500"></i>
+                <p class="font-black uppercase tracking-tighter text-sm">No Arrears</p>
+                <p class="text-[10px] font-bold mt-1 text-slate-400">All units are fully settled</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Group by propertyId
+    const groups = {};
+    pending.forEach(r => {
+        if (!groups[r.propertyId]) groups[r.propertyId] = [];
+        groups[r.propertyId].push(r);
+    });
+
+    // Sort groups by total owed descending
+    const sorted = Object.entries(groups).sort((a, b) => {
+        const sumA = a[1].reduce((s, r) => s + calculateAmount(r), 0);
+        const sumB = b[1].reduce((s, r) => s + calculateAmount(r), 0);
+        return sumB - sumA;
+    });
+
+    sorted.forEach(([propertyId, readings]) => {
+        const total      = readings.reduce((s, r) => s + calculateAmount(r), 0);
+        const cycleCount = readings.length;
+        // Get owner from any reading's unit
+        const sampleUnit = unitsMap[readings[0].unitId] || {};
+        const owner      = sampleUnit.ownerName || 'Resident';
+        const isOpen     = expandedArrears.has(propertyId);
+
+        // Sort child cycles oldest-first
+        const sortedCycles = [...readings].sort((a, b) => a.billingCycle.localeCompare(b.billingCycle));
+
+        const oldestCycle = sortedCycles[0]?.billingCycle || '';
+        const newestCycle = sortedCycles[sortedCycles.length - 1]?.billingCycle || '';
+        const cycleRange  = cycleCount === 1 ? oldestCycle : `${oldestCycle} – ${newestCycle}`;
+
+        const group = document.createElement('div');
+        group.className = 'arrears-group glass-card rounded-2xl overflow-hidden';
+        group.innerHTML = `
+            <!-- Group header -->
+            <div class="arrears-group-header flex items-center justify-between p-3 gap-3"
+                 onclick="toggleArrearsGroup('${propertyId}')">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center bg-rose-500/10 text-rose-500">
+                        <i class="bi bi-person-fill text-sm"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <p class="text-xs font-black uppercase tracking-tighter truncate">${owner}</p>
+                            <span class="text-[7px] bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 px-1.5 py-0.5 rounded font-black uppercase flex-shrink-0">${cycleCount} cycle${cycleCount !== 1 ? 's' : ''}</span>
+                        </div>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">${readings[0].locationAddress} · ${cycleRange}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <div class="text-right">
+                        <p class="text-sm font-black text-rose-600">${formatCurrency(total)}</p>
+                        <p class="text-[8px] font-black text-slate-400 uppercase">total owed</p>
+                    </div>
+                    <i class="bi bi-chevron-${isOpen ? 'up' : 'down'} text-slate-400 text-xs transition-transform" id="chevron-${propertyId}"></i>
+                </div>
+            </div>
+
+            <!-- Child cycles -->
+            <div class="arrears-children ${isOpen ? 'is-open' : ''}" id="children-${propertyId}">
+                <div class="border-t border-slate-100 dark:border-slate-800 mx-3 mb-2"></div>
+                ${sortedCycles.map(r => {
+                    const amt  = calculateAmount(r);
+                    const unit = unitsMap[r.unitId] || {};
+                    const gapBadge = r.isGapFill
+                        ? `<span class="text-[7px] bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded font-black uppercase">Gap Fill</span>`
+                        : '';
+                    return `
+                        <div class="flex items-center justify-between px-3 py-2 gap-3 cursor-pointer hover:bg-water/5 rounded-xl mx-2 mb-1 transition-colors"
+                             onclick="event.stopPropagation(); selectUnit(${JSON.stringify(r).replace(/"/g, '&quot;')})">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <div class="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center bg-amber-500/10 text-amber-500">
+                                    <i class="bi bi-clock-history text-[10px]"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-1">
+                                        <p class="text-[10px] font-black text-waterDark uppercase">${r.billingCycle}</p>
+                                        ${gapBadge}
+                                    </div>
+                                    <p class="text-[8px] font-bold text-slate-400 truncate">${(r.reading - r.prevReading).toFixed(1)} m³ · SN: ${unit.meterSerial || 'N/A'}</p>
+                                </div>
+                            </div>
+                            <p class="text-sm font-black text-slate-900 dark:text-white flex-shrink-0">${formatCurrency(amt)}</p>
+                        </div>
+                    `;
+                }).join('')}
+                <div class="h-2"></div>
+            </div>
+        `;
+        container.appendChild(group);
+    });
+
+    // Summary footer
+    const totalArrears    = pending.reduce((s, r) => s + calculateAmount(r), 0);
+    const uniqueOwners    = Object.keys(groups).length;
+    const footer = document.createElement('div');
+    footer.className = 'mt-2 p-4 rounded-2xl bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-800/30 flex justify-between items-center';
+    footer.innerHTML = `
+        <div>
+            <p class="text-[8px] font-black text-rose-500 uppercase tracking-widest">Total Arrears</p>
+            <p class="text-xs font-bold text-slate-500 mt-0.5">${uniqueOwners} properties · ${pending.length} outstanding cycles</p>
+        </div>
+        <p class="text-xl font-black text-rose-600">${formatCurrency(totalArrears)}</p>
+    `;
+    container.appendChild(footer);
+};
+
+window.toggleArrearsGroup = (propertyId) => {
+    if (expandedArrears.has(propertyId)) {
+        expandedArrears.delete(propertyId);
+    } else {
+        expandedArrears.add(propertyId);
+    }
+    // Re-render arrears to reflect new state
+    renderArrears();
 };
 
 // ─── LEDGER RENDER ────────────────────────────────────────────────────────────
 
 const renderLedger = () => {
-    if (!dataLoaded) return; // Don't render until data is ready
+    if (!dataLoaded) return;
+
+    // Always update KPIs regardless of view
+    const cycle = document.getElementById('filter-cycle').value;
+    const year  = document.getElementById('filter-year').value || new Date().getFullYear().toString();
+    updateKPIs(allReadings.filter(r =>
+        (timeMode === 'cycle') ? (r.billingCycle === cycle) : r.billingCycle.startsWith(year)
+    ));
+
+    // Delegate to arrears renderer if in that mode
+    if (viewMode === 'arrears') {
+        renderArrears();
+        return;
+    }
 
     const container = document.getElementById('ledger-container');
     const skeleton  = document.getElementById('ledger-skeleton');
     const search    = document.getElementById('search-input').value.toLowerCase();
-    const cycle     = document.getElementById('filter-cycle').value;
-    const year      = document.getElementById('filter-year').value || new Date().getFullYear().toString();
 
-    // Hide skeleton once we have data
     if (skeleton) skeleton.remove();
-
     container.innerHTML = '';
 
     const filtered = allReadings.filter(r => {
@@ -452,11 +687,6 @@ const renderLedger = () => {
         return false;
     });
 
-    updateKPIs(allReadings.filter(r =>
-        (timeMode === 'cycle') ? (r.billingCycle === cycle) : r.billingCycle.startsWith(year)
-    ));
-
-    // Suggestion 6: empty state
     if (filtered.length === 0) {
         container.innerHTML = `
             <div class="flex flex-col items-center justify-center py-20 text-center opacity-30">
@@ -476,7 +706,6 @@ const renderLedger = () => {
         const unit    = unitsMap[r.unitId] || {};
         const owner   = unit.ownerName || 'Resident';
 
-        // Suggestion 1: gap fill badge
         const gapBadge = r.isGapFill
             ? `<span class="text-[7px] bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded font-black uppercase ml-1">Gap Fill</span>`
             : '';
@@ -513,13 +742,12 @@ const buildSidebarHTML = (r) => {
     const amount  = calculateAmount(r);
     const isPaid  = r.status === 'paid';
     const unit    = unitsMap[r.unitId] || {};
+    const owner   = unit.ownerName || 'Resident';
 
-    // Suggestion 2: formatted paidDate
     const paidDateDisplay = r.paidDate
         ? new Date(r.paidDate).toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
         : null;
 
-    // Suggestion 1: gap fill notice in sidebar
     const gapNotice = r.isGapFill ? `
         <div class="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 mb-4 flex items-start gap-3">
             <i class="bi bi-exclamation-triangle-fill text-amber-500 mt-0.5 flex-shrink-0"></i>
@@ -533,8 +761,12 @@ const buildSidebarHTML = (r) => {
     return `
         <div class="animate-in fade-in slide-in-from-right-4 duration-300">
             <div class="mb-6">
-                <h2 class="text-2xl font-black uppercase tracking-tighter leading-none">${r.locationAddress}</h2>
-                <p class="text-[10px] font-black text-waterDark uppercase tracking-[0.2em] mt-2">${unit.unitLabel || 'Standard Unit'} / Cycle ${r.billingCycle}</p>
+                <!-- Owner name — prominent, on top -->
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Homeowner</p>
+                <h2 class="text-xl font-black uppercase tracking-tight leading-tight">${owner}</h2>
+                <!-- Address + unit/cycle below -->
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-tight mt-2">${r.locationAddress}</p>
+                <p class="text-[10px] font-black text-waterDark uppercase tracking-[0.2em] mt-1">${unit.unitLabel || 'Standard Unit'} / Cycle ${r.billingCycle}</p>
             </div>
             ${gapNotice}
             <div class="space-y-4 mb-8">
@@ -565,27 +797,30 @@ const buildSidebarHTML = (r) => {
 
 // ─── UNIT SELECTION — DESKTOP + MOBILE ───────────────────────────────────────
 
-const selectUnit = (r) => {
+// Expose selectUnit globally so arrears child rows can call it with parsed object
+window.selectUnit = (r) => {
+    // r may arrive as a string from inline onclick attr — parse if needed
+    if (typeof r === 'string') r = JSON.parse(r);
     activeReading = r;
     const html = buildSidebarHTML(r);
     const isDesktop = window.innerWidth >= 1024;
 
     if (isDesktop) {
-        // Desktop: populate right sidebar
         const sidebar = document.getElementById('intel-content');
         const empty   = document.getElementById('intel-empty');
         sidebar.classList.remove('hidden');
         empty.classList.add('hidden');
         sidebar.innerHTML = html;
     } else {
-        // Mobile: open bottom sheet
         document.getElementById('mobile-sheet-content').innerHTML = html;
         document.getElementById('mobile-sheet').classList.add('is-open');
         document.getElementById('mobile-sheet-backdrop').classList.add('is-open');
     }
 
-    renderLedger(); // Refresh active highlight
+    renderLedger();
 };
+
+const selectUnit = window.selectUnit;
 
 window.closeMobileSheet = () => {
     document.getElementById('mobile-sheet').classList.remove('is-open');
@@ -629,13 +864,13 @@ window.toggleCycleDropdown = () => {
 };
 
 window.selectCycleOption = (cycle) => {
-    document.getElementById('filter-cycle').value        = cycle;
+    document.getElementById('filter-cycle').value         = cycle;
     document.getElementById('selected-cycle-label').innerText = cycle;
     window.toggleCycleDropdown();
     renderLedger();
 };
 
-// ─── EXCEL EXPORT — respects current timeMode ─────────────────────────────────
+// ─── EXCEL EXPORT ─────────────────────────────────────────────────────────────
 
 window.handleExcelExport = () => {
     const cycle = document.getElementById('filter-cycle').value;
@@ -645,6 +880,7 @@ window.handleExcelExport = () => {
         .filter(r => (timeMode === 'cycle') ? r.billingCycle === cycle : r.billingCycle.startsWith(year))
         .map(r => ({
             Address:  r.locationAddress,
+            Owner:    (unitsMap[r.unitId] || {}).ownerName || 'Resident',
             Unit:     (unitsMap[r.unitId] || {}).unitLabel || 'Standard',
             Cycle:    r.billingCycle,
             Usage:    (r.reading - r.prevReading).toFixed(1),
@@ -698,6 +934,7 @@ window.openConfirmModal = (isUndo = false) => {
         confirmBtn.className = 'w-full py-4 bg-amber-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-amber-500/20';
         actions.classList.add('hidden');
         lockout.classList.remove('hidden');
+        lockout.classList.add('flex');   // FIX: ensure flex is applied when shown
         startLockoutCountdown();
     } else {
         document.getElementById('conf-cycle').className = 'text-[9px] font-black text-waterDark mt-1 uppercase tracking-widest';
@@ -709,6 +946,7 @@ window.openConfirmModal = (isUndo = false) => {
         confirmBtn.className = 'w-full py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-emerald-600/20';
         actions.classList.remove('hidden');
         lockout.classList.add('hidden');
+        lockout.classList.remove('flex');
     }
 
     confirmBtn.onclick = () => { processPayment(); closeConfirmModal(); };
@@ -716,8 +954,8 @@ window.openConfirmModal = (isUndo = false) => {
 
 const startLockoutCountdown = () => {
     let timeLeft = 50;
-    const circle       = document.getElementById('countdown-circle');
-    const text         = document.getElementById('countdown-text');
+    const circle        = document.getElementById('countdown-circle');
+    const text          = document.getElementById('countdown-text');
     const circumference = 2 * Math.PI * 20;
     if (lockoutTimer) clearInterval(lockoutTimer);
 
@@ -727,7 +965,9 @@ const startLockoutCountdown = () => {
         circle.style.strokeDashoffset = circumference - (timeLeft / 50) * circumference;
         if (timeLeft <= 0) {
             clearInterval(lockoutTimer);
-            document.getElementById('lockout-container').classList.add('hidden');
+            const lockout = document.getElementById('lockout-container');
+            lockout.classList.add('hidden');
+            lockout.classList.remove('flex');
             document.getElementById('modal-actions').classList.remove('hidden');
         }
     }, 100);
@@ -788,8 +1028,8 @@ auth.onAuthStateChanged(user => {
     });
 });
 
-document.getElementById('search-input').oninput  = renderLedger;
-document.getElementById('filter-year').oninput   = renderLedger;
+document.getElementById('search-input').oninput = renderLedger;
+document.getElementById('filter-year').oninput  = renderLedger;
 
 </script>
 </body>
