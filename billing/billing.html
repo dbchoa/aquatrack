@@ -737,7 +737,7 @@ const renderLedger = () => {
     const filtered = allReadings.filter(r => {
         const unit = unitsMap[r.unitId] || {};
 
-        // ── KPI date filter overrides normal time+status filter
+        // ── KPI date filter overrides normal time+status filters
         if (kpiDateFilter) {
             const today     = new Date().toISOString().slice(0, 10);
             const thisMonth = new Date().toISOString().slice(0, 7);
