@@ -78,8 +78,10 @@ tailwind.config = {
     height: 3px;
     border-radius: 2px 2px 0 0;
 }
-.kpi-btn.is-active-paid::after  { background: #10b981; }
-.kpi-btn.is-active-pending::after { background: #f59e0b; }
+.kpi-btn.is-active-paid::after     { background: #10b981; }
+.kpi-btn.is-active-pending::after  { background: #f59e0b; }
+.kpi-btn.is-active-mtd::after      { background: #4facfe; }
+.kpi-btn.is-active-ytd::after      { background: #0072ff; }
 
 #toast-container { position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%); z-index: 999; pointer-events: none; }
 
@@ -172,41 +174,37 @@ main { height: 100vh; display: flex; flex-direction: column; }
 
 <main class="max-w-full h-screen flex flex-col overflow-hidden">
 
-    <!-- KPI BAR — 5 columns -->
-    <div class="flex-none grid grid-cols-5 gap-0 bg-white dark:bg-slate-900 border-b border-water/20">
+    <!-- KPI BAR — 4 columns -->
+    <div class="flex-none grid grid-cols-4 gap-0 bg-white dark:bg-slate-900 border-b border-water/20">
 
         <!-- Today's Collection -->
         <button id="kpi-paid" onclick="setFilterStatus('paid')" class="kpi-btn p-3 lg:p-5 group text-left">
-            <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest group-hover:text-emerald-500 leading-tight">Today's<br>Collection</p>
-            <h4 id="hud-daily" class="text-lg lg:text-xl font-black text-emerald-500 stat-glow mt-1">₱ 0.00</h4>
+            <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest group-hover:text-emerald-500 leading-tight">Today's Collection</p>
+            <h4 id="hud-daily" class="text-xl lg:text-2xl font-black text-emerald-500 stat-glow mt-1">₱ 0.00</h4>
         </button>
 
-        <!-- MTD Collection -->
-        <div class="kpi-btn p-3 lg:p-5 text-left">
-            <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-tight">Month<br>to Date</p>
-            <h4 id="hud-mtd" class="text-lg lg:text-xl font-black text-water stat-glow mt-1">₱ 0.00</h4>
-        </div>
-
-        <!-- YTD Collection -->
-        <div class="kpi-btn p-3 lg:p-5 text-left">
-            <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-tight">Year<br>to Date</p>
-            <h4 id="hud-ytd" class="text-lg lg:text-xl font-black text-waterDark stat-glow mt-1">₱ 0.00</h4>
-        </div>
-
-        <!-- Pending Receivables -->
-        <button id="kpi-pending" onclick="setFilterStatus('pending')" class="kpi-btn p-3 lg:p-5 group text-left">
-            <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest group-hover:text-amber-500 leading-tight">Pending<br>Receivables</p>
-            <h4 id="hud-pending" class="text-lg lg:text-xl font-black text-amber-500 mt-1">₱ 0.00</h4>
+        <!-- MTD — clickable, sets time mode to current month -->
+        <button id="kpi-mtd" onclick="setTimeScopeFromKPI('mtd')" class="kpi-btn p-3 lg:p-5 group text-left">
+            <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest group-hover:text-water leading-tight">Month to Date</p>
+            <h4 id="hud-mtd" class="text-xl lg:text-2xl font-black text-water stat-glow mt-1">₱ 0.00</h4>
+            <p id="hud-mtd-sub" class="text-[8px] font-bold text-slate-400 mt-0.5">0% · -- / -- units</p>
         </button>
 
-        <!-- Efficiency + Export -->
-        <div class="p-3 lg:p-5 flex justify-between items-center bg-water/5">
-            <div>
-                <p class="text-[8px] font-black text-waterDark uppercase tracking-widest leading-tight">Collection<br>Efficiency</p>
-                <h4 id="display-efficiency-pct" class="text-lg lg:text-xl font-black mt-1">0%</h4>
-                <p id="display-efficiency-counts" class="text-[8px] font-bold text-slate-400 mt-0.5">-- / -- units</p>
-            </div>
-            <button onclick="handleExcelExport()" class="w-9 h-9 lg:w-11 lg:h-11 rounded-2xl bg-white dark:bg-slate-800 shadow-lg flex items-center justify-center text-emerald-500 active:scale-95 transition-all flex-shrink-0">
+        <!-- YTD — clickable, sets time mode to current year -->
+        <button id="kpi-ytd" onclick="setTimeScopeFromKPI('ytd')" class="kpi-btn p-3 lg:p-5 group text-left">
+            <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest group-hover:text-waterDark leading-tight">Year to Date</p>
+            <h4 id="hud-ytd" class="text-xl lg:text-2xl font-black text-waterDark stat-glow mt-1">₱ 0.00</h4>
+            <p id="hud-ytd-sub" class="text-[8px] font-bold text-slate-400 mt-0.5">0% · -- / -- units</p>
+        </button>
+
+        <!-- Pending Receivables — dynamic label + export -->
+        <div class="p-3 lg:p-5 flex justify-between items-start bg-amber-500/5">
+            <button id="kpi-pending" onclick="setFilterStatus('pending')" class="group text-left">
+                <p id="hud-pending-label" class="text-[8px] font-black text-slate-400 uppercase tracking-widest group-hover:text-amber-500 leading-tight">Cycle Pending</p>
+                <h4 id="hud-pending" class="text-xl lg:text-2xl font-black text-amber-500 mt-1">₱ 0.00</h4>
+                <p id="hud-pending-sub" class="text-[8px] font-bold text-slate-400 mt-0.5">-- units unpaid</p>
+            </button>
+            <button onclick="handleExcelExport()" class="w-9 h-9 lg:w-11 lg:h-11 rounded-2xl bg-white dark:bg-slate-800 shadow-lg flex items-center justify-center text-emerald-500 active:scale-95 transition-all flex-shrink-0 mt-1">
                 <i class="bi bi-file-earmark-spreadsheet-fill text-base lg:text-lg"></i>
             </button>
         </div>
@@ -373,6 +371,7 @@ let unitsMap            = {};
 let activeReading       = null;
 let currentFilterStatus = 'all';
 let timeMode            = 'cycle';
+let timeScopeOverride   = null;   // 'mtd' | 'ytd' | null — set by KPI cell clicks
 let searchMode          = 'address';
 let viewMode            = 'ledger';   // 'ledger' | 'arrears'
 let dataLoaded          = false;
@@ -411,6 +410,10 @@ window.setSearchMode = (mode) => {
 
 window.setTimeMode = (mode) => {
     timeMode = mode;
+    timeScopeOverride = null;  // manual time mode change clears KPI override
+    // Clear MTD/YTD active states when switching manually
+    document.getElementById('kpi-mtd').classList.remove('is-active', 'is-active-mtd');
+    document.getElementById('kpi-ytd').classList.remove('is-active', 'is-active-ytd');
     document.getElementById('wrapper-cycle').classList.toggle('hidden', mode !== 'cycle');
     document.getElementById('wrapper-year').classList.toggle('hidden', mode !== 'year');
     document.getElementById('btn-mode-cycle').classList.toggle('is-active', mode === 'cycle');
@@ -454,7 +457,6 @@ window.setViewMode = (mode) => {
 // ─── KPI FILTER WITH ACTIVE STATE ─────────────────────────────────────────────
 
 window.setFilterStatus = (status) => {
-    // Arrears mode doesn't use status filter
     if (viewMode === 'arrears') return;
 
     currentFilterStatus = (currentFilterStatus === status) ? 'all' : status;
@@ -474,43 +476,87 @@ window.setFilterStatus = (status) => {
     renderLedger();
 };
 
+// ─── KPI CELL → TIME MODE SWITCH ─────────────────────────────────────────────
+
+window.setTimeScopeFromKPI = (scope) => {
+    if (viewMode === 'arrears') return;
+
+    const mtdBtn = document.getElementById('kpi-mtd');
+    const ytdBtn = document.getElementById('kpi-ytd');
+    mtdBtn.classList.remove('is-active', 'is-active-mtd');
+    ytdBtn.classList.remove('is-active', 'is-active-ytd');
+
+    // setTimeMode clears timeScopeOverride, so we set it after
+    setTimeMode('year');
+
+    if (scope === 'mtd') {
+        timeScopeOverride = 'mtd';
+        mtdBtn.classList.add('is-active', 'is-active-mtd');
+    } else {
+        timeScopeOverride = 'ytd';
+        if (!document.getElementById('filter-year').value) {
+            document.getElementById('filter-year').value = new Date().getFullYear();
+        }
+        ytdBtn.classList.add('is-active', 'is-active-ytd');
+    }
+    renderLedger();
+};
+
 // ─── KPI UPDATE ───────────────────────────────────────────────────────────────
 
 const updateKPIs = (cycleData) => {
-    // Efficiency is always cycle/year-scoped
-    let expected = 0; let collected = 0; let paidCount = 0;
-    cycleData.forEach(r => {
-        const amt = calculateAmount(r);
-        expected += amt;
-        if (r.status === 'paid') { collected += amt; paidCount++; }
-    });
+    const today     = new Date().toISOString().slice(0, 10);   // YYYY-MM-DD
+    const thisMonth = new Date().toISOString().slice(0, 7);    // YYYY-MM
+    const thisYear  = new Date().getFullYear().toString();     // YYYY
 
-    // Today / MTD / YTD are always computed from ALL readings regardless of filter
-    const today     = new Date().toISOString().slice(0, 10);           // YYYY-MM-DD
-    const thisMonth = new Date().toISOString().slice(0, 7);            // YYYY-MM
-    const thisYear  = new Date().getFullYear().toString();             // YYYY
-
+    // ── Today
     const daily = allReadings
         .filter(r => r.status === 'paid' && r.paidDate && r.paidDate.startsWith(today))
         .reduce((acc, r) => acc + calculateAmount(r), 0);
+    document.getElementById('hud-daily').innerText = formatCurrency(daily);
 
-    const mtd = allReadings
-        .filter(r => r.status === 'paid' && r.paidDate && r.paidDate.startsWith(thisMonth))
-        .reduce((acc, r) => acc + calculateAmount(r), 0);
+    // ── MTD: collected via paidDate in current month
+    const mtdReadings  = allReadings.filter(r => r.status === 'paid' && r.paidDate && r.paidDate.startsWith(thisMonth));
+    // Billed in current month (billingCycle prefix)
+    const mtdBilled    = allReadings.filter(r => r.billingCycle.startsWith(thisMonth));
+    const mtdCollected = mtdReadings.reduce((s, r) => s + calculateAmount(r), 0);
+    const mtdExpected  = mtdBilled.reduce((s, r) => s + calculateAmount(r), 0);
+    const mtdPaidCount = mtdBilled.filter(r => r.status === 'paid').length;
+    const mtdTotal     = mtdBilled.length;
+    const mtdEff       = mtdExpected > 0 ? Math.round((mtdBilled.filter(r => r.status === 'paid').reduce((s, r) => s + calculateAmount(r), 0) / mtdExpected) * 100) : 0;
+    document.getElementById('hud-mtd').innerText     = formatCurrency(mtdCollected);
+    document.getElementById('hud-mtd-sub').innerText = `${mtdEff}% · ${mtdPaidCount} / ${mtdTotal} units`;
 
-    const ytd = allReadings
-        .filter(r => r.status === 'paid' && r.paidDate && r.paidDate.startsWith(thisYear))
-        .reduce((acc, r) => acc + calculateAmount(r), 0);
+    // ── YTD: collected via paidDate in current year
+    const ytdReadings  = allReadings.filter(r => r.status === 'paid' && r.paidDate && r.paidDate.startsWith(thisYear));
+    const ytdBilled    = allReadings.filter(r => r.billingCycle.startsWith(thisYear));
+    const ytdCollected = ytdReadings.reduce((s, r) => s + calculateAmount(r), 0);
+    const ytdExpected  = ytdBilled.reduce((s, r) => s + calculateAmount(r), 0);
+    const ytdPaidCount = ytdBilled.filter(r => r.status === 'paid').length;
+    const ytdTotal     = ytdBilled.length;
+    const ytdEff       = ytdExpected > 0 ? Math.round((ytdBilled.filter(r => r.status === 'paid').reduce((s, r) => s + calculateAmount(r), 0) / ytdExpected) * 100) : 0;
+    document.getElementById('hud-ytd').innerText     = formatCurrency(ytdCollected);
+    document.getElementById('hud-ytd-sub').innerText = `${ytdEff}% · ${ytdPaidCount} / ${ytdTotal} units`;
 
-    document.getElementById('hud-daily').innerText   = formatCurrency(daily);
-    document.getElementById('hud-mtd').innerText     = formatCurrency(mtd);
-    document.getElementById('hud-ytd').innerText     = formatCurrency(ytd);
-    document.getElementById('hud-pending').innerText = formatCurrency(expected - collected);
+    // ── Pending — scope tracks active time mode
+    const cycle = document.getElementById('filter-cycle').value;
+    const year  = document.getElementById('filter-year').value || thisYear;
 
-    const effPct    = expected > 0 ? Math.round((collected / expected) * 100) : 0;
-    const totalUnits = cycleData.length;
-    document.getElementById('display-efficiency-pct').innerText    = `${effPct}%`;
-    document.getElementById('display-efficiency-counts').innerText = `${paidCount} / ${totalUnits} units`;
+    let pendingScope, pendingLabel, pendingSubLabel;
+    if (timeMode === 'cycle') {
+        pendingScope    = allReadings.filter(r => r.billingCycle === cycle && r.status === 'pending');
+        pendingLabel    = `${cycle || 'Cycle'} Pending`;
+    } else if (timeScopeOverride === 'mtd') {
+        pendingScope    = allReadings.filter(r => r.billingCycle.startsWith(thisMonth) && r.status === 'pending');
+        pendingLabel    = 'MTD Pending';
+    } else {
+        pendingScope    = allReadings.filter(r => r.billingCycle.startsWith(year) && r.status === 'pending');
+        pendingLabel    = `${year} Pending`;
+    }
+    const pendingTotal = pendingScope.reduce((s, r) => s + calculateAmount(r), 0);
+    document.getElementById('hud-pending-label').innerText = pendingLabel;
+    document.getElementById('hud-pending').innerText       = formatCurrency(pendingTotal);
+    document.getElementById('hud-pending-sub').innerText   = `${pendingScope.length} unit${pendingScope.length !== 1 ? 's' : ''} unpaid`;
 };
 
 // ─── ARREARS RENDER ───────────────────────────────────────────────────────────
@@ -656,11 +702,7 @@ const renderLedger = () => {
     if (!dataLoaded) return;
 
     // Always update KPIs regardless of view
-    const cycle = document.getElementById('filter-cycle').value;
-    const year  = document.getElementById('filter-year').value || new Date().getFullYear().toString();
-    updateKPIs(allReadings.filter(r =>
-        (timeMode === 'cycle') ? (r.billingCycle === cycle) : r.billingCycle.startsWith(year)
-    ));
+    updateKPIs();
 
     // Delegate to arrears renderer if in that mode
     if (viewMode === 'arrears') {
@@ -904,6 +946,21 @@ window.handleExcelExport = () => {
 let lockoutTimer = null;
 
 window.openConfirmModal = (isUndo = false) => {
+    if (!activeReading) return;
+
+    // ── Arrears enforcement: earliest pending cycle must be paid first
+    if (!isUndo) {
+        const pendingForProperty = allReadings
+            .filter(r => r.propertyId === activeReading.propertyId && r.status === 'pending')
+            .sort((a, b) => a.billingCycle.localeCompare(b.billingCycle));
+
+        if (pendingForProperty.length > 0 && pendingForProperty[0].readingId !== activeReading.readingId) {
+            const earliest = pendingForProperty[0].billingCycle;
+            toast(`Settle ${earliest} first before paying ${activeReading.billingCycle}`, 'error');
+            return;
+        }
+    }
+
     const modal      = document.getElementById('confirmModal');
     const icon       = document.getElementById('modal-icon');
     const iconBox    = document.getElementById('modal-icon-container');
