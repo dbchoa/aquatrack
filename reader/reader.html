@@ -1025,14 +1025,15 @@
 		    const rateEl = document.getElementById('rate-summary-text');
 		    if (rateEl) rateEl.innerText = `₱${billingConfig.minFee} base up to ${billingConfig.threshold}m³ + ₱${billingConfig.excessRate}/m³ excess`;
 		
-		    // Derive server billing cycle from the most recent reading's billingCycle.
-		    // This is the best available server-side signal without a dedicated config field.
+		    // Derive server billing cycle from the actual server clock via Firebase's
+		    // serverTimeOffset. serverCycle = server now - 1 month, same logic as
+		    // getTargetBillingCycle() but anchored to server time instead of device time.
 		    try {
-		        const latestSnap = await db.ref('readings').orderByChild('timestamp').limitToLast(1).once('value');
-		        if (latestSnap.exists()) {
-		            const latestReading = Object.values(latestSnap.val())[0];
-		            serverBillingCycle = latestReading.billingCycle;
-		        }
+		        const offsetSnap = await db.ref('/.info/serverTimeOffset').once('value');
+		        const offset     = offsetSnap.val() || 0;
+		        const serverNow  = new Date(Date.now() + offset);
+		        serverNow.setMonth(serverNow.getMonth() - 1);
+		        serverBillingCycle = serverNow.toISOString().slice(0, 7);
 		    } catch (e) {
 		        console.warn('Could not derive server billing cycle:', e);
 		    }
