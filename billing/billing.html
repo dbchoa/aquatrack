@@ -178,20 +178,20 @@ main { height: 100vh; display: flex; flex-direction: column; }
     <div class="flex-none grid grid-cols-4 gap-0 bg-white dark:bg-slate-900 border-b border-water/20">
 
         <!-- Today's Collection -->
-        <button id="kpi-paid" onclick="setFilterStatus('paid')" class="kpi-btn p-3 lg:p-5 group text-left">
+        <button id="kpi-paid" onclick="setKpiDateFilter('today')" class="kpi-btn p-3 lg:p-5 group text-left">
             <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest group-hover:text-emerald-500 leading-tight">Today's Collection</p>
             <h4 id="hud-daily" class="text-xl lg:text-2xl font-black text-emerald-500 stat-glow mt-1">₱ 0.00</h4>
         </button>
 
-        <!-- MTD — clickable, sets time mode to current month -->
-        <button id="kpi-mtd" onclick="setTimeScopeFromKPI('mtd')" class="kpi-btn p-3 lg:p-5 group text-left">
+        <!-- MTD -->
+        <button id="kpi-mtd" onclick="setKpiDateFilter('mtd')" class="kpi-btn p-3 lg:p-5 group text-left">
             <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest group-hover:text-water leading-tight">Month to Date</p>
             <h4 id="hud-mtd" class="text-xl lg:text-2xl font-black text-water stat-glow mt-1">₱ 0.00</h4>
             <p id="hud-mtd-sub" class="text-[8px] font-bold text-slate-400 mt-0.5">0% · -- / -- units</p>
         </button>
 
-        <!-- YTD — clickable, sets time mode to current year -->
-        <button id="kpi-ytd" onclick="setTimeScopeFromKPI('ytd')" class="kpi-btn p-3 lg:p-5 group text-left">
+        <!-- YTD -->
+        <button id="kpi-ytd" onclick="setKpiDateFilter('ytd')" class="kpi-btn p-3 lg:p-5 group text-left">
             <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest group-hover:text-waterDark leading-tight">Year to Date</p>
             <h4 id="hud-ytd" class="text-xl lg:text-2xl font-black text-waterDark stat-glow mt-1">₱ 0.00</h4>
             <p id="hud-ytd-sub" class="text-[8px] font-bold text-slate-400 mt-0.5">0% · -- / -- units</p>
@@ -213,15 +213,11 @@ main { height: 100vh; display: flex; flex-direction: column; }
     <!-- FILTER BAR -->
     <div class="flex-none p-3 lg:p-4 bg-white dark:bg-slate-900/50 border-b border-water/10 space-y-3">
         <div class="flex justify-between items-center px-1">
-            <!-- Left: search mode OR arrears indicator -->
+            <!-- Search mode buttons — shown in both ledger and arrears -->
             <div id="filter-left-normal" class="segmented-control w-60 lg:w-72">
                 <button onclick="setSearchMode('address')" id="mode-address" class="search-mode-btn segment-btn is-active">Address</button>
                 <button onclick="setSearchMode('serial')"  id="mode-serial"  class="search-mode-btn segment-btn">Serial</button>
                 <button onclick="setSearchMode('name')"    id="mode-name"    class="search-mode-btn segment-btn">Name</button>
-            </div>
-            <div id="filter-left-arrears" class="hidden items-center gap-2">
-                <span class="text-[9px] font-black text-rose-500 uppercase tracking-widest">Arrears View</span>
-                <span class="text-[8px] bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 px-2 py-0.5 rounded-lg font-black uppercase">All Cycles</span>
             </div>
 
             <!-- Right: view mode tabs -->
@@ -231,7 +227,7 @@ main { height: 100vh; display: flex; flex-direction: column; }
             </div>
         </div>
 
-        <!-- Search + time filter row — hidden in arrears mode -->
+        <!-- Search + time filter row -->
         <div id="filter-row-controls" class="flex gap-3 items-center">
             <div class="flex-1 relative h-[44px] group">
                 <div class="absolute left-4 inset-y-0 flex items-center pointer-events-none">
@@ -240,23 +236,25 @@ main { height: 100vh; display: flex; flex-direction: column; }
                 <input id="search-input" type="text" placeholder="Search by address..."
                     class="w-full h-full pl-10 pr-4 bg-slate-100 dark:bg-slate-800 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-water/40 border-none transition-all">
             </div>
-            <div class="relative w-40 lg:w-48 h-[44px]">
-                <div id="wrapper-cycle" class="absolute inset-0">
-                    <div id="cycle-trigger" onclick="toggleCycleDropdown()" class="custom-select-trigger flex items-center justify-between px-4 rounded-2xl h-full bg-slate-100 dark:bg-slate-800">
-                        <span id="selected-cycle-label" class="text-xs font-black uppercase">---</span>
-                        <i class="bi bi-chevron-down opacity-50 text-[10px]"></i>
+            <!-- Time selector — hidden in arrears mode -->
+            <div id="time-selector-wrapper" class="flex gap-3 items-center">
+                <div class="relative w-40 lg:w-48 h-[44px]">
+                    <div id="wrapper-cycle" class="absolute inset-0">
+                        <div id="cycle-trigger" onclick="toggleCycleDropdown()" class="custom-select-trigger flex items-center justify-between px-4 rounded-2xl h-full bg-slate-100 dark:bg-slate-800">
+                            <span id="selected-cycle-label" class="text-xs font-black uppercase">---</span>
+                            <i class="bi bi-chevron-down opacity-50 text-[10px]"></i>
+                        </div>
+                        <div id="cycle-options" class="select-dropdown-panel hidden"></div>
                     </div>
-                    <div id="cycle-options" class="select-dropdown-panel hidden"></div>
+                    <div id="wrapper-year" class="hidden absolute inset-0">
+                        <input id="filter-year" type="number" placeholder="2026"
+                            class="w-full h-full px-4 bg-slate-100 dark:bg-slate-800 rounded-2xl text-sm font-black outline-none focus:ring-2 ring-water/40 border-none text-center tracking-[0.3em]">
+                    </div>
                 </div>
-                <div id="wrapper-year" class="hidden absolute inset-0">
-                    <input id="filter-year" type="number" placeholder="2026"
-                        class="w-full h-full px-4 bg-slate-100 dark:bg-slate-800 rounded-2xl text-sm font-black outline-none focus:ring-2 ring-water/40 border-none text-center tracking-[0.3em]">
+                <div class="segmented-control w-36 flex-shrink-0">
+                    <button onclick="setTimeMode('cycle')" id="btn-mode-cycle"    class="segment-btn is-active">Cycle</button>
+                    <button onclick="setTimeMode('year')"  id="mode-year-trigger" class="segment-btn">Year</button>
                 </div>
-            </div>
-            <!-- Time mode toggle — shown only in ledger mode -->
-            <div class="segmented-control w-36 flex-shrink-0">
-                <button onclick="setTimeMode('cycle')" id="btn-mode-cycle"    class="segment-btn is-active">Cycle</button>
-                <button onclick="setTimeMode('year')"  id="mode-year-trigger" class="segment-btn">Year</button>
             </div>
         </div>
         <input type="hidden" id="filter-cycle" value="">
@@ -410,10 +408,9 @@ window.setSearchMode = (mode) => {
 
 window.setTimeMode = (mode) => {
     timeMode = mode;
-    timeScopeOverride = null;  // manual time mode change clears KPI override
-    // Clear MTD/YTD active states when switching manually
-    document.getElementById('kpi-mtd').classList.remove('is-active', 'is-active-mtd');
-    document.getElementById('kpi-ytd').classList.remove('is-active', 'is-active-ytd');
+    timeScopeOverride = null;
+    kpiDateFilter     = null;   // clear KPI date filter when time mode changes manually
+    clearKpiActive();
     document.getElementById('wrapper-cycle').classList.toggle('hidden', mode !== 'cycle');
     document.getElementById('wrapper-year').classList.toggle('hidden', mode !== 'year');
     document.getElementById('btn-mode-cycle').classList.toggle('is-active', mode === 'cycle');
@@ -432,73 +429,72 @@ window.setViewMode = (mode) => {
     document.getElementById('btn-view-ledger').classList.toggle('is-active', mode === 'ledger');
     document.getElementById('btn-view-arrears').classList.toggle('is-active', mode === 'arrears');
 
-    // Toggle left-side filter controls
-    const normalLeft  = document.getElementById('filter-left-normal');
-    const arrearsLeft = document.getElementById('filter-left-arrears');
-    normalLeft.classList.toggle('hidden', mode === 'arrears');
-    arrearsLeft.classList.toggle('hidden', mode === 'ledger');
-    arrearsLeft.classList.toggle('flex', mode === 'arrears');
+    // Time selector hidden in arrears — search row always visible
+    document.getElementById('time-selector-wrapper').classList.toggle('hidden', mode === 'arrears');
 
-    // Toggle search / time-selector row
-    document.getElementById('filter-row-controls').classList.toggle('hidden', mode === 'arrears');
-
-    // Also clear status filter when entering arrears — arrears always shows pending
     if (mode === 'arrears') {
         currentFilterStatus = 'all';
-        const paidBtn    = document.getElementById('kpi-paid');
-        const pendingBtn = document.getElementById('kpi-pending');
-        paidBtn.classList.remove('is-active', 'is-active-paid');
-        pendingBtn.classList.remove('is-active', 'is-active-pending');
+        kpiDateFilter = null;
+        clearKpiActive();
+        document.getElementById('search-input').value = '';
     }
 
     renderLedger();
 };
 
 // ─── KPI FILTER WITH ACTIVE STATE ─────────────────────────────────────────────
+// kpiDateFilter: null | 'today' | 'mtd' | 'ytd'
+// When set, ledger shows only paid records matching that paidDate scope.
+// Cleared when user clicks a different KPI cell, changes time mode, or searches.
+
+let kpiDateFilter = null;
+
+const clearKpiActive = () => {
+    ['kpi-paid', 'kpi-mtd', 'kpi-ytd', 'kpi-pending'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('is-active', 'is-active-paid', 'is-active-mtd', 'is-active-ytd', 'is-active-pending');
+    });
+};
 
 window.setFilterStatus = (status) => {
+    // 'status' here is only called for the Pending button now
     if (viewMode === 'arrears') return;
+
+    // If a kpiDateFilter is active, clicking pending clears it first
+    kpiDateFilter = null;
+    clearKpiActive();
 
     currentFilterStatus = (currentFilterStatus === status) ? 'all' : status;
 
-    const paidBtn    = document.getElementById('kpi-paid');
-    const pendingBtn = document.getElementById('kpi-pending');
-    paidBtn.classList.remove('is-active', 'is-active-paid');
-    pendingBtn.classList.remove('is-active', 'is-active-pending');
-
-    if (currentFilterStatus === 'paid') {
-        paidBtn.classList.add('is-active', 'is-active-paid');
-    } else if (currentFilterStatus === 'pending') {
-        pendingBtn.classList.add('is-active', 'is-active-pending');
+    if (currentFilterStatus === 'pending') {
+        document.getElementById('kpi-pending').classList.add('is-active', 'is-active-pending');
     }
 
     toast(`Filter: ${currentFilterStatus.toUpperCase()}`, 'info');
     renderLedger();
 };
 
-// ─── KPI CELL → TIME MODE SWITCH ─────────────────────────────────────────────
-
-window.setTimeScopeFromKPI = (scope) => {
+window.setKpiDateFilter = (scope) => {
+    // scope: 'today' | 'mtd' | 'ytd'
     if (viewMode === 'arrears') return;
 
-    const mtdBtn = document.getElementById('kpi-mtd');
-    const ytdBtn = document.getElementById('kpi-ytd');
-    mtdBtn.classList.remove('is-active', 'is-active-mtd');
-    ytdBtn.classList.remove('is-active', 'is-active-ytd');
-
-    // setTimeMode clears timeScopeOverride, so we set it after
-    setTimeMode('year');
-
-    if (scope === 'mtd') {
-        timeScopeOverride = 'mtd';
-        mtdBtn.classList.add('is-active', 'is-active-mtd');
-    } else {
-        timeScopeOverride = 'ytd';
-        if (!document.getElementById('filter-year').value) {
-            document.getElementById('filter-year').value = new Date().getFullYear();
-        }
-        ytdBtn.classList.add('is-active', 'is-active-ytd');
+    // Toggle off if already active
+    if (kpiDateFilter === scope) {
+        kpiDateFilter = null;
+        currentFilterStatus = 'all';
+        clearKpiActive();
+        renderLedger();
+        return;
     }
+
+    kpiDateFilter = scope;
+    currentFilterStatus = 'all'; // kpiDateFilter takes over; clear status filter
+    clearKpiActive();
+
+    const map = { today: 'kpi-paid', mtd: 'kpi-mtd', ytd: 'kpi-ytd' };
+    const classMap = { today: 'is-active-paid', mtd: 'is-active-mtd', ytd: 'is-active-ytd' };
+    document.getElementById(map[scope]).classList.add('is-active', classMap[scope]);
+
     renderLedger();
 };
 
@@ -567,8 +563,18 @@ const renderArrears = () => {
     if (skeleton) skeleton.remove();
     container.innerHTML = '';
 
-    // All pending readings across all cycles
-    const pending = allReadings.filter(r => r.status === 'pending');
+    const search  = document.getElementById('search-input').value.toLowerCase();
+
+    // All pending readings, filtered by search
+    const pending = allReadings.filter(r => {
+        if (r.status !== 'pending') return false;
+        if (!search) return true;
+        const unit = unitsMap[r.unitId] || {};
+        if (searchMode === 'address') return r.locationAddress.toLowerCase().includes(search);
+        if (searchMode === 'serial')  return unit.meterSerial && unit.meterSerial.toString().toLowerCase().includes(search);
+        if (searchMode === 'name')    return (unit.ownerName || '').toLowerCase().includes(search);
+        return true;
+    });
 
     if (pending.length === 0) {
         container.innerHTML = `
@@ -721,9 +727,21 @@ const renderLedger = () => {
 
     const filtered = allReadings.filter(r => {
         const unit = unitsMap[r.unitId] || {};
-        const matchesTime   = (timeMode === 'cycle') ? (r.billingCycle === cycle) : r.billingCycle.startsWith(year);
-        const matchesStatus = currentFilterStatus === 'all' || r.status === currentFilterStatus;
-        if (!matchesTime || !matchesStatus) return false;
+
+        // ── KPI date filter overrides normal time+status filter
+        if (kpiDateFilter) {
+            const today     = new Date().toISOString().slice(0, 10);
+            const thisMonth = new Date().toISOString().slice(0, 7);
+            const thisYear  = new Date().getFullYear().toString();
+            const prefixMap = { today, mtd: thisMonth, ytd: thisYear };
+            const prefix    = prefixMap[kpiDateFilter];
+            if (r.status !== 'paid' || !r.paidDate || !r.paidDate.startsWith(prefix)) return false;
+        } else {
+            const matchesTime   = (timeMode === 'cycle') ? (r.billingCycle === cycle) : r.billingCycle.startsWith(year);
+            const matchesStatus = currentFilterStatus === 'all' || r.status === currentFilterStatus;
+            if (!matchesTime || !matchesStatus) return false;
+        }
+
         if (!search) return true;
         if (searchMode === 'address') return r.locationAddress.toLowerCase().includes(search);
         if (searchMode === 'serial')  return unit.meterSerial && unit.meterSerial.toString().toLowerCase().includes(search);
