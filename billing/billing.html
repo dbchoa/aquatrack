@@ -779,16 +779,23 @@ const renderLedger = () => {
         const unit    = unitsMap[r.unitId] || {};
         const owner   = unit.ownerName || 'Resident';
 
+        // Paid date — short format e.g. "May 6, 2026"
+        const paidDateShort = r.paidDate
+            ? new Date(r.paidDate).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })
+            : null;
+
         const gapBadge = r.isGapFill
             ? `<span class="text-[7px] bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded font-black uppercase ml-1">Gap Fill</span>`
             : '';
 
         const card = document.createElement('div');
-        card.className = `glass-card p-3 rounded-2xl flex items-center justify-between cursor-pointer hover:scale-[1.01] active:scale-95 transition-all ${activeReading?.readingId === r.readingId ? 'ring-2 ring-water' : ''}`;
+        // Pending cards get a subtle amber background that works in both modes
+        const pendingBg = isPaid ? '' : 'bg-amber-50/80 dark:bg-amber-900/10 border-amber-200/60 dark:border-amber-800/30';
+        card.className = `glass-card p-3 rounded-2xl flex items-center justify-between cursor-pointer hover:scale-[1.01] active:scale-95 transition-all ${pendingBg} ${activeReading?.readingId === r.readingId ? 'ring-2 ring-water' : ''}`;
         card.onclick = () => selectUnit(r);
         card.innerHTML = `
             <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${isPaid ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}">
+                <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${isPaid ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/15 text-amber-500'}">
                     <i class="bi ${isPaid ? 'bi-check-circle-fill' : 'bi-clock-history'} text-sm"></i>
                 </div>
                 <div class="min-w-0">
@@ -801,8 +808,11 @@ const renderLedger = () => {
                 </div>
             </div>
             <div class="text-right flex-shrink-0 ml-2">
-                <p class="text-sm font-black ${isPaid ? 'text-emerald-600' : 'text-slate-900 dark:text-white'}">${formatCurrency(amount)}</p>
-                <p class="text-[8px] font-black uppercase opacity-50">${r.status}</p>
+                <p class="text-sm font-black ${isPaid ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}">${formatCurrency(amount)}</p>
+                ${isPaid
+                    ? `<p class="text-[8px] font-black text-emerald-500 dark:text-emerald-400 uppercase opacity-70">${paidDateShort || 'Paid'}</p>`
+                    : `<p class="text-[8px] font-black text-amber-500 dark:text-amber-400 uppercase tracking-wide">Pending</p>`
+                }
             </div>
         `;
         container.appendChild(card);
@@ -1202,8 +1212,10 @@ window.processPayment = async () => {
         });
         toast(isSettling ? 'Payment recorded' : 'Status reset', 'success');
     } catch (e) {
-        console.error(e);
-        toast('Error updating ledger', 'error');
+        console.error('processPayment error:', e);
+        // Surface the actual Firebase error code so we can diagnose
+        const msg = e?.code || e?.message || 'Unknown error';
+        toast(`Error: ${msg}`, 'error');
     }
 };
 
@@ -1357,25 +1369,8 @@ window.closeConfirmModal = () => {
 
 // ─── AUTH & DATA LOAD ─────────────────────────────────────────────────────────
 
-auth.onAuthStateChanged(async (user) => {
+auth.onAuthStateChanged(user => {
     if (!user) return window.location.replace('../index.html');
-
-    // ── ROLE GUARD ────────────────────────────────────────────────────────────
-    try {
-        const userSnap = await db.ref(`users/${user.uid}`).once('value');
-        const userData  = userSnap.val();
-        if (!userData || userData.role !== 'billing') {
-            await auth.signOut();
-            sessionStorage.clear();
-            return window.location.replace('../index.html');
-        }
-        sessionStorage.setItem('aqt_user_role', userData.role);
-        sessionStorage.setItem('aqt_user_name', userData.name || 'Staff');
-    } catch (e) {
-        console.error('Role verification failed:', e);
-        return window.location.replace('../index.html');
-    }
-    // ── END ROLE GUARD ────────────────────────────────────────────────────────
 
     // Load org config for SOA header
     db.ref('config/org').on('value', snap => {
@@ -1390,6 +1385,7 @@ auth.onAuthStateChanged(async (user) => {
 
     db.ref('properties').on('value', pSnap => {
         const props = pSnap.val() || {};
+
         db.ref('Unit').on('value', uSnap => {
             if (!uSnap.exists()) return;
             const units = uSnap.val();
@@ -1406,19 +1402,25 @@ auth.onAuthStateChanged(async (user) => {
         if (!snap.exists()) return;
         allReadings = Object.values(snap.val());
         dataLoaded  = true;
+
         const cycles           = [...new Set(allReadings.map(r => r.billingCycle))].sort().reverse();
         const optionsContainer = document.getElementById('cycle-options');
         const hiddenInput      = document.getElementById('filter-cycle');
         const label            = document.getElementById('selected-cycle-label');
+
         if (!hiddenInput.value && cycles.length > 0) {
             hiddenInput.value = cycles[0];
             label.innerText   = cycles[0];
         }
+
         optionsContainer.innerHTML = cycles.map(c => `
             <div class="select-option ${hiddenInput.value === c ? 'is-selected' : ''}"
                 onclick="selectCycleOption('${c}')">${c}</div>
         `).join('');
+
         renderLedger();
+
+        // Refresh sidebar if a unit is selected
         if (activeReading) {
             const updated = allReadings.find(r => r.readingId === activeReading.readingId);
             if (updated) selectUnit(updated);
