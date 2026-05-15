@@ -1,761 +1,796 @@
 <!DOCTYPE html>
 <html lang="en" id="main-html">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Billing Command - AquaTrack v2.2</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="../style.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: { water: '#4facfe', waterDark: '#0072ff', warning: '#f59e0b' },
-                    borderRadius: { '32': '32px', '48': '48px' }
-                }
-            }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Billing Command - AquaTrack v2.2</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+<script>
+tailwind.config = {
+    darkMode: 'class',
+    theme: {
+        extend: {
+            colors: { water: '#4facfe', waterDark: '#0072ff', warning: '#f59e0b' },
+            borderRadius: { '32': '32px', '48': '48px' }
         }
-    </script>
-    
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
-    
-    <style>
-        .stat-glow { text-shadow: 0 0 15px rgba(79, 172, 254, 0.4); }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-blur: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.5);
-        }
-        .dark .glass-card {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(79, 172, 254, 0.2);
-        }
+    }
+}
+</script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+<style>
+.stat-glow { text-shadow: 0 0 15px rgba(79, 172, 254, 0.4); }
+.glass-card {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-blur: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+.dark .glass-card {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(79, 172, 254, 0.2);
+}
+.custom-select-trigger {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+    border: 2px solid transparent;
+}
+.custom-select-trigger.is-open { border: 2px solid #4facfe !important; }
+.select-dropdown-panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    width: 100%;
+    background: white;
+    border: 1px solid #4facfe;
+    border-radius: 18px;
+    z-index: 1000;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transform-origin: top;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.dark .select-dropdown-panel { background: #0f172a; }
+.select-option {
+    padding: 12px 20px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #64748b;
+    transition: all 0.1s ease;
+}
+.select-option:hover { background: #4facfe; color: white; }
+.select-option.is-selected { color: #4facfe; background: rgba(79, 172, 254, 0.1); }
 
-        /* Custom Select Hijack */
-        .custom-select-trigger {
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-            position: relative;
-            user-select: none;
-            border: 2px solid transparent;
-        }
-        .custom-select-trigger.is-open { border: 2px solid #4facfe !important; }
-        
-        .select-dropdown-panel {
-            position: absolute;
-            top: calc(100% + 4px);
-            left: 0;
-            width: 100%;
-            background: white;
-            backdrop-blur: 24px;
-            border: 1px solid #4facfe;
-            border-radius: 18px;
-            z-index: 1000;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
-            transform-origin: top;
-            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        .dark .select-dropdown-panel { background: #0f172a; }
-        .select-option {
-            padding: 12px 20px;
-            font-size: 11px;
-            font-weight: 800;
-            text-transform: uppercase;
-            color: #64748b;
-            transition: all 0.1s ease;
-        }
-        .select-option:hover { background: #4facfe; color: white; }
-        .select-option.is-selected { color: #4facfe; background: rgba(79, 172, 254, 0.1); }
+/* KPI bar — active filter highlight */
+.kpi-btn {
+    transition: all 0.2s ease;
+    border-right: 1px solid rgba(79, 172, 254, 0.1);
+    position: relative;
+}
+.kpi-btn:hover { background: rgba(79, 172, 254, 0.05); }
+.kpi-btn.is-active::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 2px 2px 0 0;
+}
+.kpi-btn.is-active-paid::after  { background: #10b981; }
+.kpi-btn.is-active-pending::after { background: #f59e0b; }
 
-        .kpi-btn { transition: all 0.2s ease; border-right: 1px solid rgba(79, 172, 254, 0.1); }
-        .kpi-btn:hover { background: rgba(79, 172, 254, 0.05); }
+#toast-container { position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%); z-index: 999; pointer-events: none; }
 
-        #toast-container { position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%); z-index: 999; pointer-events: none; }
+.search-mode-btn {
+    padding: 6px 16px; border-radius: 12px;
+    font-size: 9px; font-weight: 900;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: #64748b; background: transparent;
+    transition: all 0.2s ease;
+}
+.search-mode-btn.is-active { background: #4facfe; color: white; box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3); }
 
-        .search-mode-btn {
-            padding: 6px 16px;
-            border-radius: 12px;
-            font-size: 9px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: #64748b;
-            background: transparent;
-            transition: all 0.2s ease;
-        }
-        .search-mode-btn.is-active {
-            background: #4facfe;
-            color: white;
-            box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
-        }
+.segmented-control {
+    background: rgba(0,0,0,0.05);
+    padding: 3px; border-radius: 14px;
+    display: flex; gap: 2px;
+}
+.dark .segmented-control { background: rgba(255,255,255,0.05); }
+.segment-btn {
+    flex: 1; padding: 8px 0;
+    font-size: 9px; font-weight: 900;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    color: #64748b; border-radius: 11px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+}
+.segment-btn.is-active { background: #4facfe; color: white; box-shadow: 0 4px 12px rgba(79,172,254,0.2); }
 
-        /* Unified Segmented Controls */
-        .segmented-control {
-            background: rgba(0, 0, 0, 0.05);
-            padding: 3px;
-            border-radius: 14px;
-            display: flex;
-            gap: 2px;
-        }
-        .dark .segmented-control { background: rgba(255, 255, 255, 0.05); }
-        
-        .segment-btn {
-            flex: 1;
-            padding: 8px 0;
-            font-size: 9px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: #64748b;
-            border-radius: 11px;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            white-space: nowrap;
-        }
-        .segment-btn.is-active {
-            background: #4facfe;
-            color: white;
-            box-shadow: 0 4px 12px rgba(79, 172, 254, 0.2);
-        }
-        
-        /* Hide Search Mode Overrides */
-        .search-mode-btn { background: transparent; }
+/* Skeleton loader */
+@keyframes shimmer {
+    0%   { background-position: -600px 0; }
+    100% { background-position: 600px 0; }
+}
+.skeleton {
+    background: linear-gradient(90deg, rgba(79,172,254,0.05) 25%, rgba(79,172,254,0.12) 50%, rgba(79,172,254,0.05) 75%);
+    background-size: 600px 100%;
+    animation: shimmer 1.4s infinite linear;
+    border-radius: 16px;
+}
 
-        /* --- SURGICAL SCROLLBAR HIJACK --- */
+/* Bottom sheet for mobile sidebar */
+#mobile-sheet {
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+}
+#mobile-sheet.is-open { transform: translateY(0); }
+#mobile-sheet-backdrop {
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+#mobile-sheet-backdrop.is-open { opacity: 1; pointer-events: auto; }
 
-        /* 1. Target the main ledger container specifically (or the whole body) */
-        #ledger-container::-webkit-scrollbar,
-        main::-webkit-scrollbar,
-        #intel-sidebar::-webkit-scrollbar {
-            width: 6px; /* Ultra-thin profile */
-            height: 6px;
-        }
-        
-        /* 2. The Track (The "Background" of the scrollbar) */
-        #ledger-container::-webkit-scrollbar-track,
-        main::-webkit-scrollbar-track,
-        #intel-sidebar::-webkit-scrollbar-track {
-            background: transparent; /* Makes it look like it's floating */
-        }
-        
-        /* 3. The Thumb (The part you actually move) */
-        #ledger-container::-webkit-scrollbar-thumb,
-        main::-webkit-scrollbar-thumb,
-        #intel-sidebar::-webkit-scrollbar-thumb {
-            background: rgba(79, 172, 254, 0.2); /* Faded 'Water' Blue */
-            border-radius: 20px;
-            transition: all 0.3s ease;
-        }
-        
-        /* 4. The Interaction Glow (Hover State) */
-        #ledger-container::-webkit-scrollbar-thumb:hover,
-        main::-webkit-scrollbar-thumb:hover,
-        #intel-sidebar::-webkit-scrollbar-thumb:hover {
-            background: rgba(79, 172, 254, 0.6); /* Dominant Glow when touched */
-            box-shadow: 0 0 10px rgba(79, 172, 254, 0.4);
-        }
-        
-        /* 5. Dark Mode Adjustments */
-        .dark #ledger-container::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1);
-        }
-        .dark #ledger-container::-webkit-scrollbar-thumb:hover {
-            background: #4facfe;
-        }
+/* Scrollbars */
+#ledger-container::-webkit-scrollbar,
+main::-webkit-scrollbar,
+#intel-sidebar::-webkit-scrollbar,
+#mobile-sheet::-webkit-scrollbar { width: 6px; height: 6px; }
+#ledger-container::-webkit-scrollbar-track,
+main::-webkit-scrollbar-track,
+#intel-sidebar::-webkit-scrollbar-track,
+#mobile-sheet::-webkit-scrollbar-track { background: transparent; }
+#ledger-container::-webkit-scrollbar-thumb,
+main::-webkit-scrollbar-thumb,
+#intel-sidebar::-webkit-scrollbar-thumb,
+#mobile-sheet::-webkit-scrollbar-thumb { background: rgba(79,172,254,0.2); border-radius: 20px; }
+#ledger-container::-webkit-scrollbar-thumb:hover,
+main::-webkit-scrollbar-thumb:hover,
+#intel-sidebar::-webkit-scrollbar-thumb:hover { background: rgba(79,172,254,0.6); }
+.dark #ledger-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+.dark #ledger-container::-webkit-scrollbar-thumb:hover { background: #4facfe; }
 
-        /* Force the body to be a non-scrolling container */
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            overflow: hidden; /* THE KILLER BLOW: Prevents browser-level scrolling */
-        }
-        
-        /* Ensure the main container fills exactly what's left */
-        main {
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+body, html { margin: 0; padding: 0; height: 100vh; overflow: hidden; }
+main { height: 100vh; display: flex; flex-direction: column; }
 
-        /* --- SURGICAL SPINNER REMOVAL --- */
-
-        /* 1. Kill for Chrome, Safari, Edge, and Opera */
-        #filter-year::-webkit-outer-spin-button,
-        #filter-year::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-        
-        /* 2. Kill for Firefox */
-        #filter-year {
-            -moz-appearance: textfield;
-        }
-        
-        /* 3. Explicitly disable the hover state to be safe */
-        #filter-year:hover, 
-        #filter-year:focus {
-            -webkit-appearance: none;
-            -moz-appearance: textfield;
-        }
-    </style>
+#filter-year::-webkit-outer-spin-button,
+#filter-year::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+#filter-year { -moz-appearance: textfield; }
+</style>
 </head>
 <body class="bg-slate-50 dark:bg-[#020617] font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300">
-    
-    <header id="header-container"></header>
-    <div id="toast-container"></div>
+<header id="header-container"></header>
+<div id="toast-container"></div>
 
-    <main class="max-w-full h-screen flex flex-col overflow-hidden">
-        <div class="flex-none grid grid-cols-3 gap-0 bg-white dark:bg-slate-900 border-b border-water/20">
-            <button onclick="setFilterStatus('paid')" class="kpi-btn p-6 group text-left">
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-emerald-500">Today's Collection</p>
-                <h4 id="hud-daily" class="text-2xl font-black text-emerald-500 stat-glow">₱ 0.00</h4>
-            </button>
-            <button onclick="setFilterStatus('pending')" class="kpi-btn p-6 group text-left">
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-amber-500">Pending Receivables</p>
-                <h4 id="hud-pending" class="text-2xl font-black text-amber-500">₱ 0.00</h4>
-            </button>
-            <div class="p-6 flex justify-between items-center bg-water/5">
-                <div>
-                    <p class="text-[9px] font-black text-waterDark uppercase tracking-widest">Efficiency</p>
-                    <h4 id="display-efficiency-pct" class="text-2xl font-black">0%</h4>
-                </div>
-                <button onclick="handleExcelExport()" class="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 shadow-lg flex items-center justify-center text-emerald-500 active:scale-95 transition-all">
-                    <i class="bi bi-file-earmark-spreadsheet-fill text-xl"></i>
-                </button>
-            </div>
-        </div>
-    
-        <div class="flex-none p-4 bg-white dark:bg-slate-900/50 border-b border-water/10 space-y-4">
-            <div class="flex justify-between items-center px-2">
-                <div class="segmented-control w-72">
-                    <button onclick="setSearchMode('address')" id="mode-address" class="search-mode-btn segment-btn is-active">Address</button>
-                    <button onclick="setSearchMode('serial')" id="mode-serial" class="search-mode-btn segment-btn">Serial</button>
-                    <button onclick="setSearchMode('name')" id="mode-name" class="search-mode-btn segment-btn">Name</button>
-                </div>
-    
-                <div class="segmented-control w-48">
-                    <button onclick="setTimeMode('cycle')" id="btn-mode-cycle" class="segment-btn is-active">Cycle</button>
-                    <button onclick="setTimeMode('year')" id="mode-year-trigger" class="segment-btn">Year</button>
-                </div>
-            </div>
-    
-            <div class="flex gap-4 items-center">
-                <div class="flex-1 relative h-[48px] group">
-                    <div class="absolute left-4 inset-y-0 flex items-center pointer-events-none">
-                        <i id="search-icon" class="bi bi-geo-alt text-slate-400 group-focus-within:text-water transition-colors"></i>
-                    </div>
-                    <input id="search-input" type="text" placeholder="Search by address..." 
-                           class="w-full h-full pl-11 pr-4 bg-slate-100 dark:bg-slate-800 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-water/40 border-none transition-all">
-                </div>
-    
-                <div class="relative w-48 h-[48px]">
-                    <div id="wrapper-cycle" class="absolute inset-0">
-                        <div id="cycle-trigger" onclick="toggleCycleDropdown()" class="custom-select-trigger flex items-center justify-between px-5 rounded-2xl h-full bg-slate-100 dark:bg-slate-800 border-none">
-                            <span id="selected-cycle-label" class="text-xs font-black uppercase">---</span>
-                            <i class="bi bi-chevron-down opacity-50 text-[10px]"></i>
-                        </div>
-                        <div id="cycle-options" class="select-dropdown-panel hidden"></div>
-                    </div>
-    
-                    <div id="wrapper-year" class="hidden absolute inset-0">
-                        <input id="filter-year" type="number" 
-                               oninput="if(this.length > 4) this.value = this.value.slice(0, 4); renderLedger();" 
-                               placeholder="2026" 
-                               class="w-full h-full px-5 bg-slate-100 dark:bg-slate-800 rounded-2xl text-sm font-black outline-none focus:ring-2 ring-water/40 border-none text-center tracking-[0.3em]">
-                        <div class="absolute left-4 inset-y-0 flex items-center pointer-events-none opacity-30">
-                            <i class="bi bi-calendar3 text-[10px]"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <input type="hidden" id="filter-cycle" value="">
-        </div>
-    
-        <div class="flex-1 flex overflow-hidden">
-            <div class="flex-1 overflow-y-auto p-4 space-y-2 bg-slate-50 dark:bg-black/20" id="ledger-container">
-                </div>
-    
-            <div class="w-96 bg-white dark:bg-slate-900 border-l border-water/20 overflow-y-auto hidden lg:block" id="intel-sidebar">
-                <div id="intel-empty" class="h-full flex flex-col items-center justify-center p-10 text-center opacity-20">
-                    <i class="bi bi-lightning-charge text-6xl mb-4"></i>
-                    <p class="font-black uppercase tracking-tighter text-xs">Select Unit to process</p>
-                </div>
-                <div id="intel-content" class="hidden p-8"></div>
-            </div>
-        </div>
-    </main>
+<main class="max-w-full h-screen flex flex-col overflow-hidden">
 
-    <div id="confirmModal" class="hidden fixed inset-0 z-[600] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6">
-        <div class="bg-white dark:bg-slate-900 w-full max-w-sm rounded-48 p-8 shadow-2xl border border-water/20 relative overflow-hidden">
-            <div class="text-center mb-6">
-                <div id="modal-icon-container" class="w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-4">
-                    <i id="modal-icon" class="bi text-3xl"></i>
-                </div>
-                <h3 id="modal-title" class="text-xl font-black uppercase tracking-tight leading-tight">Confirm Action</h3>
-                <p id="modal-prompt" class="text-[11px] font-bold text-slate-400 uppercase mt-2 px-4"></p>
+    <!-- KPI BAR -->
+    <div class="flex-none grid grid-cols-3 gap-0 bg-white dark:bg-slate-900 border-b border-water/20">
+        <button id="kpi-paid" onclick="setFilterStatus('paid')" class="kpi-btn p-4 lg:p-6 group text-left">
+            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-emerald-500">Today's Collection</p>
+            <h4 id="hud-daily" class="text-xl lg:text-2xl font-black text-emerald-500 stat-glow">₱ 0.00</h4>
+        </button>
+        <button id="kpi-pending" onclick="setFilterStatus('pending')" class="kpi-btn p-4 lg:p-6 group text-left">
+            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-amber-500">Pending Receivables</p>
+            <h4 id="hud-pending" class="text-xl lg:text-2xl font-black text-amber-500">₱ 0.00</h4>
+        </button>
+        <div class="p-4 lg:p-6 flex justify-between items-center bg-water/5">
+            <div>
+                <p class="text-[9px] font-black text-waterDark uppercase tracking-widest">Efficiency</p>
+                <h4 id="display-efficiency-pct" class="text-xl lg:text-2xl font-black">0%</h4>
+                <p id="display-efficiency-counts" class="text-[8px] font-bold text-slate-400 mt-0.5">-- / -- units</p>
             </div>
-    
-            <div class="bg-slate-50 dark:bg-slate-800/50 rounded-32 p-6 mb-8 border border-slate-100 dark:border-slate-800">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="text-left">
-                        <p id="conf-address" class="text-xs font-black uppercase tracking-tighter leading-none"></p>
-                        <p id="conf-owner" class="text-[10px] font-bold text-slate-400 mt-1 uppercase"></p>
-                        <p id="conf-cycle" class="text-[9px] font-black text-waterDark mt-1 uppercase tracking-widest"></p>
-                    </div>
-                    <span id="conf-label" class="bg-water/10 text-waterDark px-2 py-0.5 rounded text-[8px] font-black uppercase"></span>
-                </div>
-                <div class="border-t border-slate-200 dark:border-slate-700 pt-4 flex justify-between items-end">
-                    <div>
-                        <p class="text-[8px] font-black text-slate-400 uppercase">Usage</p>
-                        <p id="conf-usage" class="text-sm font-black"></p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-[8px] font-black text-slate-400 uppercase">Payable</p>
-                        <p id="conf-amount" class="text-xl font-black text-emerald-500"></p>
-                    </div>
-                </div>
-            </div>
-    
-            <div id="lockout-container" class="hidden flex flex-col items-center justify-center mb-6">
-                <div class="relative w-12 h-12">
-                    <svg class="w-full h-full -rotate-90">
-                        <circle cx="24" cy="24" r="20" stroke="currentColor" stroke-width="4" fill="transparent" class="text-slate-200 dark:text-slate-800" />
-                        <circle id="countdown-circle" cx="24" cy="24" r="20" stroke="currentColor" stroke-width="4" fill="transparent" stroke-dasharray="125.6" stroke-dashoffset="0" class="text-water transition-all duration-100" />
-                    </svg>
-                    <span id="countdown-text" class="absolute inset-0 flex items-center justify-center text-[10px] font-black">5</span>
-                </div>
-                <p class="text-[8px] font-black text-slate-400 uppercase mt-2 tracking-[0.2em]">Safety Lock Active</p>
-            </div>
-    
-            <div id="modal-actions" class="flex flex-col gap-2">
-                <button id="btn-modal-confirm" class="w-full py-4 rounded-2xl font-black uppercase text-xs tracking-widest text-white transition-all active:scale-95"></button>
-                <button onclick="closeConfirmModal()" class="w-full py-3 text-slate-400 font-bold uppercase text-[10px] tracking-widest text-center">Cancel</button>
-            </div>
+            <button onclick="handleExcelExport()" class="w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-white dark:bg-slate-800 shadow-lg flex items-center justify-center text-emerald-500 active:scale-95 transition-all">
+                <i class="bi bi-file-earmark-spreadsheet-fill text-lg lg:text-xl"></i>
+            </button>
         </div>
     </div>
-    
-    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-auth-compat.js"></script>
 
-    <script type="module">
-        import { injectHeader } from '../js/header-component.js';
-        import { db, auth } from '../js/firebase-init.js';
-        import { toast, formatCurrency } from '../js/utils.js';
-
-        injectHeader();
-
-        let allReadings = [];
-        let unitsMap = {}; // Cache for Unit labels/serials
-        let activeReading = null;
-        let currentFilterStatus = 'all';
-        let timeMode = 'cycle'; // 'cycle' or 'year'
-        
-        const calculateAmount = (r) => {
-            if(!r.appliedRates) return 0;
-            const consumption = Math.max(0, r.reading - r.prevReading);
-            const { threshold, minFee, excessRate } = r.appliedRates;
-            return consumption <= threshold ? minFee : minFee + ((consumption - threshold) * excessRate);
-        };
-
-       // --- SURGICAL REPLACEMENT: SEARCH & TEMPORAL CONTROLLERS ---
-        let searchMode = 'address';
-        
-        window.setSearchMode = (mode) => {
-            searchMode = mode;
-            // Update the UI segments for search
-            document.querySelectorAll('.segmented-control .segment-btn').forEach(btn => {
-                if(['mode-address', 'mode-serial', 'mode-name'].includes(btn.id)) {
-                    btn.classList.toggle('is-active', btn.id === `mode-${mode}`);
-                }
-            });
-            const input = document.getElementById('search-input');
-            const icon = document.getElementById('search-icon');
-            const configs = {
-                address: { p: "Search by address...", i: "bi-geo-alt" },
-                serial: { p: "Search by meter serial...", i: "bi-hash" },
-                name: { p: "Search by resident name...", i: "bi-person-fill" }
-            };
-            input.placeholder = configs[mode].p;
-            icon.className = `bi ${configs[mode].i} text-slate-400 group-focus-within:text-water transition-colors`;
-            renderLedger();
-            input.focus();
-        };
-
-        window.setTimeMode = (mode) => {
-            timeMode = mode;
-            // Toggle visibility of the input wrappers
-            document.getElementById('wrapper-cycle').classList.toggle('hidden', mode !== 'cycle');
-            document.getElementById('wrapper-year').classList.toggle('hidden', mode !== 'year');
-            // Toggle active state of the segmented buttons
-            document.getElementById('btn-mode-cycle').classList.toggle('is-active', mode === 'cycle');
-            document.getElementById('mode-year-trigger').classList.toggle('is-active', mode === 'year');
-            
-            if(mode === 'year' && !document.getElementById('filter-year').value) {
-                document.getElementById('filter-year').value = new Date().getFullYear();
-            }
-            renderLedger();
-        };
-
-        
-
-        /*window.toggleTimeMode = () => {
-            timeMode = (timeMode === 'cycle') ? 'year' : 'cycle';
-            
-            // Toggle UI Visibility
-            document.getElementById('wrapper-cycle').classList.toggle('hidden', timeMode !== 'cycle');
-            document.getElementById('wrapper-year').classList.toggle('hidden', timeMode !== 'year');
-            
-            // Toggle Label Highlights
-            document.getElementById('label-cycle').className = `text-[8px] font-black px-1.5 py-0.5 rounded-md ${timeMode === 'cycle' ? 'bg-water text-white' : 'text-slate-400'}`;
-            document.getElementById('label-year').className = `text-[8px] font-black px-1.5 py-0.5 rounded-md ${timeMode === 'year' ? 'bg-water text-white' : 'text-slate-400'}`;
-            
-            renderLedger();
-        };*/
-
-        const renderLedger = () => {
-            const container = document.getElementById('ledger-container');
-            const search = document.getElementById('search-input').value.toLowerCase();
-            const cycle = document.getElementById('filter-cycle').value;
-            const year = document.getElementById('filter-year').value || new Date().getFullYear().toString();
-            
-            container.innerHTML = '';
-            const filtered = allReadings.filter(r => {
-                const unit = unitsMap[r.unitId] || {};
-                
-                // 1. TEMPORAL FILTER (Cycle vs Year logic)
-                let matchesTime = (timeMode === 'cycle') ? (r.billingCycle === cycle) : r.billingCycle.startsWith(year);
-
-                // 2. STATUS FILTER
-                const matchesStatus = currentFilterStatus === 'all' || r.status === currentFilterStatus;
-                
-                if(!matchesTime || !matchesStatus) return false;
-                if(!search) return true;
-
-                // 3. SEARCH MODE FILTER
-                if (searchMode === 'address') return r.locationAddress.toLowerCase().includes(search);
-                if (searchMode === 'serial') return unit.meterSerial && unit.meterSerial.toString().toLowerCase().includes(search);
-                if (searchMode === 'name') return (unit.ownerName || "").toLowerCase().includes(search);
-                return false;
-            });
-
-            // Update KPIs based on the filtered timeframe
-            updateKPIs(allReadings.filter(r => (timeMode === 'cycle') ? (r.billingCycle === cycle) : r.billingCycle.startsWith(year)));
-
-            filtered.forEach(r => {
-                const amount = calculateAmount(r);
-                const isPaid = r.status === 'paid';
-                const unit = unitsMap[r.unitId] || {};
-                const owner = unit.ownerName || "Resident";
-                
-                const card = document.createElement('div');
-                card.className = `glass-card p-2 rounded-2xl flex items-center justify-between cursor-pointer hover:scale-[1.01] active:scale-95 transition-all ${activeReading?.readingId === r.readingId ? 'ring-2 ring-water' : ''}`;
-                card.onclick = () => selectUnit(r);
-
-                card.innerHTML = `
-                    <div class="flex items-center gap-4">
-                        <div class="w-8 h-8 rounded-full flex items-center justify-center ${isPaid ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}">
-                            <i class="bi ${isPaid ? 'bi-check-circle-fill' : 'bi-clock-history'}"></i>
-                        </div>
-                        <div>
-                            <div class="flex items-center gap-2">
-                                <p class="text-xs font-black uppercase tracking-tighter">${r.locationAddress}</p>
-                                <span class="text-[8px] bg-water/10 text-waterDark px-1.5 py-0.5 rounded font-black uppercase">${unit.unitLabel || 'Unit'}</span>
-                            </div>
-                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">${owner} • SN: ${unit.meterSerial || 'N/A'}</p>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-sm font-black ${isPaid ? 'text-emerald-600' : 'text-slate-900 dark:text-white'}">${formatCurrency(amount)}</p>
-                        <p class="text-[8px] font-black uppercase opacity-50">${r.status}</p>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        };
-
-        // Add event listener for year input
-        document.getElementById('filter-year').oninput = renderLedger;
-        
-        const selectUnit = (r) => {
-            activeReading = r;
-            const sidebar = document.getElementById('intel-content');
-            const empty = document.getElementById('intel-empty');
-            sidebar.classList.remove('hidden'); empty.classList.add('hidden');
-
-            const amount = calculateAmount(r);
-            const isPaid = r.status === 'paid';
-            const unit = unitsMap[r.unitId] || {};
-
-            sidebar.innerHTML = `
-                <div class="animate-in fade-in slide-in-from-right-4 duration-300">
-                    <div class="mb-6">
-                        <h2 class="text-2xl font-black uppercase tracking-tighter leading-none">${r.locationAddress}</h2>
-                        <p class="text-[10px] font-black text-waterDark uppercase tracking-[0.2em] mt-2">${unit.unitLabel || 'Standard Unit'} / Cycle ${r.billingCycle}</p>
-                    </div>
-                    
-                    <div class="space-y-4 mb-8">
-                        <div class="bg-slate-100 dark:bg-slate-800/50 p-5 rounded-2xl">
-                            <p class="text-[9px] font-black text-slate-400 uppercase mb-3 tracking-widest">Bill Calculation</p>
-                            <div class="flex justify-between text-xs font-bold"><span>Present</span><span>${r.reading.toFixed(1)} m³</span></div>
-                            <div class="flex justify-between text-xs font-bold opacity-50 mt-1"><span>Previous</span><span>${r.prevReading.toFixed(1)} m³</span></div>
-                            <div class="border-t border-slate-200 dark:border-slate-700 mt-2 pt-2 flex justify-between font-black text-waterDark">
-                                <span>Consumption</span><span>${(r.reading - r.prevReading).toFixed(1)} m³</span>
-                            </div>
-                        </div>
-
-                        <div class="${isPaid ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-amber-500/10 border-amber-500/20'} p-5 rounded-2xl border">
-                            <p class="text-[9px] font-black uppercase mb-1 tracking-widest ${isPaid ? 'text-emerald-600' : 'text-amber-600'}">Total Due</p>
-                            <h3 class="text-3xl font-black tracking-tighter ${isPaid ? 'text-emerald-600' : 'text-slate-900 dark:text-white'}">${formatCurrency(amount)}</h3>
-                            ${isPaid ? `<p class="text-[9px] font-bold text-emerald-600 uppercase mt-2">Received: ${r.paidDate}</p>` : ''}
-                        </div>
-                    </div>
-
-                    
-                    <button onclick="openConfirmModal(${isPaid})" 
-                            class="w-full py-4 ${isPaid 
-                                ? 'bg-amber-500 text-white shadow-xl shadow-amber-500/20' 
-                                : 'bg-emerald-600 text-white shadow-xl shadow-emerald-600/20'} 
-                            rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all">
-                        ${isPaid ? 'Undo Payment' : 'Mark as Paid'}
-                    </button>
+    <!-- FILTER BAR -->
+    <div class="flex-none p-3 lg:p-4 bg-white dark:bg-slate-900/50 border-b border-water/10 space-y-3">
+        <div class="flex justify-between items-center px-1">
+            <div class="segmented-control w-60 lg:w-72">
+                <button onclick="setSearchMode('address')" id="mode-address" class="search-mode-btn segment-btn is-active">Address</button>
+                <button onclick="setSearchMode('serial')"  id="mode-serial"  class="search-mode-btn segment-btn">Serial</button>
+                <button onclick="setSearchMode('name')"    id="mode-name"    class="search-mode-btn segment-btn">Name</button>
+            </div>
+            <div class="segmented-control w-40 lg:w-48">
+                <button onclick="setTimeMode('cycle')" id="btn-mode-cycle"    class="segment-btn is-active">Cycle</button>
+                <button onclick="setTimeMode('year')"  id="mode-year-trigger" class="segment-btn">Year</button>
+            </div>
+        </div>
+        <div class="flex gap-3 items-center">
+            <div class="flex-1 relative h-[44px] group">
+                <div class="absolute left-4 inset-y-0 flex items-center pointer-events-none">
+                    <i id="search-icon" class="bi bi-geo-alt text-slate-400 group-focus-within:text-water transition-colors"></i>
                 </div>
-            `;
-            renderLedger(); // Refresh highlights
-        };
+                <input id="search-input" type="text" placeholder="Search by address..."
+                    class="w-full h-full pl-10 pr-4 bg-slate-100 dark:bg-slate-800 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-water/40 border-none transition-all">
+            </div>
+            <div class="relative w-40 lg:w-48 h-[44px]">
+                <div id="wrapper-cycle" class="absolute inset-0">
+                    <div id="cycle-trigger" onclick="toggleCycleDropdown()" class="custom-select-trigger flex items-center justify-between px-4 rounded-2xl h-full bg-slate-100 dark:bg-slate-800">
+                        <span id="selected-cycle-label" class="text-xs font-black uppercase">---</span>
+                        <i class="bi bi-chevron-down opacity-50 text-[10px]"></i>
+                    </div>
+                    <div id="cycle-options" class="select-dropdown-panel hidden"></div>
+                </div>
+                <div id="wrapper-year" class="hidden absolute inset-0">
+                    <input id="filter-year" type="number" placeholder="2026"
+                        class="w-full h-full px-4 bg-slate-100 dark:bg-slate-800 rounded-2xl text-sm font-black outline-none focus:ring-2 ring-water/40 border-none text-center tracking-[0.3em]">
+                </div>
+            </div>
+        </div>
+        <input type="hidden" id="filter-cycle" value="">
+    </div>
 
-        window.processPayment = async () => {
-            if(!activeReading) return;
-            const isSettling = activeReading.status !== 'paid';
-            
-            // SURGICAL FIX: Capturing full ISO (Date + Time)
-            // Instead of .slice(0,10), we keep the whole string: 2026-05-08T14:10:00.000Z
-            const fullTimestamp = new Date().toISOString(); 
-            
-            try {
-                await db.ref(`readings/${activeReading.readingId}`).update({
-                    status: isSettling ? 'paid' : 'pending',
-                    paidDate: isSettling ? fullTimestamp : null
-                });
-                
-                toast(isSettling ? "Payment Saved with Time" : "Status Reset", "success");
-            } catch (e) { 
-                console.error(e);
-                toast("Error updating ledger", "error"); 
-            }
-        };
+    <!-- LEDGER + SIDEBAR -->
+    <div class="flex-1 flex overflow-hidden">
 
-        const updateKPIs = (cycleData) => {
-            let expected = 0; let collected = 0;
-            const todayPrefix = new Date().toISOString().slice(0, 10);
-            
-            cycleData.forEach(r => {
-                const amt = calculateAmount(r);
-                expected += amt;
-                if (r.status === 'paid') collected += amt;
-            });
+        <!-- LEDGER -->
+        <div class="flex-1 overflow-y-auto p-3 lg:p-4 space-y-2 bg-slate-50 dark:bg-black/20" id="ledger-container">
+            <!-- Skeleton loader shown on initial load -->
+            <div id="ledger-skeleton" class="space-y-2">
+                <div class="skeleton h-16 w-full"></div>
+                <div class="skeleton h-16 w-full"></div>
+                <div class="skeleton h-16 w-full"></div>
+                <div class="skeleton h-16 w-full opacity-70"></div>
+                <div class="skeleton h-16 w-full opacity-40"></div>
+            </div>
+        </div>
 
-            // SURGICAL FIX: Used 'curr' instead of 'child'
-            const daily = allReadings.filter(r => r.status === 'paid' && r.paidDate && r.paidDate.startsWith(todayPrefix))
-                                     .reduce((acc, curr) => acc + calculateAmount(curr), 0);
-            
-            document.getElementById('hud-daily').innerText = formatCurrency(daily);
-            document.getElementById('hud-pending').innerText = formatCurrency(expected - collected);
-            document.getElementById('display-efficiency-pct').innerText = `${expected > 0 ? Math.round((collected/expected)*100) : 0}%`;
-        };
+        <!-- DESKTOP SIDEBAR -->
+        <div class="w-96 bg-white dark:bg-slate-900 border-l border-water/20 overflow-y-auto hidden lg:block" id="intel-sidebar">
+            <div id="intel-empty" class="h-full flex flex-col items-center justify-center p-10 text-center opacity-20">
+                <i class="bi bi-lightning-charge text-6xl mb-4"></i>
+                <p class="font-black uppercase tracking-tighter text-xs">Select unit to process</p>
+            </div>
+            <div id="intel-content" class="hidden p-8"></div>
+        </div>
+    </div>
+</main>
 
-        window.toggleCycleDropdown = () => {
-            const panel = document.getElementById('cycle-options');
-            const trigger = document.getElementById('cycle-trigger');
-            const isOpen = !panel.classList.contains('hidden');
-            if (isOpen) {
-                panel.classList.add('scale-95', 'opacity-0');
-                setTimeout(() => panel.classList.add('hidden'), 200);
-                trigger.classList.remove('is-open');
-            } else {
-                panel.classList.remove('hidden');
-                setTimeout(() => panel.classList.remove('scale-95', 'opacity-0'), 10);
-                trigger.classList.add('is-open');
-            }
-        };
+<!-- MOBILE BOTTOM SHEET BACKDROP -->
+<div id="mobile-sheet-backdrop" onclick="closeMobileSheet()"
+    class="lg:hidden fixed inset-0 z-[400] bg-black/50 backdrop-blur-sm">
+</div>
 
-        window.selectCycleOption = (cycle) => {
-            document.getElementById('filter-cycle').value = cycle;
-            document.getElementById('selected-cycle-label').innerText = cycle;
-            window.toggleCycleDropdown(); renderLedger();
-        };
+<!-- MOBILE BOTTOM SHEET -->
+<div id="mobile-sheet"
+    class="lg:hidden fixed bottom-0 left-0 right-0 z-[500] bg-white dark:bg-slate-900 rounded-t-[2rem] max-h-[85vh] overflow-y-auto shadow-2xl border-t border-water/20">
+    <div class="sticky top-0 bg-white dark:bg-slate-900 pt-4 pb-2 px-6 flex items-center justify-between border-b border-water/10 z-10">
+        <div class="w-10 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-3"></div>
+        <span class="text-[10px] font-black text-waterDark uppercase tracking-widest mt-2">Unit Detail</span>
+        <button onclick="closeMobileSheet()" class="w-7 h-7 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 mt-2">
+            <i class="bi bi-x-lg text-xs"></i>
+        </button>
+    </div>
+    <div id="mobile-sheet-content" class="p-6"></div>
+</div>
 
-        window.setFilterStatus = (status) => {
-            currentFilterStatus = (currentFilterStatus === status) ? 'all' : status;
-            toast(`Filter: ${currentFilterStatus.toUpperCase()}`, "info"); renderLedger();
-        };
+<!-- CONFIRM MODAL -->
+<div id="confirmModal" class="hidden fixed inset-0 z-[600] bg-black/60 backdrop-blur-sm flex items-end lg:items-center justify-center p-0 lg:p-6">
+    <div class="bg-white dark:bg-slate-900 w-full lg:max-w-sm rounded-t-[2.5rem] lg:rounded-48 p-8 shadow-2xl border border-water/20 relative overflow-hidden">
+        <div class="text-center mb-6">
+            <div id="modal-icon-container" class="w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-4">
+                <i id="modal-icon" class="bi text-3xl"></i>
+            </div>
+            <h3 id="modal-title" class="text-xl font-black uppercase tracking-tight leading-tight">Confirm Action</h3>
+            <p id="modal-prompt" class="text-[11px] font-bold text-slate-400 uppercase mt-2 px-4"></p>
+        </div>
+        <div class="bg-slate-50 dark:bg-slate-800/50 rounded-32 p-6 mb-8 border border-slate-100 dark:border-slate-800">
+            <div class="flex justify-between items-start mb-4">
+                <div class="text-left">
+                    <p id="conf-address" class="text-xs font-black uppercase tracking-tighter leading-none"></p>
+                    <p id="conf-owner"   class="text-[10px] font-bold text-slate-400 mt-1 uppercase"></p>
+                    <p id="conf-cycle"   class="text-[9px] font-black text-waterDark mt-1 uppercase tracking-widest"></p>
+                </div>
+                <span id="conf-label" class="bg-water/10 text-waterDark px-2 py-0.5 rounded text-[8px] font-black uppercase"></span>
+            </div>
+            <div class="border-t border-slate-200 dark:border-slate-700 pt-4 flex justify-between items-end">
+                <div>
+                    <p class="text-[8px] font-black text-slate-400 uppercase">Usage</p>
+                    <p id="conf-usage" class="text-sm font-black"></p>
+                </div>
+                <div class="text-right">
+                    <p class="text-[8px] font-black text-slate-400 uppercase">Payable</p>
+                    <p id="conf-amount" class="text-xl font-black text-emerald-500"></p>
+                </div>
+            </div>
+        </div>
+        <div id="lockout-container" class="hidden flex-col items-center justify-center mb-6">
+            <div class="relative w-12 h-12">
+                <svg class="w-full h-full -rotate-90">
+                    <circle cx="24" cy="24" r="20" stroke="currentColor" stroke-width="4" fill="transparent" class="text-slate-200 dark:text-slate-800"/>
+                    <circle id="countdown-circle" cx="24" cy="24" r="20" stroke="currentColor" stroke-width="4" fill="transparent" stroke-dasharray="125.6" stroke-dashoffset="0" class="text-water transition-all duration-100"/>
+                </svg>
+                <span id="countdown-text" class="absolute inset-0 flex items-center justify-center text-[10px] font-black">5</span>
+            </div>
+            <p class="text-[8px] font-black text-slate-400 uppercase mt-2 tracking-[0.2em]">Safety Lock Active</p>
+        </div>
+        <div id="modal-actions" class="flex flex-col gap-2">
+            <button id="btn-modal-confirm" class="w-full py-4 rounded-2xl font-black uppercase text-xs tracking-widest text-white transition-all active:scale-95"></button>
+            <button onclick="closeConfirmModal()" class="w-full py-3 text-slate-400 font-bold uppercase text-[10px] tracking-widest text-center">Cancel</button>
+        </div>
+    </div>
+</div>
 
-        window.handleExcelExport = () => {
-            const cycle = document.getElementById('filter-cycle').value;
-            const data = allReadings.filter(r => r.billingCycle === cycle).map(r => ({
-                Address: r.locationAddress,
-                Unit: (unitsMap[r.unitId] || {}).unitLabel || 'Standard',
-                Usage: (r.reading - r.prevReading).toFixed(1),
-                Amount: calculateAmount(r),
-                Status: r.status,
-                PaidDate: r.paidDate || 'N/A'
-            }));
-            const ws = XLSX.utils.json_to_sheet(data);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Collection");
-            XLSX.writeFile(wb, `AquaTrack_v2.2_${cycle}.xlsx`);
-        };
+<script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-auth-compat.js"></script>
+<script type="module">
+import { injectHeader } from '../js/header-component.js';
+import { db, auth } from '../js/firebase-init.js';
+import { toast, formatCurrency } from '../js/utils.js';
 
-        let lockoutTimer = null;
+injectHeader();
 
-        window.openConfirmModal = (isUndo = false) => {
-            const modal = document.getElementById('confirmModal');
-            const icon = document.getElementById('modal-icon');
-            const iconBox = document.getElementById('modal-icon-container');
-            const title = document.getElementById('modal-title');
-            const prompt = document.getElementById('modal-prompt');
-            const confirmBtn = document.getElementById('btn-modal-confirm');
-            const lockout = document.getElementById('lockout-container');
-            const actions = document.getElementById('modal-actions');
-            
-            const unit = unitsMap[activeReading.unitId] || {};
-            const amount = calculateAmount(activeReading);
+let allReadings        = [];
+let unitsMap           = {};
+let activeReading      = null;
+let currentFilterStatus = 'all';
+let timeMode           = 'cycle';
+let searchMode         = 'address';
+let dataLoaded         = false;
 
-            // Populate Details
-            document.getElementById('conf-address').innerText = activeReading.locationAddress;
-            document.getElementById('conf-owner').innerText = unit.ownerName || "Resident";
-            document.getElementById('conf-label').innerText = unit.unitLabel || "Unit";
-            document.getElementById('conf-usage').innerText = `${(activeReading.reading - activeReading.prevReading).toFixed(1)} m³`;
-            document.getElementById('conf-amount').innerText = formatCurrency(amount);
-            
-            // SURGICAL FIX: POPULATE BILLING CYCLE
-            const cycleEl = document.getElementById('conf-cycle');
-            cycleEl.innerText = `Cycle: ${activeReading.billingCycle}`;
+// ─── BILLING CALCULATION ──────────────────────────────────────────────────────
 
-            modal.classList.remove('hidden');
+const calculateAmount = (r) => {
+    if (!r.appliedRates) return 0;
+    const consumption = Math.max(0, r.reading - r.prevReading);
+    const { threshold, minFee, excessRate } = r.appliedRates;
+    return consumption <= threshold ? minFee : minFee + ((consumption - threshold) * excessRate);
+};
 
-            if (isUndo) {
-                // UNDO MODE (Safety Lock)
-                cycleEl.className = "text-[9px] font-black text-rose-500 mt-1 uppercase tracking-widest"; // Red warning for undo
-                iconBox.className = "w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-4 bg-amber-500/10 text-amber-500";
-                icon.className = "bi bi-arrow-counterclockwise text-3xl";
-                title.innerText = "Revert Payment";
-                prompt.innerText = "Please wait before undoing this payment status";
-                confirmBtn.innerText = "Confirm Undo";
-                confirmBtn.className = "w-full py-4 bg-amber-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-amber-500/20";
-                
-                actions.classList.add('hidden');
-                lockout.classList.remove('hidden');
-                startLockoutCountdown();
-            } else {
-                // PAID MODE (Standard)
-                cycleEl.className = "text-[9px] font-black text-waterDark mt-1 uppercase tracking-widest";
-                iconBox.className = "w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-4 bg-emerald-500/10 text-emerald-500";
-                icon.className = "bi bi-cash-stack text-3xl";
-                title.innerText = "Settle Statement";
-                prompt.innerText = "Confirm you are marking this statement as paid";
-                confirmBtn.innerText = "Confirm Payment";
-                confirmBtn.className = "w-full py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-emerald-600/20";
-                
-                actions.classList.remove('hidden');
-                lockout.classList.add('hidden');
-            }
+// ─── SEARCH & TIME MODE ───────────────────────────────────────────────────────
 
-            confirmBtn.onclick = () => {
-                processPayment();
-                closeConfirmModal();
-            };
-        };
+window.setSearchMode = (mode) => {
+    searchMode = mode;
+    document.querySelectorAll('.segmented-control .segment-btn').forEach(btn => {
+        if (['mode-address', 'mode-serial', 'mode-name'].includes(btn.id)) {
+            btn.classList.toggle('is-active', btn.id === `mode-${mode}`);
+        }
+    });
+    const configs = {
+        address: { p: 'Search by address...',      i: 'bi-geo-alt' },
+        serial:  { p: 'Search by meter serial...', i: 'bi-hash' },
+        name:    { p: 'Search by resident name...', i: 'bi-person-fill' }
+    };
+    document.getElementById('search-input').placeholder = configs[mode].p;
+    document.getElementById('search-icon').className    = `bi ${configs[mode].i} text-slate-400 group-focus-within:text-water transition-colors`;
+    renderLedger();
+    document.getElementById('search-input').focus();
+};
 
-        const startLockoutCountdown = () => {
-            let timeLeft = 50; // 5.0 seconds in deciseconds
-            const circle = document.getElementById('countdown-circle');
-            const text = document.getElementById('countdown-text');
-            const circumference = 2 * Math.PI * 20; // 125.6
+window.setTimeMode = (mode) => {
+    timeMode = mode;
+    document.getElementById('wrapper-cycle').classList.toggle('hidden', mode !== 'cycle');
+    document.getElementById('wrapper-year').classList.toggle('hidden', mode !== 'year');
+    document.getElementById('btn-mode-cycle').classList.toggle('is-active', mode === 'cycle');
+    document.getElementById('mode-year-trigger').classList.toggle('is-active', mode === 'year');
+    if (mode === 'year' && !document.getElementById('filter-year').value) {
+        document.getElementById('filter-year').value = new Date().getFullYear();
+    }
+    renderLedger();
+};
 
-            if(lockoutTimer) clearInterval(lockoutTimer);
+// ─── KPI FILTER WITH ACTIVE STATE ─────────────────────────────────────────────
 
-            lockoutTimer = setInterval(() => {
-                timeLeft--;
-                text.innerText = Math.ceil(timeLeft / 10);
-                
-                // Update SVG Circle
-                const offset = circumference - (timeLeft / 50) * circumference;
-                circle.style.strokeDashoffset = offset;
+window.setFilterStatus = (status) => {
+    currentFilterStatus = (currentFilterStatus === status) ? 'all' : status;
 
-                if (timeLeft <= 0) {
-                    clearInterval(lockoutTimer);
-                    document.getElementById('lockout-container').classList.add('hidden');
-                    document.getElementById('modal-actions').classList.remove('hidden');
-                }
-            }, 100);
-        };
+    // Clear active state from both buttons
+    const paidBtn    = document.getElementById('kpi-paid');
+    const pendingBtn = document.getElementById('kpi-pending');
+    paidBtn.classList.remove('is-active', 'is-active-paid');
+    pendingBtn.classList.remove('is-active', 'is-active-pending');
 
-        window.closeConfirmModal = () => {
-            document.getElementById('confirmModal').classList.add('hidden');
-            if(lockoutTimer) clearInterval(lockoutTimer);
-        };
-        
-        auth.onAuthStateChanged(user => {
-            if (!user) return window.location.replace('../index.html');
-            
-            // --- SURGICAL GRAFT START: Fetch Land Data to Resolve Names ---
-            db.ref('properties').on('value', pSnap => {
-                const props = pSnap.val() || {};
-                
-                // Nesting Unit listener inside Properties listener to ensure we have the names
-                db.ref('Unit').on('value', uSnap => {
-                    if(uSnap.exists()) {
-                        const units = uSnap.val();
-                        unitsMap = {}; // Reset local cache
-                        
-                        // Bridge the Gap: Link Unit data to Parent Property Owner
-                        for(let id in units) {
-                            const parent = props[units[id].propertyId] || {};
-                            unitsMap[id] = {
-                                ...units[id],
-                                // Surgical Fix: If land is not yet claimed, show "Resident"
-                                ownerName: parent.ownerName || "Resident" 
-                            };
-                        }
-                        renderLedger();
-                    }
-                });
-            });
-            // --- SURGICAL GRAFT END ---
+    if (currentFilterStatus === 'paid') {
+        paidBtn.classList.add('is-active', 'is-active-paid');
+    } else if (currentFilterStatus === 'pending') {
+        pendingBtn.classList.add('is-active', 'is-active-pending');
+    }
 
-            db.ref('readings').on('value', snap => {
-                if(snap.exists()) {
-                    allReadings = Object.values(snap.val());
-                    const cycles = [...new Set(allReadings.map(r => r.billingCycle))].sort().reverse();
-                    const optionsContainer = document.getElementById('cycle-options');
-                    const hiddenInput = document.getElementById('filter-cycle');
-                    const label = document.getElementById('selected-cycle-label');
+    toast(`Filter: ${currentFilterStatus.toUpperCase()}`, 'info');
+    renderLedger();
+};
 
-                    if (!hiddenInput.value && cycles.length > 0) {
-                        hiddenInput.value = cycles[0]; label.innerText = cycles[0];
-                    }
+// ─── KPI UPDATE ───────────────────────────────────────────────────────────────
 
-                    optionsContainer.innerHTML = cycles.map(c => `
-                        <div class="select-option ${hiddenInput.value === c ? 'is-selected' : ''}" 
-                             onclick="selectCycleOption('${c}')">${c}</div>
-                    `).join('');
+const updateKPIs = (cycleData) => {
+    let expected = 0; let collected = 0; let paidCount = 0;
 
-                    renderLedger();
-                    if(activeReading) {
-                        const updated = allReadings.find(r => r.readingId === activeReading.readingId);
-                        if(updated) selectUnit(updated);
-                    }
-                }
-            });
+    // FIX: prefix match against full ISO paidDate for Today's Collection
+    const todayPrefix = new Date().toISOString().slice(0, 10);
+
+    cycleData.forEach(r => {
+        const amt = calculateAmount(r);
+        expected += amt;
+        if (r.status === 'paid') { collected += amt; paidCount++; }
+    });
+
+    const daily = allReadings
+        .filter(r => r.status === 'paid' && r.paidDate && r.paidDate.startsWith(todayPrefix))
+        .reduce((acc, curr) => acc + calculateAmount(curr), 0);
+
+    document.getElementById('hud-daily').innerText   = formatCurrency(daily);
+    document.getElementById('hud-pending').innerText = formatCurrency(expected - collected);
+
+    const effPct    = expected > 0 ? Math.round((collected / expected) * 100) : 0;
+    const totalUnits = cycleData.length;
+    document.getElementById('display-efficiency-pct').innerText    = `${effPct}%`;
+    // Suggestion 9: show unit counts alongside percentage
+    document.getElementById('display-efficiency-counts').innerText = `${paidCount} / ${totalUnits} units`;
+};
+
+// ─── LEDGER RENDER ────────────────────────────────────────────────────────────
+
+const renderLedger = () => {
+    if (!dataLoaded) return; // Don't render until data is ready
+
+    const container = document.getElementById('ledger-container');
+    const skeleton  = document.getElementById('ledger-skeleton');
+    const search    = document.getElementById('search-input').value.toLowerCase();
+    const cycle     = document.getElementById('filter-cycle').value;
+    const year      = document.getElementById('filter-year').value || new Date().getFullYear().toString();
+
+    // Hide skeleton once we have data
+    if (skeleton) skeleton.remove();
+
+    container.innerHTML = '';
+
+    const filtered = allReadings.filter(r => {
+        const unit = unitsMap[r.unitId] || {};
+        const matchesTime   = (timeMode === 'cycle') ? (r.billingCycle === cycle) : r.billingCycle.startsWith(year);
+        const matchesStatus = currentFilterStatus === 'all' || r.status === currentFilterStatus;
+        if (!matchesTime || !matchesStatus) return false;
+        if (!search) return true;
+        if (searchMode === 'address') return r.locationAddress.toLowerCase().includes(search);
+        if (searchMode === 'serial')  return unit.meterSerial && unit.meterSerial.toString().toLowerCase().includes(search);
+        if (searchMode === 'name')    return (unit.ownerName || '').toLowerCase().includes(search);
+        return false;
+    });
+
+    updateKPIs(allReadings.filter(r =>
+        (timeMode === 'cycle') ? (r.billingCycle === cycle) : r.billingCycle.startsWith(year)
+    ));
+
+    // Suggestion 6: empty state
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-20 text-center opacity-30">
+                <i class="bi bi-inbox text-5xl mb-4"></i>
+                <p class="font-black uppercase tracking-tighter text-sm">No records found</p>
+                <p class="text-[10px] font-bold mt-1 text-slate-400">
+                    ${search ? 'Try a different search term' : 'No readings match the current filter'}
+                </p>
+            </div>
+        `;
+        return;
+    }
+
+    filtered.forEach(r => {
+        const amount  = calculateAmount(r);
+        const isPaid  = r.status === 'paid';
+        const unit    = unitsMap[r.unitId] || {};
+        const owner   = unit.ownerName || 'Resident';
+
+        // Suggestion 1: gap fill badge
+        const gapBadge = r.isGapFill
+            ? `<span class="text-[7px] bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded font-black uppercase ml-1">Gap Fill</span>`
+            : '';
+
+        const card = document.createElement('div');
+        card.className = `glass-card p-3 rounded-2xl flex items-center justify-between cursor-pointer hover:scale-[1.01] active:scale-95 transition-all ${activeReading?.readingId === r.readingId ? 'ring-2 ring-water' : ''}`;
+        card.onclick = () => selectUnit(r);
+        card.innerHTML = `
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${isPaid ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}">
+                    <i class="bi ${isPaid ? 'bi-check-circle-fill' : 'bi-clock-history'} text-sm"></i>
+                </div>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-1 flex-wrap">
+                        <p class="text-xs font-black uppercase tracking-tighter truncate">${r.locationAddress}</p>
+                        <span class="text-[7px] bg-water/10 text-waterDark px-1.5 py-0.5 rounded font-black uppercase flex-shrink-0">${unit.unitLabel || 'Unit'}</span>
+                        ${gapBadge}
+                    </div>
+                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">${owner} · SN: ${unit.meterSerial || 'N/A'}</p>
+                </div>
+            </div>
+            <div class="text-right flex-shrink-0 ml-2">
+                <p class="text-sm font-black ${isPaid ? 'text-emerald-600' : 'text-slate-900 dark:text-white'}">${formatCurrency(amount)}</p>
+                <p class="text-[8px] font-black uppercase opacity-50">${r.status}</p>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+};
+
+// ─── SIDEBAR CONTENT BUILDER ──────────────────────────────────────────────────
+
+const buildSidebarHTML = (r) => {
+    const amount  = calculateAmount(r);
+    const isPaid  = r.status === 'paid';
+    const unit    = unitsMap[r.unitId] || {};
+
+    // Suggestion 2: formatted paidDate
+    const paidDateDisplay = r.paidDate
+        ? new Date(r.paidDate).toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : null;
+
+    // Suggestion 1: gap fill notice in sidebar
+    const gapNotice = r.isGapFill ? `
+        <div class="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 mb-4 flex items-start gap-3">
+            <i class="bi bi-exclamation-triangle-fill text-amber-500 mt-0.5 flex-shrink-0"></i>
+            <div>
+                <p class="text-[9px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-1">System-Generated Record</p>
+                <p class="text-[10px] font-bold text-slate-500 leading-relaxed">This is a gap fill record. No meter reading was captured — minimum fee applies for the missed cycle.</p>
+            </div>
+        </div>
+    ` : '';
+
+    return `
+        <div class="animate-in fade-in slide-in-from-right-4 duration-300">
+            <div class="mb-6">
+                <h2 class="text-2xl font-black uppercase tracking-tighter leading-none">${r.locationAddress}</h2>
+                <p class="text-[10px] font-black text-waterDark uppercase tracking-[0.2em] mt-2">${unit.unitLabel || 'Standard Unit'} / Cycle ${r.billingCycle}</p>
+            </div>
+            ${gapNotice}
+            <div class="space-y-4 mb-8">
+                <div class="bg-slate-100 dark:bg-slate-800/50 p-5 rounded-2xl">
+                    <p class="text-[9px] font-black text-slate-400 uppercase mb-3 tracking-widest">Bill Calculation</p>
+                    <div class="flex justify-between text-xs font-bold"><span>Present</span><span>${r.reading.toFixed(1)} m³</span></div>
+                    <div class="flex justify-between text-xs font-bold opacity-50 mt-1"><span>Previous</span><span>${r.prevReading.toFixed(1)} m³</span></div>
+                    <div class="border-t border-slate-200 dark:border-slate-700 mt-2 pt-2 flex justify-between font-black text-waterDark">
+                        <span>Consumption</span><span>${(r.reading - r.prevReading).toFixed(1)} m³</span>
+                    </div>
+                </div>
+                <div class="${isPaid ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-amber-500/10 border-amber-500/20'} p-5 rounded-2xl border">
+                    <p class="text-[9px] font-black uppercase mb-1 tracking-widest ${isPaid ? 'text-emerald-600' : 'text-amber-600'}">Total Due</p>
+                    <h3 class="text-3xl font-black tracking-tighter ${isPaid ? 'text-emerald-600' : 'text-slate-900 dark:text-white'}">${formatCurrency(amount)}</h3>
+                    ${paidDateDisplay ? `<p class="text-[9px] font-bold text-emerald-600 uppercase mt-2">Received: ${paidDateDisplay}</p>` : ''}
+                </div>
+            </div>
+            <button onclick="openConfirmModal(${isPaid})"
+                class="w-full py-4 ${isPaid
+                    ? 'bg-amber-500 text-white shadow-xl shadow-amber-500/20'
+                    : 'bg-emerald-600 text-white shadow-xl shadow-emerald-600/20'}
+                rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all">
+                ${isPaid ? 'Undo Payment' : 'Mark as Paid'}
+            </button>
+        </div>
+    `;
+};
+
+// ─── UNIT SELECTION — DESKTOP + MOBILE ───────────────────────────────────────
+
+const selectUnit = (r) => {
+    activeReading = r;
+    const html = buildSidebarHTML(r);
+    const isDesktop = window.innerWidth >= 1024;
+
+    if (isDesktop) {
+        // Desktop: populate right sidebar
+        const sidebar = document.getElementById('intel-content');
+        const empty   = document.getElementById('intel-empty');
+        sidebar.classList.remove('hidden');
+        empty.classList.add('hidden');
+        sidebar.innerHTML = html;
+    } else {
+        // Mobile: open bottom sheet
+        document.getElementById('mobile-sheet-content').innerHTML = html;
+        document.getElementById('mobile-sheet').classList.add('is-open');
+        document.getElementById('mobile-sheet-backdrop').classList.add('is-open');
+    }
+
+    renderLedger(); // Refresh active highlight
+};
+
+window.closeMobileSheet = () => {
+    document.getElementById('mobile-sheet').classList.remove('is-open');
+    document.getElementById('mobile-sheet-backdrop').classList.remove('is-open');
+};
+
+// ─── PAYMENT PROCESSING ───────────────────────────────────────────────────────
+
+window.processPayment = async () => {
+    if (!activeReading) return;
+    const isSettling = activeReading.status !== 'paid';
+
+    try {
+        await db.ref(`readings/${activeReading.readingId}`).update({
+            status:   isSettling ? 'paid' : 'pending',
+            paidDate: isSettling ? new Date().toISOString() : null
         });
+        toast(isSettling ? 'Payment recorded' : 'Status reset', 'success');
+    } catch (e) {
+        console.error(e);
+        toast('Error updating ledger', 'error');
+    }
+};
 
-        document.getElementById('search-input').oninput = renderLedger;
-        document.getElementById('filter-year').oninput = renderLedger;
-    </script>
+// ─── CYCLE DROPDOWN ───────────────────────────────────────────────────────────
+
+window.toggleCycleDropdown = () => {
+    const panel   = document.getElementById('cycle-options');
+    const trigger = document.getElementById('cycle-trigger');
+    const isOpen  = !panel.classList.contains('hidden');
+
+    if (isOpen) {
+        panel.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => panel.classList.add('hidden'), 200);
+        trigger.classList.remove('is-open');
+    } else {
+        panel.classList.remove('hidden');
+        setTimeout(() => panel.classList.remove('scale-95', 'opacity-0'), 10);
+        trigger.classList.add('is-open');
+    }
+};
+
+window.selectCycleOption = (cycle) => {
+    document.getElementById('filter-cycle').value        = cycle;
+    document.getElementById('selected-cycle-label').innerText = cycle;
+    window.toggleCycleDropdown();
+    renderLedger();
+};
+
+// ─── EXCEL EXPORT — respects current timeMode ─────────────────────────────────
+
+window.handleExcelExport = () => {
+    const cycle = document.getElementById('filter-cycle').value;
+    const year  = document.getElementById('filter-year').value || new Date().getFullYear().toString();
+
+    const data = allReadings
+        .filter(r => (timeMode === 'cycle') ? r.billingCycle === cycle : r.billingCycle.startsWith(year))
+        .map(r => ({
+            Address:  r.locationAddress,
+            Unit:     (unitsMap[r.unitId] || {}).unitLabel || 'Standard',
+            Cycle:    r.billingCycle,
+            Usage:    (r.reading - r.prevReading).toFixed(1),
+            Amount:   calculateAmount(r),
+            Status:   r.status,
+            GapFill:  r.isGapFill ? 'Yes' : 'No',
+            PaidDate: r.paidDate
+                ? new Date(r.paidDate).toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : 'N/A'
+        }));
+
+    const label = timeMode === 'cycle' ? cycle : year;
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Collection');
+    XLSX.writeFile(wb, `AquaTrack_${label}.xlsx`);
+};
+
+// ─── CONFIRM MODAL ────────────────────────────────────────────────────────────
+
+let lockoutTimer = null;
+
+window.openConfirmModal = (isUndo = false) => {
+    const modal      = document.getElementById('confirmModal');
+    const icon       = document.getElementById('modal-icon');
+    const iconBox    = document.getElementById('modal-icon-container');
+    const title      = document.getElementById('modal-title');
+    const prompt     = document.getElementById('modal-prompt');
+    const confirmBtn = document.getElementById('btn-modal-confirm');
+    const lockout    = document.getElementById('lockout-container');
+    const actions    = document.getElementById('modal-actions');
+    const unit       = unitsMap[activeReading.unitId] || {};
+    const amount     = calculateAmount(activeReading);
+
+    document.getElementById('conf-address').innerText = activeReading.locationAddress;
+    document.getElementById('conf-owner').innerText   = unit.ownerName || 'Resident';
+    document.getElementById('conf-label').innerText   = unit.unitLabel || 'Unit';
+    document.getElementById('conf-usage').innerText   = `${(activeReading.reading - activeReading.prevReading).toFixed(1)} m³`;
+    document.getElementById('conf-amount').innerText  = formatCurrency(amount);
+    document.getElementById('conf-cycle').innerText   = `Cycle: ${activeReading.billingCycle}`;
+
+    modal.classList.remove('hidden');
+
+    if (isUndo) {
+        document.getElementById('conf-cycle').className = 'text-[9px] font-black text-rose-500 mt-1 uppercase tracking-widest';
+        iconBox.className    = 'w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-4 bg-amber-500/10 text-amber-500';
+        icon.className       = 'bi bi-arrow-counterclockwise text-3xl';
+        title.innerText      = 'Revert Payment';
+        prompt.innerText     = 'Please wait before undoing this payment status';
+        confirmBtn.innerText = 'Confirm Undo';
+        confirmBtn.className = 'w-full py-4 bg-amber-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-amber-500/20';
+        actions.classList.add('hidden');
+        lockout.classList.remove('hidden');
+        startLockoutCountdown();
+    } else {
+        document.getElementById('conf-cycle').className = 'text-[9px] font-black text-waterDark mt-1 uppercase tracking-widest';
+        iconBox.className    = 'w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-4 bg-emerald-500/10 text-emerald-500';
+        icon.className       = 'bi bi-cash-stack text-3xl';
+        title.innerText      = 'Settle Statement';
+        prompt.innerText     = 'Confirm you are marking this statement as paid';
+        confirmBtn.innerText = 'Confirm Payment';
+        confirmBtn.className = 'w-full py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-emerald-600/20';
+        actions.classList.remove('hidden');
+        lockout.classList.add('hidden');
+    }
+
+    confirmBtn.onclick = () => { processPayment(); closeConfirmModal(); };
+};
+
+const startLockoutCountdown = () => {
+    let timeLeft = 50;
+    const circle       = document.getElementById('countdown-circle');
+    const text         = document.getElementById('countdown-text');
+    const circumference = 2 * Math.PI * 20;
+    if (lockoutTimer) clearInterval(lockoutTimer);
+
+    lockoutTimer = setInterval(() => {
+        timeLeft--;
+        text.innerText = Math.ceil(timeLeft / 10);
+        circle.style.strokeDashoffset = circumference - (timeLeft / 50) * circumference;
+        if (timeLeft <= 0) {
+            clearInterval(lockoutTimer);
+            document.getElementById('lockout-container').classList.add('hidden');
+            document.getElementById('modal-actions').classList.remove('hidden');
+        }
+    }, 100);
+};
+
+window.closeConfirmModal = () => {
+    document.getElementById('confirmModal').classList.add('hidden');
+    if (lockoutTimer) clearInterval(lockoutTimer);
+};
+
+// ─── AUTH & DATA LOAD ─────────────────────────────────────────────────────────
+
+auth.onAuthStateChanged(user => {
+    if (!user) return window.location.replace('../index.html');
+
+    db.ref('properties').on('value', pSnap => {
+        const props = pSnap.val() || {};
+
+        db.ref('Unit').on('value', uSnap => {
+            if (!uSnap.exists()) return;
+            const units = uSnap.val();
+            unitsMap = {};
+            for (let id in units) {
+                const parent = props[units[id].propertyId] || {};
+                unitsMap[id] = { ...units[id], ownerName: parent.ownerName || 'Resident' };
+            }
+            renderLedger();
+        });
+    });
+
+    db.ref('readings').on('value', snap => {
+        if (!snap.exists()) return;
+        allReadings = Object.values(snap.val());
+        dataLoaded  = true;
+
+        const cycles           = [...new Set(allReadings.map(r => r.billingCycle))].sort().reverse();
+        const optionsContainer = document.getElementById('cycle-options');
+        const hiddenInput      = document.getElementById('filter-cycle');
+        const label            = document.getElementById('selected-cycle-label');
+
+        if (!hiddenInput.value && cycles.length > 0) {
+            hiddenInput.value = cycles[0];
+            label.innerText   = cycles[0];
+        }
+
+        optionsContainer.innerHTML = cycles.map(c => `
+            <div class="select-option ${hiddenInput.value === c ? 'is-selected' : ''}"
+                onclick="selectCycleOption('${c}')">${c}</div>
+        `).join('');
+
+        renderLedger();
+
+        // Refresh sidebar if a unit is selected
+        if (activeReading) {
+            const updated = allReadings.find(r => r.readingId === activeReading.readingId);
+            if (updated) selectUnit(updated);
+        }
+    });
+});
+
+document.getElementById('search-input').oninput  = renderLedger;
+document.getElementById('filter-year').oninput   = renderLedger;
+
+</script>
 </body>
 </html>
