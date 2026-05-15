@@ -826,9 +826,10 @@ window.generateSOA = () => {
     const excessUnits = Math.max(0, consumption - threshold);
     const excessCharge = excessUnits * excessRate;
 
-    // Due date = last day of the billing month
+    // Due date = last day of the month the reading was taken (billing cycle month + 1)
+    // e.g. billingCycle "2026-04" → reading taken in May → due end of May
     const [yr, mo]   = r.billingCycle.split('-').map(Number);
-    const dueDate    = new Date(yr, mo, 0); // day 0 of next month = last day of billing month
+    const dueDate    = new Date(yr, mo + 1, 0); // day 0 of mo+2 = last day of mo+1
     const dueDateStr = dueDate.toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' });
 
     // Reading timestamp
