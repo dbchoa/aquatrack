@@ -1357,8 +1357,25 @@ window.closeConfirmModal = () => {
 
 // ─── AUTH & DATA LOAD ─────────────────────────────────────────────────────────
 
-auth.onAuthStateChanged(user => {
+auth.onAuthStateChanged(async (user) => {
     if (!user) return window.location.replace('../index.html');
+
+    // ── ROLE GUARD ────────────────────────────────────────────────────────────
+    try {
+        const userSnap = await db.ref(`users/${user.uid}`).once('value');
+        const userData  = userSnap.val();
+        if (!userData || userData.role !== 'billing') {
+            await auth.signOut();
+            sessionStorage.clear();
+            return window.location.replace('../index.html');
+        }
+        sessionStorage.setItem('aqt_user_role', userData.role);
+        sessionStorage.setItem('aqt_user_name', userData.name || 'Staff');
+    } catch (e) {
+        console.error('Role verification failed:', e);
+        return window.location.replace('../index.html');
+    }
+    // ── END ROLE GUARD ────────────────────────────────────────────────────────
 
     // Load org config for SOA header
     db.ref('config/org').on('value', snap => {
@@ -1373,7 +1390,6 @@ auth.onAuthStateChanged(user => {
 
     db.ref('properties').on('value', pSnap => {
         const props = pSnap.val() || {};
-
         db.ref('Unit').on('value', uSnap => {
             if (!uSnap.exists()) return;
             const units = uSnap.val();
@@ -1390,25 +1406,19 @@ auth.onAuthStateChanged(user => {
         if (!snap.exists()) return;
         allReadings = Object.values(snap.val());
         dataLoaded  = true;
-
         const cycles           = [...new Set(allReadings.map(r => r.billingCycle))].sort().reverse();
         const optionsContainer = document.getElementById('cycle-options');
         const hiddenInput      = document.getElementById('filter-cycle');
         const label            = document.getElementById('selected-cycle-label');
-
         if (!hiddenInput.value && cycles.length > 0) {
             hiddenInput.value = cycles[0];
             label.innerText   = cycles[0];
         }
-
         optionsContainer.innerHTML = cycles.map(c => `
             <div class="select-option ${hiddenInput.value === c ? 'is-selected' : ''}"
                 onclick="selectCycleOption('${c}')">${c}</div>
         `).join('');
-
         renderLedger();
-
-        // Refresh sidebar if a unit is selected
         if (activeReading) {
             const updated = allReadings.find(r => r.readingId === activeReading.readingId);
             if (updated) selectUnit(updated);
