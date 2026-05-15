@@ -95,6 +95,7 @@
 			    <p class="text-[11px] font-bold text-waterDark dark:text-water uppercase tracking-widest">
 			        Hello, <span id="reader-name-display">...</span>
 			    </p>
+				<div id="cycle-display" class="flex items-center gap-3 justify-center mt-1"></div>
 			    <button onclick="openPasswordModal()" class="w-7 h-7 rounded-xl bg-water/10 flex items-center justify-center text-waterDark active:scale-90 transition-transform">
 			        <i class="bi bi-gear-fill text-lg"></i>
 			    </button>
@@ -290,33 +291,83 @@
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-auth-compat.js"></script>
 
     <script type="module">
-        import { injectHeader } from '../js/header-component.js';
-        import { db, auth } from '../js/firebase-init.js';
-        import { toast, formatCurrency } from '../js/utils.js';
-
-        injectHeader();
-
-        let activeUnit = null; // Replaces activeProperty
-        let unitsCache = null; // New Source of Truth
-        let propertiesCache = null; // Stays for Address/Owner lookup
-        let uniqueCapturedUnitIds = new Set(); // Replaces uniqueCapturedUnitIds
-        
-		let billingConfig = { threshold: 15, minFee: 200, excessRate: 15, setBy: 'DEFAULT', updatedAt: null };
-        let isDeviceOffline = false;
-        let isProcessingSubmission = false; // [Verified] Prevents race conditions during UI render
-        
-
-		// Helper to get billing cycle (Current Month - 1)
+		import { injectHeader } from '../js/header-component.js';
+		import { db, auth } from '../js/firebase-init.js';
+		import { toast, formatCurrency } from '../js/utils.js';
+		
+		injectHeader();
+		
+		let activeUnit       = null;
+		let unitsCache       = null;
+		let propertiesCache  = null;
+		let uniqueCapturedUnitIds = new Set();
+		let billingConfig    = { threshold: 15, minFee: 200, excessRate: 15, setBy: 'DEFAULT', updatedAt: null };
+		let serverBillingCycle = null;   // fetched from server on load
+		let isDeviceOffline  = false;
+		let isProcessingSubmission = false;
+		
+		// ─── BILLING CYCLE ────────────────────────────────────────────────────────────
+		
 		const getTargetBillingCycle = () => {
 		    const d = new Date();
 		    d.setMonth(d.getMonth() - 1);
 		    return d.toISOString().slice(0, 7);
 		};
 		
-        const getOutbox = () => JSON.parse(localStorage.getItem('aqt_outbox') || '[]');
-        const setOutbox = (data) => localStorage.setItem('aqt_outbox', JSON.stringify(data));
+		// Enumerate every YYYY-MM between two cycles (exclusive of both ends).
+		// e.g. gapCycles('2026-01', '2026-04') → ['2026-02', '2026-03']
+		const gapCycles = (fromCycle, toCycle) => {
+		    const gaps = [];
+		    const [fy, fm] = fromCycle.split('-').map(Number);
+		    const [ty, tm] = toCycle.split('-').map(Number);
+		    let year = fy, month = fm + 1;
+		    while (year < ty || (year === ty && month < tm)) {
+		        gaps.push(`${year}-${String(month).padStart(2, '0')}`);
+		        month++;
+		        if (month > 12) { month = 1; year++; }
+		    }
+		    return gaps;
+		};
 		
-        const processSyncCleanup = async () => {
+		// ─── CYCLE DISPLAY ────────────────────────────────────────────────────────────
+		
+		const renderCycleDisplay = () => {
+		    const deviceCycle = getTargetBillingCycle();
+		    const el = document.getElementById('cycle-display');
+		    if (!el) return;
+		
+		    const inSync = !serverBillingCycle || serverBillingCycle === deviceCycle;
+		
+		    if (inSync) {
+		        el.innerHTML = `
+		            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Active Cycle</span>
+		            <span class="text-[11px] font-black text-waterDark dark:text-water tracking-widest">${deviceCycle}</span>
+		        `;
+		        el.className = 'flex items-center gap-3 justify-center mt-1';
+		    } else {
+		        el.innerHTML = `
+		            <div class="flex flex-col items-center gap-1 px-4 py-2 rounded-2xl bg-amber-500/10 border border-amber-500/30 w-full max-w-xs">
+		                <span class="text-[9px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">⚠ Cycle Mismatch</span>
+		                <div class="flex gap-4 text-[10px] font-bold">
+		                    <span class="text-slate-500">Server: <span class="text-slate-900 dark:text-white">${serverBillingCycle}</span></span>
+		                    <span class="text-slate-500">Device: <span class="text-amber-600 dark:text-amber-400">${deviceCycle}</span></span>
+		                </div>
+		                <span class="text-[8px] text-amber-600 dark:text-amber-400 font-bold">Check device date before submitting</span>
+		            </div>
+		        `;
+		        el.className = 'flex items-center justify-center mt-1';
+		    }
+		};
+		
+		// ─── OUTBOX ───────────────────────────────────────────────────────────────────
+		
+		const getOutbox = () => JSON.parse(localStorage.getItem('aqt_outbox') || '[]');
+		const setOutbox = (data) => localStorage.setItem('aqt_outbox', JSON.stringify(data));
+		
+		// ─── SYNC ─────────────────────────────────────────────────────────────────────
+		
+		// PATCH 2: prevReading is immutable — write exactly what was captured, never recompute.
+		const processSyncCleanup = async () => {
 		    let outbox = getOutbox();
 		    if (outbox.length === 0 || isDeviceOffline) return;
 		
@@ -326,9 +377,7 @@
 		                ...item,
 		                timestamp: firebase.database.ServerValue.TIMESTAMP
 		            };
-		
 		            await db.ref(`readings/${item.readingId}`).set(syncedData);
-		
 		            outbox = getOutbox().filter(o => o.readingId !== item.readingId);
 		            setOutbox(outbox);
 		        } catch (e) {
@@ -338,130 +387,115 @@
 		
 		    renderOutboxOnly();
 		};
-
-        const renderOutboxOnly = () => {
-            const outboxContainer = document.getElementById('outbox-feed');
-            const outboxSection = document.getElementById('outbox-section');
-            const outboxCountEl = document.getElementById('outbox-count');
-            
-            // [Inference] Get the deduplicated outbox from storage
-            const outbox = getOutbox();
-            outboxContainer.innerHTML = '';
-        
-            if (outbox.length > 0) {
-                outboxSection.classList.remove('hidden');
-                // [Inference] The count will now correctly show 1 per house, even after multiple offline edits
-                outboxCountEl.innerText = outbox.length;
-                
-                // [Inference] Render unique pending entries; reverse() ensures the most recent edit is seen first
-                [...outbox].reverse().forEach(r => {
-                    outboxContainer.appendChild(createLogEntry(r, false));
-                });
-            } else {
-                outboxSection.classList.add('hidden');
-            }
-        };
-
-        db.ref(".info/connected").on("value", (snap) => {
-            isDeviceOffline = (snap.val() === false);
-            const fab = document.getElementById('fab-container');
-            const statusText = document.getElementById('connection-status');
-            const ping = document.getElementById('fab-ping');
-
-            if (!isDeviceOffline) {
-                if(fab) fab.classList.remove('is-offline');
-                if(statusText) {
-                    statusText.innerText = "● Online";
-                    statusText.className = "text-[10px] text-emerald-500 font-bold uppercase tracking-[0.4em] mb-2 opacity-80";
-                }
-                if(ping) ping.className = "absolute inset-0 rounded-full bg-waterDark animate-ping opacity-20 pointer-events-none";
-                processSyncCleanup();
-            } else {
-                if(fab) fab.classList.add('is-offline');
-                if(statusText) {
-                    statusText.innerText = "● Offline (Cached)";
-                    statusText.className = "text-[10px] text-warning font-bold uppercase tracking-[0.4em] mb-2 opacity-60";
-                }
-                if(ping) ping.className = "absolute inset-0 rounded-full bg-warning animate-ping opacity-20 pointer-events-none";
-            }
-        });
-
-        setInterval(() => {
-            if (!isDeviceOffline) {
-                processSyncCleanup();
-                updateHUDStats(); 
-            }
-        }, 30000); 
-
-        const primeCaches = () => {
-            // Monitor Units
-            db.ref('Unit').on('value', (snap) => {
-                if(snap.exists()) {
-                    unitsCache = snap.val();
-                    updateHUDStats();
-                }
-            });
-            // Monitor Properties (Static Data)
-            db.ref('properties').on('value', (snap) => {
-                if(snap.exists()) propertiesCache = snap.val();
-            });
-        };
-
-        const updateHUDStats = async () => {
-            if(!unitsCache) return;
-            
-            const rSnap = await db.ref('readings').once('value');
-            const totalUnits = Object.keys(unitsCache).length;
-            uniqueCapturedUnitIds.clear(); 
-            const currentCycle = getTargetBillingCycle();
-        
-            // 1. Audit Database Readings
-            if (rSnap.exists()) {
-                Object.values(rSnap.val()).forEach(r => {
-                    if (r.billingCycle === currentCycle && r.unitId) {
-                        uniqueCapturedUnitIds.add(r.unitId);
-                    }
-                });
-            }
-        
-            // 2. Audit Local Outbox (Offline Entries)
-            getOutbox().forEach(item => {
-                if (item.billingCycle === currentCycle && item.unitId) {
-                    uniqueCapturedUnitIds.add(item.unitId);
-                }
-            });
-        
-            const capturedCount = uniqueCapturedUnitIds.size;
-            const globalPct = totalUnits > 0 ? Math.min(100, Math.round((capturedCount / totalUnits) * 100)) : 0;
-        
-            // UI Update: Progress
-            document.getElementById('display-progress-pct').innerHTML = `${globalPct}<span class="text-lg opacity-50 ml-1">%</span>`;
-            document.getElementById('display-counts').innerText = `${capturedCount} / ${totalUnits} Units`;
-            
-            const bar = document.getElementById('progress-bar');
-            if(bar) bar.style.width = `${globalPct}%`;
-        
-            // 3. Street-Specific Metrics
-            const activeStreetDisplay = document.getElementById('active-street').innerText;
-            const activeStreetName = activeStreetDisplay.replace(' St.', '').trim();
-            
-            if(activeStreetName && activeStreetName !== "---") {
-                // Filter unitsCache for units belonging to this street
-                const streetUnitIds = Object.keys(unitsCache).filter(uid => 
-                    uid.split('_')[0] === activeStreetName
-                );
-                const streetTotal = streetUnitIds.length;
-                const streetCaptured = streetUnitIds.filter(uid => uniqueCapturedUnitIds.has(uid)).length;
-                const streetRemaining = Math.max(0, streetTotal - streetCaptured);
-                document.getElementById('remaining-units').innerText = `${streetRemaining} Units`;
-            } else {
-                document.getElementById('remaining-units').innerText = `-- Units`;
-            }
-        };
-
-        const renderFeeds = (snapshot) => {
-            if (isProcessingSubmission) return;
-
+		
+		const renderOutboxOnly = () => {
+		    const outboxContainer = document.getElementById('outbox-feed');
+		    const outboxSection   = document.getElementById('outbox-section');
+		    const outboxCountEl   = document.getElementById('outbox-count');
+		    const outbox = getOutbox();
+		    outboxContainer.innerHTML = '';
+		
+		    if (outbox.length > 0) {
+		        outboxSection.classList.remove('hidden');
+		        outboxCountEl.innerText = outbox.length;
+		        [...outbox].reverse().forEach(r => {
+		            outboxContainer.appendChild(createLogEntry(r, false));
+		        });
+		    } else {
+		        outboxSection.classList.add('hidden');
+		    }
+		};
+		
+		// ─── CONNECTIVITY ─────────────────────────────────────────────────────────────
+		
+		db.ref('.info/connected').on('value', (snap) => {
+		    isDeviceOffline = (snap.val() === false);
+		    const fab        = document.getElementById('fab-container');
+		    const statusText = document.getElementById('connection-status');
+		    const ping       = document.getElementById('fab-ping');
+		
+		    if (!isDeviceOffline) {
+		        if (fab)        fab.classList.remove('is-offline');
+		        if (statusText) {
+		            statusText.innerText   = '● Online';
+		            statusText.className   = 'text-[10px] text-emerald-500 font-bold uppercase tracking-[0.4em] mb-2 opacity-80';
+		        }
+		        if (ping) ping.className = 'absolute inset-0 rounded-full bg-waterDark animate-ping opacity-20 pointer-events-none';
+		        processSyncCleanup();
+		    } else {
+		        if (fab)        fab.classList.add('is-offline');
+		        if (statusText) {
+		            statusText.innerText = '● Offline (Cached)';
+		            statusText.className = 'text-[10px] text-warning font-bold uppercase tracking-[0.4em] mb-2 opacity-60';
+		        }
+		        if (ping) ping.className = 'absolute inset-0 rounded-full bg-warning animate-ping opacity-20 pointer-events-none';
+		    }
+		});
+		
+		setInterval(() => {
+		    if (!isDeviceOffline) {
+		        processSyncCleanup();
+		        updateHUDStats();
+		    }
+		}, 30000);
+		
+		// ─── CACHES & HUD ─────────────────────────────────────────────────────────────
+		
+		const primeCaches = () => {
+		    db.ref('Unit').on('value', (snap) => {
+		        if (snap.exists()) { unitsCache = snap.val(); updateHUDStats(); }
+		    });
+		    db.ref('properties').on('value', (snap) => {
+		        if (snap.exists()) propertiesCache = snap.val();
+		    });
+		};
+		
+		const updateHUDStats = async () => {
+		    if (!unitsCache) return;
+		    const rSnap = await db.ref('readings').once('value');
+		    const totalUnits  = Object.keys(unitsCache).length;
+		    const currentCycle = getTargetBillingCycle();
+		    uniqueCapturedUnitIds.clear();
+		
+		    if (rSnap.exists()) {
+		        Object.values(rSnap.val()).forEach(r => {
+		            if (r.billingCycle === currentCycle && r.unitId) {
+		                uniqueCapturedUnitIds.add(r.unitId);
+		            }
+		        });
+		    }
+		    getOutbox().forEach(item => {
+		        if (item.billingCycle === currentCycle && item.unitId) {
+		            uniqueCapturedUnitIds.add(item.unitId);
+		        }
+		    });
+		
+		    const capturedCount = uniqueCapturedUnitIds.size;
+		    const globalPct = totalUnits > 0 ? Math.min(100, Math.round((capturedCount / totalUnits) * 100)) : 0;
+		
+		    document.getElementById('display-progress-pct').innerHTML = `${globalPct}<span class="text-lg opacity-50 ml-1">%</span>`;
+		    document.getElementById('display-counts').innerText = `${capturedCount} / ${totalUnits} Units`;
+		    const bar = document.getElementById('progress-bar');
+		    if (bar) bar.style.width = `${globalPct}%`;
+		
+		    const activeStreetDisplay = document.getElementById('active-street').innerText;
+		    const activeStreetName    = activeStreetDisplay.replace(' St.', '').trim();
+		    if (activeStreetName && activeStreetName !== '---') {
+		        const streetUnitIds  = Object.keys(unitsCache).filter(uid => uid.split('_')[0] === activeStreetName);
+		        const streetRemaining = Math.max(0, streetUnitIds.length - streetUnitIds.filter(uid => uniqueCapturedUnitIds.has(uid)).length);
+		        document.getElementById('remaining-units').innerText = `${streetRemaining} Units`;
+		    } else {
+		        document.getElementById('remaining-units').innerText = '-- Units';
+		    }
+		};
+		
+		// ─── FEEDS ────────────────────────────────────────────────────────────────────
+		
+		// PATCH 7: Always show DB records. If a DB record still exists in the outbox,
+		// the outbox clear failed — clean it up now. Never hide a synced reading.
+		const renderFeeds = (snapshot) => {
+		    if (isProcessingSubmission) return;
+		
 		    const activityContainer = document.getElementById('readings-feed');
 		    activityContainer.innerHTML = '';
 		
@@ -474,454 +508,540 @@
 		        syncedReadingIds.add(data.readingId);
 		        displayItems.push({ ...data, isSynced: true });
 		
-		        // If this readingId is still in the outbox but already in DB,
-		        // it means the outbox clear failed — clean it up now
+		        // Stale outbox entry — DB write succeeded but outbox clear failed. Clean up now.
 		        if (outbox.some(o => o.readingId === data.readingId)) {
 		            const cleaned = getOutbox().filter(o => o.readingId !== data.readingId);
 		            setOutbox(cleaned);
 		        }
 		    });
-        
-            // Sort by timestamp (Server Seconds or Local MS)
-            displayItems.sort((a, b) => (b.timestamp?.seconds || b.timestamp) - (a.timestamp?.seconds || a.timestamp));
-            const latestItems = displayItems.slice(0, 5);
-        
-            if(latestItems.length > 0 && latestItems[0].locationAddress) {
-                const fullAddress = latestItems[0].locationAddress;
-                // Surgical split: Get everything before the " B" (Block)
-                const streetPart = fullAddress.split(' B')[0]; 
-                document.getElementById('active-street').innerText = streetPart + ' St.';
-            }
-        
-            latestItems.forEach(item => activityContainer.appendChild(createLogEntry(item, true)));
-            updateHUDStats();
-            renderOutboxOnly();
-        };
-
-        const createLogEntry = (r, isSynced) => {
-            const div = document.createElement('div');
-            div.className = `console-entry ${isSynced ? 'border-water' : 'outbox-entry animate-pulse'}`;
-            const ts = r.timestamp?.seconds ? r.timestamp.seconds * 1000 : r.timestamp;
-            const timeDisplay = (typeof ts === 'number') ? new Date(ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'Pending';
-            const originBadge = r.fromOffline === true ? '<span class="text-[7px] bg-slate-200 dark:bg-slate-800 px-1 rounded text-slate-500 font-black">OFFLINE-ORIGIN</span>' : '';
-
-            div.innerHTML = `
-                <div class="flex flex-col">
-                    <div class="flex items-center gap-2">
-                        <span class="text-[10px] font-black uppercase text-slate-900 dark:text-white">${r.locationAddress}</span>
-                        ${originBadge}
-                    </div>
-                    <span class="text-[9px] text-slate-500 font-bold">${timeDisplay}</span>
-                </div>
-                <div class="text-right">
-                    <div class="font-mono text-sm font-black ${isSynced ? 'text-waterDark dark:text-water' : 'text-amber-600'}">
-                        ${r.reading.toFixed(1)} <span class="text-[8px] opacity-60">m³</span>
-                    </div>
-                    <p class="text-[7px] uppercase font-bold ${isSynced ? 'text-emerald-500' : 'text-amber-500'}">
-                        ${isSynced ? 'Synced' : 'In Outbox'}
-                    </p>
-                </div>
-            `;
-            return div;
-        };
-
-        window.openGlobalUnreadModal = () => {
-            const container = document.getElementById('global-unread-list-container');
-            container.innerHTML = '';
-            
-            // FIX: Point to unitsCache as the primary iterator
-            if (!unitsCache || !propertiesCache) {
-                container.innerHTML = '<p class="text-center text-slate-400 text-xs py-4 italic">Waking cache...</p>';
-            } else {
-                // 1. Identify unit IDs NOT in our captured set
-                const unreadUnitIds = Object.keys(unitsCache).filter(id => !uniqueCapturedUnitIds.has(id));
-                
-                if (unreadUnitIds.length === 0) {
-                    container.innerHTML = '<p class="text-center text-emerald-500 text-xs py-4 font-bold">Subdivision Complete! 🏆</p>';
-                } else {
-                    // 2. Map and Sort: Resolve address details for each unread unit
-                    const unreadList = unreadUnitIds.map(id => {
-                        const unit = unitsCache[id];
-                        const prop = propertiesCache[unit.propertyId] || {};
-                        return { id, ...unit, ...prop };
-                    })
-                    .sort((a, b) => 
-                        (a.street || "").localeCompare(b.street || "") || 
-                        (a.block - b.block) || 
-                        (a.lot || "").localeCompare(b.lot || "", undefined, {numeric: true}) ||
-                        (a.unitNumber - b.unitNumber)
-                    );
-
-                    // 3. Render the specific Units
-                    unreadList.forEach(u => {
-                        const div = document.createElement('div');
-                        div.className = "flex flex-col p-3 bg-slate-100 dark:bg-slate-800/50 rounded-xl mb-1 border border-slate-200 dark:border-slate-700";
-                        div.innerHTML = `
-                            <div class="flex justify-between items-center">
-                                <span class="text-[9px] font-black text-waterDark uppercase tracking-widest">${u.street || 'Unknown'}</span>
-                                <span class="text-xs font-black text-slate-900 dark:text-white uppercase">B${u.block} L${u.lot}</span>
-                            </div>
-                            <div class="flex justify-between items-end mt-1">
-                                <span class="text-[10px] font-bold text-slate-500 truncate max-w-[150px]">${u.ownerName || 'Resident'}</span>
-                                <span class="text-[9px] font-black bg-water/10 text-waterDark px-2 py-0.5 rounded-md uppercase">${u.unitLabel || 'Unit ' + u.unitNumber}</span>
-                            </div>
-                        `;
-                        container.appendChild(div);
-                    });
-                }
-            }
-            document.getElementById('globalUnreadModal').classList.remove('hidden');
-        };
-        
-        window.closeGlobalUnreadModal = () => document.getElementById('globalUnreadModal').classList.add('hidden');
-        
-        window.openUnreadModal = () => {
-            const container = document.getElementById('unread-list-container');
-            const streetEl = document.getElementById('unread-street-name');
-            const activeStreetDisplay = document.getElementById('active-street').innerText;
-            const activeStreetName = activeStreetDisplay.replace(' St.', '').trim();
-            
-            container.innerHTML = '';
-            streetEl.innerText = activeStreetName + " Checklist";
-            
-            // FIX: Guard with unitsCache and propertiesCache
-            if (!unitsCache || !propertiesCache || activeStreetName === "---") {
-                container.innerHTML = '<p class="text-center text-slate-400 text-xs py-4 italic">No street selected</p>';
-            } else {
-                // 1. Filter unitsCache for this street NOT in our captured set
-                // We use the propertyId link to verify the street
-                const unreadUnitIds = Object.keys(unitsCache).filter(id => {
-                    const unit = unitsCache[id];
-                    const prop = propertiesCache[unit.propertyId];
-                    return prop && prop.street === activeStreetName && !uniqueCapturedUnitIds.has(id);
-                });
-        
-                if (unreadUnitIds.length === 0) {
-                    container.innerHTML = '<p class="text-center text-emerald-500 text-xs py-4 font-bold">Street Complete! ✓</p>';
-                } else {
-                    // 2. Map and Sort by Block, Lot, then Unit Number
-                    unreadUnitIds.map(id => {
-                        const unit = unitsCache[id];
-                        const prop = propertiesCache[unit.propertyId];
-                        return { id, ...unit, ...prop };
-                    })
-                    .sort((a, b) => a.block - b.block || a.lot.localeCompare(b.lot, undefined, {numeric: true}) || a.unitNumber - b.unitNumber)
-                    .forEach(u => {
-                        const div = document.createElement('div');
-                        div.className = "flex justify-between items-center p-3 bg-slate-100 dark:bg-slate-800/50 rounded-xl mb-1 border border-slate-200 dark:border-slate-700";
-                        div.innerHTML = `
-                            <div class="flex flex-col">
-                                <span class="text-xs font-black text-slate-900 dark:text-white uppercase">B${u.block} L${u.lot}</span>
-                                <span class="text-[9px] font-bold text-slate-500 truncate max-w-[120px]">${u.ownerName || 'Resident'}</span>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-[9px] font-black bg-water/10 text-waterDark px-2 py-1 rounded-md uppercase">${u.unitLabel || 'Unit ' + u.unitNumber}</span>
-                            </div>
-                        `;
-                        container.appendChild(div);
-                    });
-                }
-            }
-            document.getElementById('unreadModal').classList.remove('hidden');
-        };
-        
-        window.closeUnreadModal = () => document.getElementById('unreadModal').classList.add('hidden');
-        
-        window.submitReading = async () => {
-		    const reading = parseFloat(document.getElementById('input-reading').value);
-		    const floor = parseFloat(document.getElementById('display-prev').innerText) || 0;
 		
-		    if (isNaN(reading) || reading < floor) {
-		        toast(`Reading must be at least ${floor} m³`, "error");
-		        return;
+		    displayItems.sort((a, b) => (b.timestamp?.seconds || b.timestamp) - (a.timestamp?.seconds || a.timestamp));
+		    const latestItems = displayItems.slice(0, 5);
+		
+		    if (latestItems.length > 0 && latestItems[0].locationAddress) {
+		        const streetPart = latestItems[0].locationAddress.split(' B')[0];
+		        document.getElementById('active-street').innerText = streetPart + ' St.';
 		    }
 		
-		    isProcessingSubmission = true;
-		    const btn = document.getElementById('final-submit-btn');
-		    const billingCycle = getTargetBillingCycle();
+		    latestItems.forEach(item => activityContainer.appendChild(createLogEntry(item, true)));
+		    updateHUDStats();
+		    renderOutboxOnly();
+		};
 		
-		    const readingId = `${activeUnit.unitId}_${billingCycle}`;
-		    const readingRef = db.ref(`readings/${readingId}`);
+		// ISSUE 8: Show paid/pending/outbox status badge on all log entries.
+		const createLogEntry = (r, isSynced) => {
+		    const div = document.createElement('div');
+		    div.className = `console-entry ${isSynced ? 'border-water' : 'outbox-entry animate-pulse'}`;
 		
-		    btn.innerText = "..."; btn.disabled = true;
+		    const ts = r.timestamp?.seconds ? r.timestamp.seconds * 1000 : r.timestamp;
+		    const timeDisplay  = (typeof ts === 'number') ? new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pending';
+		    const originBadge  = r.fromOffline === true ? '<span class="text-[7px] bg-slate-200 dark:bg-slate-800 px-1 rounded text-slate-500 font-black">OFFLINE-ORIGIN</span>' : '';
+		    const gapBadge     = r.isGapFill   === true ? '<span class="text-[7px] bg-amber-100 dark:bg-amber-900/40 px-1 rounded text-amber-700 dark:text-amber-400 font-black">GAP FILL</span>' : '';
 		
-		    const consumption = parseFloat((reading - floor).toFixed(1));
-
-            const readingData = {
-                readingId, 
-                unitId: activeUnit.unitId,
-                propertyId: activeUnit.propertyId,
-                meterSerial: (unitsCache[activeUnit.unitId] || activeUnit).meterSerial,
-                locationAddress: `${activeUnit.street} B${activeUnit.block} L${activeUnit.lot}`,
-                readerId: auth.currentUser.uid, 
-                readerName: sessionStorage.getItem('aqt_user_name') || "Staff",
-                billingCycle, 
-                reading, 
-                prevReading: floor,
-                consumption: consumption, // RESTORED
-                timestamp: Date.now(),
-                status: 'pending', 
-                fromOffline: isDeviceOffline, 
-                appliedRates: { ...billingConfig }
-            };
-
-            // Save to Outbox
-            let updatedOutbox = getOutbox();
-            const existingIdx = updatedOutbox.findIndex(item => item.readingId === readingId);
-            if(existingIdx > -1) updatedOutbox[existingIdx] = readingData;
-            else updatedOutbox.push(readingData);
-            setOutbox(updatedOutbox);
-            renderOutboxOnly();
-
-            if (isDeviceOffline) {
-                window.finishSubmission(readingId, true);
-            } else {
-                try {
-                    const firebaseData = { ...readingData, timestamp: firebase.database.ServerValue.TIMESTAMP };
-                    await readingRef.set(firebaseData);
-                    window.finishSubmission(readingId, false);
-                } catch (error) {
-                    isProcessingSubmission = false;
-                    toast("Write Error", "error");
-                    btn.innerText = "Yes, Upload"; btn.disabled = false;
-                }
-            }
-        };
-        
-        window.finishSubmission = (readingId, wasOffline) => {
-            // [Verified Fix] Only clear if it actually reached the server
-            if (!wasOffline) {
-                const filtered = getOutbox().filter(item => item.readingId !== readingId);
-                localStorage.setItem('aqt_outbox', JSON.stringify(filtered));
-            }
-        
-            renderOutboxOnly();
-            updateHUDStats();
-            
-            // Release lock and force a clean re-render of the feeds
-            setTimeout(() => {
-                isProcessingSubmission = false; 
-                db.ref('readings').orderByChild('timestamp').limitToLast(5).once('value', (snap) => {
-                    if(snap.exists()) renderFeeds(snap);
-                });
-            }, 200); // 200ms allows disk write to finish
-            
-            toast(`Captured (${wasOffline ? 'Offline' : 'Online'})`, wasOffline ? "warning" : "success");
-            closeReadingModal();
-            
-            const btn = document.getElementById('final-submit-btn');
-            setTimeout(() => { 
-                if(btn) { 
-                    btn.innerText = "Yes, Upload"; 
-                    btn.disabled = false; 
-                }
-            }, 1000);
-        };
-
-        // [Surgical] New Controller for multi-stage identification
-        window.switchStage = (stage) => {
-            // FIX: Removed 'springboard' and 'address'
-            const stages = ['serial', 'reading', 'confirm']; 
-            stages.forEach(s => {
-                const el = document.getElementById(`modal-stage-${s}`);
-                if(el) el.classList.toggle('hidden', s !== stage);
-            });
-        };
-
-        //Serial Identification
-        window.identifyUnitBySerial = () => {
-            const serialInput = document.getElementById('input-serial').value.trim().toLowerCase();
-            if(!serialInput) return toast("Input Serial Number", "info");
-            
-            activeUnit = null;
-            // Scan through units, not properties
-            for(let id in unitsCache) {
-                const u = unitsCache[id];
-                if(u.meterSerial && u.meterSerial.toString().toLowerCase() === serialInput) {
-                    // Resolve Parent Property Details
-                    const p = propertiesCache[u.propertyId];
-                    activeUnit = { ...u, ...p };
-                    break;
-                }
-            }
-
-            if(activeUnit) {
-                switchStage('reading');
-                document.getElementById('display-prop-id').innerText = `${activeUnit.street} B${activeUnit.block} L${activeUnit.lot}`;
-                document.getElementById('display-owner').innerText = activeUnit.ownerName || "Staff Account";
-                document.getElementById('display-unit-label').innerText = activeUnit.unitLabel || `Unit ${activeUnit.unitNumber}`;
-                
-                document.getElementById('display-prev').innerText = `Syncing...`;
-                resolveBaseline(activeUnit.unitId);
-                setTimeout(() => document.getElementById('input-reading').focus(), 100);
-            } else {
-                toast("Meter Serial not found", "error");
-            }
-        };
+		    const statusLabel = !isSynced          ? 'In Outbox'
+		                      : r.status === 'paid' ? 'Paid'
+		                      : 'Pending';
+		    const statusColor = !isSynced          ? 'text-amber-500'
+		                      : r.status === 'paid' ? 'text-slate-400'
+		                      : 'text-emerald-500';
 		
+		    div.innerHTML = `
+		        <div class="flex flex-col">
+		            <div class="flex items-center gap-2 flex-wrap">
+		                <span class="text-[10px] font-black uppercase text-slate-900 dark:text-white">${r.locationAddress}</span>
+		                ${originBadge}${gapBadge}
+		            </div>
+		            <span class="text-[9px] text-slate-500 font-bold">${timeDisplay}</span>
+		        </div>
+		        <div class="text-right">
+		            <div class="font-mono text-sm font-black ${isSynced ? 'text-waterDark dark:text-water' : 'text-amber-600'}">
+		                ${r.reading.toFixed(1)} <span class="text-[8px] opacity-60">m³</span>
+		            </div>
+		            <p class="text-[7px] uppercase font-bold ${statusColor}">${statusLabel}</p>
+		        </div>
+		    `;
+		    return div;
+		};
+		
+		// ─── CHECKLIST MODALS ─────────────────────────────────────────────────────────
+		
+		window.openGlobalUnreadModal = () => {
+		    const container = document.getElementById('global-unread-list-container');
+		    container.innerHTML = '';
+		
+		    if (!unitsCache || !propertiesCache) {
+		        container.innerHTML = '<p class="text-center text-slate-400 text-xs py-4 italic">Waking cache...</p>';
+		    } else {
+		        const unreadUnitIds = Object.keys(unitsCache).filter(id => !uniqueCapturedUnitIds.has(id));
+		        if (unreadUnitIds.length === 0) {
+		            container.innerHTML = '<p class="text-center text-emerald-500 text-xs py-4 font-bold">Subdivision Complete! 🏆</p>';
+		        } else {
+		            unreadUnitIds
+		                .map(id => { const u = unitsCache[id]; const p = propertiesCache[u.propertyId] || {}; return { id, ...u, ...p }; })
+		                .sort((a, b) => (a.street || '').localeCompare(b.street || '') || (a.block - b.block) || (a.lot || '').localeCompare(b.lot || '', undefined, { numeric: true }) || (a.unitNumber - b.unitNumber))
+		                .forEach(u => {
+		                    const div = document.createElement('div');
+		                    div.className = 'flex flex-col p-3 bg-slate-100 dark:bg-slate-800/50 rounded-xl mb-1 border border-slate-200 dark:border-slate-700';
+		                    div.innerHTML = `
+		                        <div class="flex justify-between items-center">
+		                            <span class="text-[9px] font-black text-waterDark uppercase tracking-widest">${u.street || 'Unknown'}</span>
+		                            <span class="text-xs font-black text-slate-900 dark:text-white uppercase">B${u.block} L${u.lot}</span>
+		                        </div>
+		                        <div class="flex justify-between items-end mt-1">
+		                            <span class="text-[10px] font-bold text-slate-500 truncate max-w-[150px]">${u.ownerName || 'Resident'}</span>
+		                            <span class="text-[9px] font-black bg-water/10 text-waterDark px-2 py-0.5 rounded-md uppercase">${u.unitLabel || 'Unit ' + u.unitNumber}</span>
+		                        </div>
+		                    `;
+		                    container.appendChild(div);
+		                });
+		        }
+		    }
+		    document.getElementById('globalUnreadModal').classList.remove('hidden');
+		};
+		
+		window.closeGlobalUnreadModal = () => document.getElementById('globalUnreadModal').classList.add('hidden');
+		
+		window.openUnreadModal = () => {
+		    const container        = document.getElementById('unread-list-container');
+		    const streetEl         = document.getElementById('unread-street-name');
+		    const activeStreetName = document.getElementById('active-street').innerText.replace(' St.', '').trim();
+		    container.innerHTML    = '';
+		    streetEl.innerText     = activeStreetName + ' Checklist';
+		
+		    if (!unitsCache || !propertiesCache || activeStreetName === '---') {
+		        container.innerHTML = '<p class="text-center text-slate-400 text-xs py-4 italic">No street selected</p>';
+		    } else {
+		        const unreadUnitIds = Object.keys(unitsCache).filter(id => {
+		            const unit = unitsCache[id];
+		            const prop = propertiesCache[unit.propertyId];
+		            return prop && prop.street === activeStreetName && !uniqueCapturedUnitIds.has(id);
+		        });
+		
+		        if (unreadUnitIds.length === 0) {
+		            container.innerHTML = '<p class="text-center text-emerald-500 text-xs py-4 font-bold">Street Complete! ✓</p>';
+		        } else {
+		            unreadUnitIds
+		                .map(id => { const unit = unitsCache[id]; const prop = propertiesCache[unit.propertyId]; return { id, ...unit, ...prop }; })
+		                .sort((a, b) => a.block - b.block || a.lot.localeCompare(b.lot, undefined, { numeric: true }) || a.unitNumber - b.unitNumber)
+		                .forEach(u => {
+		                    const div = document.createElement('div');
+		                    div.className = 'flex justify-between items-center p-3 bg-slate-100 dark:bg-slate-800/50 rounded-xl mb-1 border border-slate-200 dark:border-slate-700';
+		                    div.innerHTML = `
+		                        <div class="flex flex-col">
+		                            <span class="text-xs font-black text-slate-900 dark:text-white uppercase">B${u.block} L${u.lot}</span>
+		                            <span class="text-[9px] font-bold text-slate-500 truncate max-w-[120px]">${u.ownerName || 'Resident'}</span>
+		                        </div>
+		                        <div class="text-right">
+		                            <span class="text-[9px] font-black bg-water/10 text-waterDark px-2 py-1 rounded-md uppercase">${u.unitLabel || 'Unit ' + u.unitNumber}</span>
+		                        </div>
+		                    `;
+		                    container.appendChild(div);
+		                });
+		        }
+		    }
+		    document.getElementById('unreadModal').classList.remove('hidden');
+		};
+		
+		window.closeUnreadModal = () => document.getElementById('unreadModal').classList.add('hidden');
+		
+		// ─── BASELINE RESOLUTION + GAP DETECTION ─────────────────────────────────────
+		
+		// Returns { baseline, gapFillRecords[] }
+		// OPTION A: fetches ALL readings for the unit in one query.
+		// Baseline = last cycle's reading value.
+		// Gap fills built for every missing cycle between last and current.
 		const resolveBaseline = async (unitId) => {
-		    const currentCycle = getTargetBillingCycle();
-		    const outbox = getOutbox();
-		    const localEntry = outbox.find(o => o.unitId === unitId && o.billingCycle === currentCycle);
+		    const currentCycle  = getTargetBillingCycle();
+		    const outbox        = getOutbox();
+		    const localEntry    = outbox.find(o => o.unitId === unitId && o.billingCycle === currentCycle);
 		
-		    // 1. Check Offline Outbox first
+		    // 1. If this cycle is already in the local outbox, use its prevReading as baseline.
+		    //    No gap detection needed — the outbox entry already handled it at capture time.
 		    if (localEntry) {
 		        document.getElementById('display-prev').innerText = `${localEntry.prevReading} m³`;
-		        return;
+		        return { baseline: localEntry.prevReading, gapFillRecords: [] };
 		    }
 		
-		    // 2. Check Database History
+		    // 2. Fetch ALL readings for this unit — needed for both baseline and gap detection.
 		    try {
 		        const historySnap = await db.ref('readings')
 		            .orderByChild('unitId')
 		            .equalTo(unitId)
-		            .limitToLast(1)
 		            .once('value');
 		
 		        if (historySnap.exists()) {
-		            const latest = Object.values(historySnap.val())[0];
+		            const allReadings = Object.values(historySnap.val());
 		
-		            // GUARD: Block re-submission if this cycle is already paid
-		            if (latest.billingCycle === currentCycle && latest.status === 'paid') {
-		                toast(`${currentCycle} already paid — submission blocked`, "error");
+		            // PAID CYCLE GUARD (from previous patch): block re-submission if current cycle is paid.
+		            const currentRecord = allReadings.find(r => r.billingCycle === currentCycle);
+		            if (currentRecord && currentRecord.status === 'paid') {
+		                toast(`${currentCycle} already paid — submission blocked`, 'error');
 		                closeReadingModal();
-		                return;
+		                return null;
 		            }
 		
-		            // Logic: If same month, use ITS prev. If new month, use its reading.
-		            const baseline = (latest.billingCycle === currentCycle) ? latest.prevReading : latest.reading;
+		            // Sort by billingCycle ascending (YYYY-MM sorts correctly as string).
+		            allReadings.sort((a, b) => a.billingCycle.localeCompare(b.billingCycle));
+		            const lastRecord = allReadings[allReadings.length - 1];
+		
+		            // If the last record is for the current cycle, use its prevReading as baseline
+		            // (reader is updating/correcting a pending read for this cycle).
+		            const baseline = (lastRecord.billingCycle === currentCycle)
+		                ? lastRecord.prevReading
+		                : lastRecord.reading;
+		
 		            document.getElementById('display-prev').innerText = `${baseline} m³`;
+		
+		            // Gap detection: find missing cycles between lastRecord.billingCycle and currentCycle.
+		            const missing = gapCycles(lastRecord.billingCycle, currentCycle);
+		
+		            if (missing.length === 0) {
+		                return { baseline, gapFillRecords: [] };
+		            }
+		
+		            // Filter out gap cycles that already exist in DB or outbox.
+		            const existingCycles = new Set(allReadings.map(r => r.billingCycle));
+		            const outboxCycles   = new Set(outbox.filter(o => o.unitId === unitId).map(o => o.billingCycle));
+		
+		            const lastKnownReading = lastRecord.reading;
+		            const prop = propertiesCache[activeUnit.propertyId] || {};
+		
+		            // INVARIANT 12: skip gap fills for disconnected units.
+		            if (prop.status === 'disconnected') {
+		                return { baseline, gapFillRecords: [] };
+		            }
+		
+		            const gapFillRecords = missing
+		                .filter(cycle => !existingCycles.has(cycle) && !outboxCycles.has(cycle))
+		                .map(cycle => ({
+		                    readingId:       `${unitId}_${cycle}`,
+		                    unitId,
+		                    propertyId:      activeUnit.propertyId,
+		                    // PATCH 1: explicit meterSerial snapshot from unitsCache.
+		                    meterSerial:     (unitsCache[unitId] || activeUnit).meterSerial,
+		                    locationAddress: `${activeUnit.street} B${activeUnit.block} L${activeUnit.lot}`,
+		                    readerId:        auth.currentUser.uid,
+		                    readerName:      sessionStorage.getItem('aqt_user_name') || 'Staff',
+		                    billingCycle:    cycle,
+		                    reading:         lastKnownReading,
+		                    prevReading:     lastKnownReading,
+		                    consumption:     0,
+		                    status:          'pending',
+		                    isGapFill:       true,
+		                    fromOffline:     isDeviceOffline,
+		                    timestamp:       isDeviceOffline ? Date.now() : firebase.database.ServerValue.TIMESTAMP,
+		                    appliedRates:    { ...billingConfig }
+		                }));
+		
+		            return { baseline, gapFillRecords };
+		
 		        } else {
-		            // 3. Absolute Fallback: Unit Onboarding Seed
-		            document.getElementById('display-prev').innerText = `${activeUnit.lastReading} m³`;
+		            // No history at all — use Unit.lastReading as onboarding fallback.
+		            const baseline = activeUnit.lastReading ?? 0;
+		            document.getElementById('display-prev').innerText = `${baseline} m³`;
+		            return { baseline, gapFillRecords: [] };
 		        }
+		
 		    } catch (e) {
-		        document.getElementById('display-prev').innerText = `${activeUnit.lastReading} m³`;
+		        console.error('resolveBaseline error:', e);
+		        const baseline = activeUnit.lastReading ?? 0;
+		        document.getElementById('display-prev').innerText = `${baseline} m³`;
+		        return { baseline, gapFillRecords: [] };
 		    }
 		};
-		        
-
-        document.getElementById('input-reading').addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value) || 0;
-            
-            // FIX: Pull the anchor directly from the display element we just synced
-            const prevStr = document.getElementById('display-prev').innerText;
-            const anchor = parseFloat(prevStr) || 0;
-        
-            const consumption = Math.max(0, val - anchor);
-            const amount = consumption <= billingConfig.threshold 
-                ? billingConfig.minFee 
-                : billingConfig.minFee + ((consumption - billingConfig.threshold) * billingConfig.excessRate);
-            
-            document.getElementById('display-cost').innerText = formatCurrency(amount);
-        });
-
-        window.showConfirmation = async () => {
-            const reading = parseFloat(document.getElementById('input-reading').value);
-		    const prevStr = document.getElementById('display-prev').innerText;
-		    const floor = parseFloat(prevStr) || 0;
 		
-		    if (isNaN(reading) || reading < floor) {
-		        return toast(`Value must be at least ${floor} m³`, "info");
+		// ─── MODAL FLOW ───────────────────────────────────────────────────────────────
+		
+		window.switchStage = (stage) => {
+		    ['serial', 'reading', 'confirm'].forEach(s => {
+		        const el = document.getElementById(`modal-stage-${s}`);
+		        if (el) el.classList.toggle('hidden', s !== stage);
+		    });
+		};
+		
+		window.identifyUnitBySerial = () => {
+		    const serialInput = document.getElementById('input-serial').value.trim().toLowerCase();
+		    if (!serialInput) return toast('Input Serial Number', 'info');
+		
+		    activeUnit = null;
+		    for (let id in unitsCache) {
+		        const u = unitsCache[id];
+		        if (u.meterSerial && u.meterSerial.toString().toLowerCase() === serialInput) {
+		            const p = propertiesCache[u.propertyId];
+		            activeUnit = { ...u, ...p };
+		            break;
+		        }
 		    }
 		
-		    // GUARD: Re-verify paid status before advancing to confirm
+		    if (activeUnit) {
+		        switchStage('reading');
+		        document.getElementById('display-prop-id').innerText    = `${activeUnit.street} B${activeUnit.block} L${activeUnit.lot}`;
+		        document.getElementById('display-owner').innerText      = activeUnit.ownerName || 'Staff Account';
+		        document.getElementById('display-unit-label').innerText = activeUnit.unitLabel || `Unit ${activeUnit.unitNumber}`;
+		        document.getElementById('display-prev').innerText       = 'Syncing...';
+		        resolveBaseline(activeUnit.unitId);
+		        setTimeout(() => document.getElementById('input-reading').focus(), 100);
+		    } else {
+		        toast('Meter Serial not found', 'error');
+		    }
+		};
+		
+		document.getElementById('input-reading').addEventListener('input', (e) => {
+		    const val    = parseFloat(e.target.value) || 0;
+		    const anchor = parseFloat(document.getElementById('display-prev').innerText) || 0;
+		    const consumption = Math.max(0, val - anchor);
+		    const amount = consumption <= billingConfig.threshold
+		        ? billingConfig.minFee
+		        : billingConfig.minFee + ((consumption - billingConfig.threshold) * billingConfig.excessRate);
+		    document.getElementById('display-cost').innerText = formatCurrency(amount);
+		});
+		
+		window.showConfirmation = async () => {
+		    const reading = parseFloat(document.getElementById('input-reading').value);
+		    const floor   = parseFloat(document.getElementById('display-prev').innerText) || 0;
+		
+		    if (isNaN(reading) || reading < floor) {
+		        return toast(`Value must be at least ${floor} m³`, 'info');
+		    }
+		
+		    // Re-verify paid status before advancing to confirm (race condition guard).
 		    const currentCycle = getTargetBillingCycle();
 		    try {
 		        const recheck = await db.ref(`readings/${activeUnit.unitId}_${currentCycle}`).once('value');
 		        if (recheck.exists() && recheck.val().status === 'paid') {
-		            return toast(`${currentCycle} already paid — submission blocked`, "error");
+		            return toast(`${currentCycle} already paid — submission blocked`, 'error');
 		        }
-		    } catch (e) {
-		        // Non-fatal — allow to proceed if recheck fails
+		    } catch (e) { /* non-fatal — allow to proceed */ }
+		
+		    switchStage('confirm');
+		
+		    document.getElementById('confirm-summary').innerHTML = `
+		        <div class="flex justify-between items-center">
+		            <span>Target</span>
+		            <span class="font-black text-waterDark uppercase text-right">
+		                ${activeUnit.street} B${activeUnit.block} L${activeUnit.lot}<br>
+		                ${activeUnit.unitLabel || 'Unit ' + activeUnit.unitNumber}
+		            </span>
+		        </div>
+		        <div class="flex justify-between text-[10px] opacity-60 mt-2">
+		            <span>Owner</span>
+		            <span class="font-bold">${activeUnit.ownerName || 'Resident'}</span>
+		        </div>
+		        <div class="flex justify-between text-[10px] opacity-60">
+		            <span>Meter Serial</span>
+		            <span class="font-bold">${activeUnit.meterSerial}</span>
+		        </div>
+		        <div class="border-t border-slate-300 dark:border-slate-700 mt-2 pt-2 flex justify-between text-sm">
+		            <span class="font-bold">Captured Reading</span>
+		            <span class="text-waterDark dark:text-water font-black">${reading.toFixed(1)} m³</span>
+		        </div>
+		    `;
+		};
+		
+		// ─── SUBMIT ───────────────────────────────────────────────────────────────────
+		
+		window.submitReading = async () => {
+		    // PATCH 3: validate before setting isProcessingSubmission.
+		    const reading = parseFloat(document.getElementById('input-reading').value);
+		    const floor   = parseFloat(document.getElementById('display-prev').innerText) || 0;
+		
+		    if (isNaN(reading) || reading < floor) {
+		        toast(`Reading must be at least ${floor} m³`, 'error');
+		        return;
 		    }
 		
-		    document.getElementById('modal-stage-reading').classList.add('hidden');
-		    document.getElementById('modal-stage-confirm').classList.remove('hidden');
-            
-            // FIX: Point all data paths to activeUnit
-            document.getElementById('confirm-summary').innerHTML = `
-                <div class="flex justify-between items-center">
-                    <span>Target</span>
-                    <span class="font-black text-waterDark uppercase text-right">
-                        ${activeUnit.street} B${activeUnit.block} L${activeUnit.lot}<br>
-                        ${activeUnit.unitLabel || 'Unit ' + activeUnit.unitNumber}
-                    </span>
-                </div>
-                <div class="flex justify-between text-[10px] opacity-60 mt-2">
-                    <span>Owner</span>
-                    <span class="font-bold">${activeUnit.ownerName || 'Resident'}</span>
-                </div>
-                <div class="flex justify-between text-[10px] opacity-60">
-                    <span>Meter Serial</span>
-                    <span class="font-bold">${activeUnit.meterSerial}</span>
-                </div>
-                <div class="border-t border-slate-300 dark:border-slate-700 mt-2 pt-2 flex justify-between text-sm">
-                    <span class="font-bold">Captured Reading</span>
-                    <span class="text-waterDark dark:text-water font-black">${reading.toFixed(1)} m³</span>
-                </div>`;
-        };
-
-        // [Surgical] Updated Reset/Open controllers
-        window.openReadingModal = () => { 
-            document.getElementById('readingModal').classList.remove('hidden'); 
-            window.resetModalState(); 
-            // Surgical Focus: Ensure the keyboard pops up immediately for the Serial
-            setTimeout(() => document.getElementById('input-serial').focus(), 100);
-        };
-        window.closeReadingModal = () => document.getElementById('readingModal').classList.add('hidden');
-        window.resetModalState = () => {
-            document.getElementById('input-serial').value = '';
-            document.getElementById('input-reading').value = '';
-            // FIX: Point directly to the Serial Entry stage
-            switchStage('serial'); 
-        };
-        window.backToReading = () => {
-			switchStage('reading');
+		    isProcessingSubmission = true;
+		    const btn          = document.getElementById('final-submit-btn');
+		    const billingCycle = getTargetBillingCycle();
+		    const readingId    = `${activeUnit.unitId}_${billingCycle}`;
+		
+		    btn.innerText = '...'; btn.disabled = true;
+		
+		    const consumption = parseFloat((reading - floor).toFixed(1));
+		
+		    // PATCH 1: explicit meterSerial snapshot from unitsCache.
+		    const meterSerial = (unitsCache[activeUnit.unitId] || activeUnit).meterSerial;
+		
+		    // PATCH 4: appliedRates always carries all 5 fields; billingConfig init guarantees setBy/updatedAt.
+		    const readingData = {
+		        readingId,
+		        unitId:          activeUnit.unitId,
+		        propertyId:      activeUnit.propertyId,
+		        meterSerial,
+		        locationAddress: `${activeUnit.street} B${activeUnit.block} L${activeUnit.lot}`,
+		        readerId:        auth.currentUser.uid,
+		        readerName:      sessionStorage.getItem('aqt_user_name') || 'Staff',
+		        billingCycle,
+		        reading,
+		        prevReading:     floor,
+		        consumption,
+		        status:          'pending',
+		        isGapFill:       false,
+		        fromOffline:     isDeviceOffline,
+		        timestamp:       Date.now(),
+		        appliedRates:    { ...billingConfig }
+		    };
+		
+		    // Fetch gap fills (resolveBaseline already ran during identifyUnitBySerial;
+		    // we re-call here to get the gapFillRecords array for the write).
+		    let gapFillRecords = [];
+		    try {
+		        const resolved = await resolveBaseline(activeUnit.unitId);
+		        if (resolved === null) {
+		            // resolveBaseline blocked the submission (paid cycle guard triggered).
+		            isProcessingSubmission = false;
+		            btn.innerText = 'Yes, Upload'; btn.disabled = false;
+		            return;
+		        }
+		        gapFillRecords = resolved.gapFillRecords || [];
+		    } catch (e) {
+		        console.error('Gap fill resolution failed:', e);
+		    }
+		
+		    // Build outbox entries: gap fills first (chronological), real reading last.
+		    let updatedOutbox = getOutbox();
+		    [...gapFillRecords, readingData].forEach(record => {
+		        const idx = updatedOutbox.findIndex(o => o.readingId === record.readingId);
+		        if (idx > -1) updatedOutbox[idx] = record;
+		        else updatedOutbox.push(record);
+		    });
+		    setOutbox(updatedOutbox);
+		    renderOutboxOnly();
+		
+		    if (isDeviceOffline) {
+		        window.finishSubmission(readingId, true, gapFillRecords.length);
+		    } else {
+		        try {
+		            // Write atomically: gap fills + real reading in a single multi-path update.
+		            const multiPathUpdate = {};
+		            [...gapFillRecords, readingData].forEach(record => {
+		                multiPathUpdate[`readings/${record.readingId}`] = {
+		                    ...record,
+		                    timestamp: firebase.database.ServerValue.TIMESTAMP
+		                };
+		            });
+		            await db.ref().update(multiPathUpdate);
+		            window.finishSubmission(readingId, false, gapFillRecords.length);
+		        } catch (error) {
+		            console.error('Write error:', error);
+		            isProcessingSubmission = false;
+		            toast('Write Error', 'error');
+		            btn.innerText = 'Yes, Upload'; btn.disabled = false;
+		        }
+		    }
 		};
-
-        // REPLACE THIS LINE
-        db.ref('readings').orderByChild('timestamp').limitToLast(5).on('value', (snap) => {
-            updateHUDStats();
-            if(snap.exists()) renderFeeds(snap);
-        });
-        auth.onAuthStateChanged(async (user) => { 
-            if (!user) return window.location.replace('../index.html');
-            
-            // --- DEEP-FETCH SESSION RECOVERY ---
-            let readerName = sessionStorage.getItem('aqt_user_name');
-            
-            if(!readerName || readerName === "Staff") {
-                // Attempt 1: Pull from Firebase Auth Profile
-                if (user.displayName) {
-                    readerName = user.displayName;
-                } else {
-                    // Attempt 2: Pull from Database source of truth
-                    try {
-                        const userSnap = await db.ref(`users/${user.uid}/name`).once('value');
-                        readerName = userSnap.exists() ? userSnap.val() : "Staff";
-                    } catch (e) {
-                        readerName = "Staff";
-                    }
-                }
-                sessionStorage.setItem('aqt_user_name', readerName);
-            }
-            
-            const nameEl = document.getElementById('reader-name-display');
-            if(nameEl) nameEl.innerText = readerName;
-
-            primeCaches();
-            processSyncCleanup();
-            const snap = await db.ref('config/billing').once('value');
-            if (snap.exists()) billingConfig = snap.val();
-            const el = document.getElementById('rate-summary-text');
-            if(el) el.innerText = `₱${billingConfig.minFee} base up to ${billingConfig.threshold}m³ + ₱${billingConfig.excessRate}/m³ excess`;
-                       
-        });
 		
-		// Security Logic
-		window.openPasswordModal = () => document.getElementById('passwordModal').classList.remove('hidden');
+		window.finishSubmission = (readingId, wasOffline, gapCount = 0) => {
+		    if (!wasOffline) {
+		        // Clear all records written in this submission from outbox.
+		        const currentCycle = getTargetBillingCycle();
+		        const toRemove = new Set();
+		        toRemove.add(readingId);
+		        // Gap fill IDs follow the same pattern — clear any outbox entry for this unit
+		        // with a billingCycle earlier than currentCycle that was just written.
+		        getOutbox().forEach(o => {
+		            if (o.unitId === activeUnit?.unitId && o.billingCycle < currentCycle && o.isGapFill) {
+		                toRemove.add(o.readingId);
+		            }
+		        });
+		        setOutbox(getOutbox().filter(o => !toRemove.has(o.readingId)));
+		    }
 		
+		    renderOutboxOnly();
+		    updateHUDStats();
+		
+		    const gapMsg = gapCount > 0 ? ` (+${gapCount} gap fill${gapCount > 1 ? 's' : ''})` : '';
+		    toast(`Captured${gapMsg} (${wasOffline ? 'Offline' : 'Online'})`, wasOffline ? 'warning' : 'success');
+		
+		    setTimeout(() => {
+		        isProcessingSubmission = false;
+		        db.ref('readings').orderByChild('timestamp').limitToLast(5).once('value', (snap) => {
+		            if (snap.exists()) renderFeeds(snap);
+		        });
+		    }, 200);
+		
+		    closeReadingModal();
+		
+		    const btn = document.getElementById('final-submit-btn');
+		    setTimeout(() => {
+		        if (btn) { btn.innerText = 'Yes, Upload'; btn.disabled = false; }
+		    }, 1000);
+		};
+		
+		// ─── MODAL OPEN/CLOSE/RESET ───────────────────────────────────────────────────
+		
+		window.openReadingModal = () => {
+		    document.getElementById('readingModal').classList.remove('hidden');
+		    window.resetModalState();
+		    setTimeout(() => document.getElementById('input-serial').focus(), 100);
+		};
+		
+		window.closeReadingModal = () => document.getElementById('readingModal').classList.add('hidden');
+		
+		window.resetModalState = () => {
+		    document.getElementById('input-serial').value  = '';
+		    document.getElementById('input-reading').value = '';
+		    switchStage('serial');
+		};
+		
+		window.backToReading = () => switchStage('reading');
+		
+		// ─── LIVE FEED LISTENER ───────────────────────────────────────────────────────
+		
+		db.ref('readings').orderByChild('timestamp').limitToLast(5).on('value', (snap) => {
+		    updateHUDStats();
+		    if (snap.exists()) renderFeeds(snap);
+		});
+		
+		// ─── AUTH & INIT ──────────────────────────────────────────────────────────────
+		
+		auth.onAuthStateChanged(async (user) => {
+		    if (!user) return window.location.replace('../index.html');
+		
+		    let readerName = sessionStorage.getItem('aqt_user_name');
+		    if (!readerName || readerName === 'Staff') {
+		        if (user.displayName) {
+		            readerName = user.displayName;
+		        } else {
+		            try {
+		                const userSnap = await db.ref(`users/${user.uid}/name`).once('value');
+		                readerName = userSnap.exists() ? userSnap.val() : 'Staff';
+		            } catch (e) {
+		                readerName = 'Staff';
+		            }
+		        }
+		        sessionStorage.setItem('aqt_user_name', readerName);
+		    }
+		
+		    const nameEl = document.getElementById('reader-name-display');
+		    if (nameEl) nameEl.innerText = readerName;
+		
+		    primeCaches();
+		    processSyncCleanup();
+		
+		    // Load billing config.
+		    const billingSnap = await db.ref('config/billing').once('value');
+		    if (billingSnap.exists()) billingConfig = billingSnap.val();
+		    const rateEl = document.getElementById('rate-summary-text');
+		    if (rateEl) rateEl.innerText = `₱${billingConfig.minFee} base up to ${billingConfig.threshold}m³ + ₱${billingConfig.excessRate}/m³ excess`;
+		
+		    // Derive server billing cycle from the most recent reading's billingCycle.
+		    // This is the best available server-side signal without a dedicated config field.
+		    try {
+		        const latestSnap = await db.ref('readings').orderByChild('timestamp').limitToLast(1).once('value');
+		        if (latestSnap.exists()) {
+		            const latestReading = Object.values(latestSnap.val())[0];
+		            serverBillingCycle = latestReading.billingCycle;
+		        }
+		    } catch (e) {
+		        console.warn('Could not derive server billing cycle:', e);
+		    }
+		    renderCycleDisplay();
+		});
+		
+		// ─── PASSWORD CHANGE ──────────────────────────────────────────────────────────
+		
+		window.openPasswordModal  = () => document.getElementById('passwordModal').classList.remove('hidden');
 		window.closePasswordModal = () => {
 		    document.getElementById('passwordModal').classList.add('hidden');
 		    ['pwd-current', 'pwd-new', 'pwd-confirm'].forEach(id => document.getElementById(id).value = '');
@@ -929,35 +1049,30 @@
 		
 		window.handlePasswordChange = async () => {
 		    const currentPwd = document.getElementById('pwd-current').value;
-		    const newPwd = document.getElementById('pwd-new').value;
+		    const newPwd     = document.getElementById('pwd-new').value;
 		    const confirmPwd = document.getElementById('pwd-confirm').value;
-		    const btn = document.getElementById('btn-update-pwd');
+		    const btn        = document.getElementById('btn-update-pwd');
 		
-		    if (!currentPwd || !newPwd || !confirmPwd) return toast("Fill all fields", "info");
-		    if (newPwd !== confirmPwd) return toast("Passwords do not match", "error");
-		    if (newPwd.length < 6) return toast("Min. 6 characters", "warning");
+		    if (!currentPwd || !newPwd || !confirmPwd) return toast('Fill all fields', 'info');
+		    if (newPwd !== confirmPwd) return toast('Passwords do not match', 'error');
+		    if (newPwd.length < 6)    return toast('Min. 6 characters', 'warning');
 		
 		    try {
-		        btn.disabled = true;
-		        btn.innerText = "Verifying...";
-		        const user = auth.currentUser;
+		        btn.disabled = true; btn.innerText = 'Verifying...';
+		        const user       = auth.currentUser;
 		        const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPwd);
-		        
 		        await user.reauthenticateWithCredential(credential);
-		        btn.innerText = "Updating...";
+		        btn.innerText = 'Updating...';
 		        await user.updatePassword(newPwd);
-		        
-		        toast("Password updated", "success");
+		        toast('Password updated', 'success');
 		        closePasswordModal();
 		    } catch (error) {
-		        toast(error.code === 'auth/wrong-password' ? "Wrong current password" : "Update failed", "error");
+		        toast(error.code === 'auth/wrong-password' ? 'Wrong current password' : 'Update failed', 'error');
 		    } finally {
-		        btn.disabled = false;
-		        btn.innerText = "Update Password";
+		        btn.disabled = false; btn.innerText = 'Update Password';
 		    }
 		};
-
 		
-    </script>
+	</script>
 </body>
 </html>
