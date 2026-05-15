@@ -1092,7 +1092,9 @@ window.generateSOA = () => {
     win.document.close();
 };
 
+// ─── SIDEBAR CONTENT BUILDER ──────────────────────────────────────────────────
 
+const buildSidebarHTML = (r) => {
     const amount  = calculateAmount(r);
     const isPaid  = r.status === 'paid';
     const unit    = unitsMap[r.unitId] || {};
