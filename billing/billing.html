@@ -551,7 +551,7 @@
 
         const updateKPIs = (cycleData) => {
             let expected = 0; let collected = 0;
-            const today = new Date().toISOString().slice(0, 10);
+            const todayPrefix = new Date().toISOString().slice(0, 10);
             
             cycleData.forEach(r => {
                 const amt = calculateAmount(r);
@@ -560,7 +560,7 @@
             });
 
             // SURGICAL FIX: Used 'curr' instead of 'child'
-            const daily = allReadings.filter(r => r.status === 'paid' && r.paidDate === today)
+            const daily = allReadings.filter(r => r.status === 'paid' && r.paidDate && r.paidDate.startsWith(todayPrefix))
                                      .reduce((acc, curr) => acc + calculateAmount(curr), 0);
             
             document.getElementById('hud-daily').innerText = formatCurrency(daily);
