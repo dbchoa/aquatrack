@@ -301,10 +301,10 @@
         let propertiesCache = null; // Stays for Address/Owner lookup
         let uniqueCapturedUnitIds = new Set(); // Replaces uniqueCapturedUnitIds
         
-		let billingConfig = { threshold: 15, minFee: 200, excessRate: 15 };
+		let billingConfig = { threshold: 15, minFee: 200, excessRate: 15, setBy: 'DEFAULT', updatedAt: null };
         let isDeviceOffline = false;
         let isProcessingSubmission = false; // [Verified] Prevents race conditions during UI render
-        //let uniqueCapturedUnitIds = new Set(); // Global set to track IDs already read
+        
 
 		// Helper to get billing cycle (Current Month - 1)
 		const getTargetBillingCycle = () => {
@@ -317,43 +317,27 @@
         const setOutbox = (data) => localStorage.setItem('aqt_outbox', JSON.stringify(data));
 		
         const processSyncCleanup = async () => {
-            let outbox = getOutbox();
-            if (outbox.length === 0 || isDeviceOffline) return;
-
-            for (const item of outbox) {
-                try {
-                    // SURGICAL FIX: Hunt by unitId to keep the meter history unique
-                    const historySnap = await db.ref('readings')
-                        .orderByChild('unitId')
-                        .equalTo(item.unitId)
-                        .limitToLast(1)
-                        .once('value');
-
-                    let finalPrev = item.prevReading;
-
-                    if (historySnap.exists()) {
-                        const latest = Object.values(historySnap.val())[0];
-                        // Logic: If same cycle, keep prev. If new cycle, latest reading becomes the new prev.
-                        finalPrev = (latest.readingId === item.readingId) ? latest.prevReading : latest.reading;
-                    }
-
-                    const syncedData = { 
-                        ...item, 
-                        prevReading: finalPrev,
-                        timestamp: firebase.database.ServerValue.TIMESTAMP 
-                    };
-
-                    await db.ref(`readings/${item.readingId}`).set(syncedData);
-                    
-                    // Remove from local outbox after confirmed cloud write
-                    outbox = getOutbox().filter(o => o.readingId !== item.readingId);
-                    setOutbox(outbox);
-                } catch (e) {
-                    console.error("Background Sync Failed for:", item.readingId, e);
-                }
-            }
-            renderOutboxOnly();
-        };
+		    let outbox = getOutbox();
+		    if (outbox.length === 0 || isDeviceOffline) return;
+		
+		    for (const item of outbox) {
+		        try {
+		            const syncedData = {
+		                ...item,
+		                timestamp: firebase.database.ServerValue.TIMESTAMP
+		            };
+		
+		            await db.ref(`readings/${item.readingId}`).set(syncedData);
+		
+		            outbox = getOutbox().filter(o => o.readingId !== item.readingId);
+		            setOutbox(outbox);
+		        } catch (e) {
+		            console.error("Background Sync Failed for:", item.readingId, e);
+		        }
+		    }
+		
+		    renderOutboxOnly();
+		};
 
         const renderOutboxOnly = () => {
             const outboxContainer = document.getElementById('outbox-feed');
@@ -477,21 +461,26 @@
 
         const renderFeeds = (snapshot) => {
             if (isProcessingSubmission) return;
-            
-            const activityContainer = document.getElementById('readings-feed');
-            activityContainer.innerHTML = '';
-            
-            let displayItems = [];
-            const outbox = getOutbox();
-        
-            snapshot.forEach(child => {
-                const data = child.val();
-                // Deduplication: Don't show if it's still in the local outbox
-                const isPendingSync = outbox.some(o => o.readingId === data.readingId);
-                if (isPendingSync) return; 
-        
-                displayItems.push({ ...data, isSynced: true });
-            });
+
+		    const activityContainer = document.getElementById('readings-feed');
+		    activityContainer.innerHTML = '';
+		
+		    let displayItems = [];
+		    const outbox = getOutbox();
+		    const syncedReadingIds = new Set();
+		
+		    snapshot.forEach(child => {
+		        const data = child.val();
+		        syncedReadingIds.add(data.readingId);
+		        displayItems.push({ ...data, isSynced: true });
+		
+		        // If this readingId is still in the outbox but already in DB,
+		        // it means the outbox clear failed — clean it up now
+		        if (outbox.some(o => o.readingId === data.readingId)) {
+		            const cleaned = getOutbox().filter(o => o.readingId !== data.readingId);
+		            setOutbox(cleaned);
+		        }
+		    });
         
             // Sort by timestamp (Server Seconds or Local MS)
             displayItems.sort((a, b) => (b.timestamp?.seconds || b.timestamp) - (a.timestamp?.seconds || a.timestamp));
@@ -639,25 +628,30 @@
         window.closeUnreadModal = () => document.getElementById('unreadModal').classList.add('hidden');
         
         window.submitReading = async () => {
-            isProcessingSubmission = true; 
-            const reading = parseFloat(document.getElementById('input-reading').value);
-            const btn = document.getElementById('final-submit-btn');
-            const billingCycle = getTargetBillingCycle();
-            
-            // New Composite ID format
-            const readingId = `${activeUnit.unitId}_${billingCycle}`;
-            const readingRef = db.ref(`readings/${readingId}`);
-
-            btn.innerText = "..."; btn.disabled = true;
-
-            const floor = parseFloat(document.getElementById('display-prev').innerText) || 0;
-            const consumption = parseFloat((reading - floor).toFixed(1));
+		    const reading = parseFloat(document.getElementById('input-reading').value);
+		    const floor = parseFloat(document.getElementById('display-prev').innerText) || 0;
+		
+		    if (isNaN(reading) || reading < floor) {
+		        toast(`Reading must be at least ${floor} m³`, "error");
+		        return;
+		    }
+		
+		    isProcessingSubmission = true;
+		    const btn = document.getElementById('final-submit-btn');
+		    const billingCycle = getTargetBillingCycle();
+		
+		    const readingId = `${activeUnit.unitId}_${billingCycle}`;
+		    const readingRef = db.ref(`readings/${readingId}`);
+		
+		    btn.innerText = "..."; btn.disabled = true;
+		
+		    const consumption = parseFloat((reading - floor).toFixed(1));
 
             const readingData = {
                 readingId, 
                 unitId: activeUnit.unitId,
                 propertyId: activeUnit.propertyId,
-                meterSerial: activeUnit.meterSerial,
+                meterSerial: (unitsCache[activeUnit.unitId] || activeUnit).meterSerial,
                 locationAddress: `${activeUnit.street} B${activeUnit.block} L${activeUnit.lot}`,
                 readerId: auth.currentUser.uid, 
                 readerName: sessionStorage.getItem('aqt_user_name') || "Staff",
@@ -766,50 +760,46 @@
         };
 		
 		const resolveBaseline = async (unitId) => {
-            const currentCycle = getTargetBillingCycle();
-            const outbox = getOutbox();
-            const localEntry = outbox.find(o => o.unitId === unitId && o.billingCycle === currentCycle);
-            
-            // 1. Check Offline Outbox first
-            if (localEntry) {
-                document.getElementById('display-prev').innerText = `${localEntry.prevReading} m³`;
-                return;
-            }
-
-            // 2. Check Database History
-            try {
-                const historySnap = await db.ref('readings')
-                    .orderByChild('unitId')
-                    .equalTo(unitId)
-                    .limitToLast(1)
-                    .once('value');
-
-                if (historySnap.exists()) {
-                    const latest = Object.values(historySnap.val())[0];
-                    // Logic: If same month, use ITS prev. If new month, use its reading.
-                    const baseline = (latest.billingCycle === currentCycle) ? latest.prevReading : latest.reading;
-                    document.getElementById('display-prev').innerText = `${baseline} m³`;
-                } else {
-                    // 3. Absolute Fallback: Unit Onboarding Seed
-                    document.getElementById('display-prev').innerText = `${activeUnit.lastReading} m³`;
-                }
-            } catch (e) {
-                document.getElementById('display-prev').innerText = `${activeUnit.lastReading} m³`;
-            }
-        };
+		    const currentCycle = getTargetBillingCycle();
+		    const outbox = getOutbox();
+		    const localEntry = outbox.find(o => o.unitId === unitId && o.billingCycle === currentCycle);
 		
-        // Internal helper to handle successful lookup
-        const proceedToReading = () => {
-            if(activeProperty) {
-                switchStage('reading');
-                document.getElementById('display-prop-id').innerText = `${activeProperty.street} B${activeProperty.block} L${activeProperty.lot}`;
-                document.getElementById('display-owner').innerText = activeProperty.ownerName || activeProperty.name;
-                document.getElementById('display-prev').innerText = `${activeProperty.lastReading || 0} m³`;
-                setTimeout(() => document.getElementById('input-reading').focus(), 100);
-            } else {
-                toast("Property not found", "error");
-            }
-        };
+		    // 1. Check Offline Outbox first
+		    if (localEntry) {
+		        document.getElementById('display-prev').innerText = `${localEntry.prevReading} m³`;
+		        return;
+		    }
+		
+		    // 2. Check Database History
+		    try {
+		        const historySnap = await db.ref('readings')
+		            .orderByChild('unitId')
+		            .equalTo(unitId)
+		            .limitToLast(1)
+		            .once('value');
+		
+		        if (historySnap.exists()) {
+		            const latest = Object.values(historySnap.val())[0];
+		
+		            // GUARD: Block re-submission if this cycle is already paid
+		            if (latest.billingCycle === currentCycle && latest.status === 'paid') {
+		                toast(`${currentCycle} already paid — submission blocked`, "error");
+		                closeReadingModal();
+		                return;
+		            }
+		
+		            // Logic: If same month, use ITS prev. If new month, use its reading.
+		            const baseline = (latest.billingCycle === currentCycle) ? latest.prevReading : latest.reading;
+		            document.getElementById('display-prev').innerText = `${baseline} m³`;
+		        } else {
+		            // 3. Absolute Fallback: Unit Onboarding Seed
+		            document.getElementById('display-prev').innerText = `${activeUnit.lastReading} m³`;
+		        }
+		    } catch (e) {
+		        document.getElementById('display-prev').innerText = `${activeUnit.lastReading} m³`;
+		    }
+		};
+		        
 
         document.getElementById('input-reading').addEventListener('input', (e) => {
             const val = parseFloat(e.target.value) || 0;
@@ -828,15 +818,26 @@
 
         window.showConfirmation = async () => {
             const reading = parseFloat(document.getElementById('input-reading').value);
-            const prevStr = document.getElementById('display-prev').innerText;
-            const floor = parseFloat(prevStr) || 0;
-        
-            if(isNaN(reading) || reading < floor) {
-                return toast(`Value must be at least ${floor} m³`, "info");
-            }
-        
-            document.getElementById('modal-stage-reading').classList.add('hidden');
-            document.getElementById('modal-stage-confirm').classList.remove('hidden');
+		    const prevStr = document.getElementById('display-prev').innerText;
+		    const floor = parseFloat(prevStr) || 0;
+		
+		    if (isNaN(reading) || reading < floor) {
+		        return toast(`Value must be at least ${floor} m³`, "info");
+		    }
+		
+		    // GUARD: Re-verify paid status before advancing to confirm
+		    const currentCycle = getTargetBillingCycle();
+		    try {
+		        const recheck = await db.ref(`readings/${activeUnit.unitId}_${currentCycle}`).once('value');
+		        if (recheck.exists() && recheck.val().status === 'paid') {
+		            return toast(`${currentCycle} already paid — submission blocked`, "error");
+		        }
+		    } catch (e) {
+		        // Non-fatal — allow to proceed if recheck fails
+		    }
+		
+		    document.getElementById('modal-stage-reading').classList.add('hidden');
+		    document.getElementById('modal-stage-confirm').classList.remove('hidden');
             
             // FIX: Point all data paths to activeUnit
             document.getElementById('confirm-summary').innerHTML = `
@@ -915,17 +916,7 @@
             if (snap.exists()) billingConfig = snap.val();
             const el = document.getElementById('rate-summary-text');
             if(el) el.innerText = `₱${billingConfig.minFee} base up to ${billingConfig.threshold}m³ + ₱${billingConfig.excessRate}/m³ excess`;
-            
-            const streetSnap = await db.ref('config/streets').once('value');
-            const select = document.getElementById('input-street');
-            if (streetSnap.exists() && select) {
-                select.innerHTML = '<option value="" disabled selected>Select Street...</option>';
-                Object.values(streetSnap.val()).forEach(st => {
-                    const opt = document.createElement('option');
-                    opt.value = st.name; opt.textContent = st.fullName;
-                    select.appendChild(opt);
-                });
-            }
+                       
         });
 		
 		// Security Logic
