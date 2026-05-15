@@ -997,6 +997,26 @@
 		
 		auth.onAuthStateChanged(async (user) => {
 		    if (!user) return window.location.replace('../index.html');
+
+		    // ── ROLE GUARD ────────────────────────────────────────────────────────────
+		    // Always verify role from DB — never trust sessionStorage alone.
+		    // A different role typing this URL directly gets bounced back to index.
+		    try {
+		        const userSnap = await db.ref(`users/${user.uid}`).once('value');
+		        const userData  = userSnap.val();
+		        if (!userData || userData.role !== 'reader') {
+		            await auth.signOut();
+		            sessionStorage.clear();
+		            return window.location.replace('../index.html');
+		        }
+		        // Refresh sessionStorage with authoritative DB values
+		        sessionStorage.setItem('aqt_user_role', userData.role);
+		        sessionStorage.setItem('aqt_user_name', userData.name || 'Staff');
+		    } catch (e) {
+		        console.error('Role verification failed:', e);
+		        return window.location.replace('../index.html');
+		    }
+		    // ── END ROLE GUARD ────────────────────────────────────────────────────────
 		
 		    let readerName = sessionStorage.getItem('aqt_user_name');
 		    if (!readerName || readerName === 'Staff') {
