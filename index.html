@@ -1,165 +1,168 @@
 <!DOCTYPE html>
 <html lang="en" id="main-html">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AquaTrack - Secure Access</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="style.css">
-    <script>
-        tailwind.config = {
-            darkMode: 'class', 
-            theme: {
-                extend: {
-                    colors: { water: '#4facfe', waterDark: '#00f2fe' },
-                    borderRadius: { '32': '32px' }
-                }
-            }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AquaTrack - Secure Access</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="style.css">
+<script>
+tailwind.config = {
+    darkMode: 'class',
+    theme: {
+        extend: {
+            colors: { water: '#4facfe', waterDark: '#00f2fe' },
+            borderRadius: { '32': '32px' }
         }
-    </script>
-    <style>
-        .btn-droplet {
-            background: radial-gradient(circle at 30% 30%, #7dd3fc, #4facfe);
-            transition: all 0.2s ease;
-        }
-        .btn-droplet:active { transform: scale(0.98); }
-        input:focus, button:focus { outline: none !important; }
-
-        .dark body { background-color: #0f172a; color: #f8fafc; }
-        .dark .glass-card { background: rgba(30, 41, 59, 0.7); border-color: rgba(255, 255, 255, 0.05); }
-    </style>
+    }
+}
+</script>
+<style>
+.btn-droplet {
+    background: radial-gradient(circle at 30% 30%, #7dd3fc, #4facfe);
+    transition: all 0.2s ease;
+}
+.btn-droplet:active { transform: scale(0.98); }
+input:focus, button:focus { outline: none !important; }
+.dark body { background-color: #0f172a; color: #f8fafc; }
+.dark .glass-card { background: rgba(30, 41, 59, 0.7); border-color: rgba(255, 255, 255, 0.05); }
+</style>
 </head>
 <body class="bg-slate-50 font-sans text-slate-900 transition-colors duration-300">
-    <div id="toast-container" class="fixed top-0 right-0 pt-12 pr-4 z-50"></div>
-
-    <div class="min-h-screen flex flex-col items-center justify-center p-6">
-        
-        <div class="flex flex-col items-center mb-10">
-            <div class="w-20 h-20 bg-white dark:bg-slate-800 rounded-3xl shadow-sm flex items-center justify-center border border-slate-100 dark:border-slate-700 mb-6">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="#4facfe">
-                    <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
-                </svg>
-            </div>
-            <h1 class="text-4xl font-light tracking-tighter text-slate-800 dark:text-slate-100">
-                Aqua<span class="text-water font-normal">Track</span>
-            </h1>
-            <p class="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-400 mt-2">Subdivision Gateway</p>
+<div id="toast-container" class="fixed top-0 right-0 pt-12 pr-4 z-50"></div>
+<div class="min-h-screen flex flex-col items-center justify-center p-6">
+    <div class="flex flex-col items-center mb-10">
+        <div class="w-20 h-20 bg-white dark:bg-slate-800 rounded-3xl shadow-sm flex items-center justify-center border border-slate-100 dark:border-slate-700 mb-6">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="#4facfe">
+                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+            </svg>
         </div>
-
-        <div class="glass-card w-full max-w-md bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-10 rounded-32 shadow-xl border border-white dark:border-slate-800">
-            <h2 class="text-center text-xl font-medium text-slate-700 dark:text-slate-200 mb-10">Sign In</h2>
-            
-            <form id="login-form" class="space-y-6">
-                <div>
-                    <label class="text-[10px] uppercase tracking-widest font-bold text-water mb-2 block text-center">Personnel ID</label>
-                    <input type="email" id="email" placeholder="name@aquatrack.sys" required 
-                        class="w-full p-4 bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:border-water focus:ring-4 focus:ring-water/10 transition-all font-normal text-center dark:text-white outline-none">
-                </div>
-
-                <div>
-                    <label class="text-[10px] uppercase tracking-widest font-bold text-water mb-2 block text-center">Access Key</label>
-                    <input type="password" id="password" placeholder="••••••••" required 
-                        class="w-full p-4 bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:border-water focus:ring-4 focus:ring-water/10 transition-all font-normal text-center dark:text-white outline-none">
-                </div>
-
-                <button type="submit" id="login-btn" 
-                    class="btn-droplet w-full py-5 rounded-full text-white text-xs font-bold uppercase tracking-widest shadow-lg shadow-water/30 haptic mt-4">
-                    Initialize Session
-                </button>
-            </form>
-        </div>
-
-        <div class="mt-8 flex bg-slate-200 dark:bg-slate-800 p-1 rounded-full w-40 relative">
-            <button onclick="toggleDarkMode('light')" type="button" class="flex-1 text-[10px] font-bold uppercase tracking-widest py-2 rounded-full z-10 transition-colors text-slate-500 dark:text-slate-400">Light</button>
-            <button onclick="toggleDarkMode('dark')" type="button" class="flex-1 text-[10px] font-bold uppercase tracking-widest py-2 rounded-full z-10 transition-colors text-slate-900 dark:text-white">Dark</button>
-            <div id="toggle-indicator" class="absolute top-1 bottom-1 left-1 right-1 w-[76px] bg-white dark:bg-slate-700 rounded-full shadow-sm transition-all duration-300 transform"></div>
-        </div>
-
-        <p class="mt-8 text-[10px] font-bold text-slate-400 uppercase tracking-widest opacity-50">
-            &copy; 2026 AQUATRACK INFRASTRUCTURE
-        </p>
+        <h1 class="text-4xl font-light tracking-tighter text-slate-800 dark:text-slate-100">
+            Aqua<span class="text-water font-normal">Track</span>
+        </h1>
+        <p class="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-400 mt-2">Subdivision Gateway</p>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>         
-    
-    <script type="module">
-        import './js/utils.js'; 
-        import { login } from './js/auth.js';
-        import { setTheme, initTheme } from './js/utils.js';
-        import { auth, db } from './js/firebase-init.js';
-       
-        initTheme();
-        const saved = localStorage.getItem('aqt_theme') || 'dark';
-        window.toggleDarkMode(saved);
+    <div class="glass-card w-full max-w-md bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-10 rounded-32 shadow-xl border border-white dark:border-slate-800">
+        <h2 class="text-center text-xl font-medium text-slate-700 dark:text-slate-200 mb-10">Sign In</h2>
+        <form id="login-form" class="space-y-6">
+            <div>
+                <label class="text-[10px] uppercase tracking-widest font-bold text-water mb-2 block text-center">Personnel ID</label>
+                <input type="email" id="email" placeholder="name@aquatrack.sys" required
+                    class="w-full p-4 bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:border-water focus:ring-4 focus:ring-water/10 transition-all font-normal text-center dark:text-white outline-none">
+            </div>
+            <div>
+                <label class="text-[10px] uppercase tracking-widest font-bold text-water mb-2 block text-center">Access Key</label>
+                <input type="password" id="password" placeholder="••••••••" required
+                    class="w-full p-4 bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:border-water focus:ring-4 focus:ring-water/10 transition-all font-normal text-center dark:text-white outline-none">
+            </div>
+            <button type="submit" id="login-btn"
+                class="btn-droplet w-full py-5 rounded-full text-white text-xs font-bold uppercase tracking-widest shadow-lg shadow-water/30 haptic mt-4">
+                Initialize Session
+            </button>
+        </form>
+    </div>
 
-        const loginForm = document.getElementById('login-form');
-        const loginBtn = document.getElementById('login-btn');
+    <div class="mt-8 flex bg-slate-200 dark:bg-slate-800 p-1 rounded-full w-40 relative">
+        <button onclick="toggleDarkMode('light')" type="button" class="flex-1 text-[10px] font-bold uppercase tracking-widest py-2 rounded-full z-10 transition-colors text-slate-500 dark:text-slate-400">Light</button>
+        <button onclick="toggleDarkMode('dark')"  type="button" class="flex-1 text-[10px] font-bold uppercase tracking-widest py-2 rounded-full z-10 transition-colors text-slate-900 dark:text-white">Dark</button>
+        <div id="toggle-indicator" class="absolute top-1 bottom-1 left-1 right-1 w-[76px] bg-white dark:bg-slate-700 rounded-full shadow-sm transition-all duration-300 transform"></div>
+    </div>
 
-        if (loginForm) {
-            loginForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
-                // Lock UI
-                loginBtn.disabled = true;
-                const originalText = loginBtn.innerText;
-                loginBtn.innerText = 'VERIFYING...';
-                
-                try {
-                    await login(document.getElementById('email').value, document.getElementById('password').value);
-                } catch (err) {
-                    // Logic handled in auth.js, but caught here for safety
-                    console.error("Login process error:", err);
-                } finally {
-                    // SURGICAL FIX: Reset button state on failure so user can try again
-                    if (loginBtn) {
-                        loginBtn.disabled = false;
-                        loginBtn.innerText = originalText;
-                    }
-                }
-            });
-        }
+    <p class="mt-8 text-[10px] font-bold text-slate-400 uppercase tracking-widest opacity-50">
+        &copy; 2026 AQUATRACK INFRASTRUCTURE
+    </p>
+</div>
 
-        /**
-         * AUTO-LOGIN RECOVERY LOGIC
-         * Heals sessionStorage if Firebase session persists but cache is cleared.
-         */
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                const cachedRole = sessionStorage.getItem('aqt_user_role');
-                
-                if (!cachedRole) {
-                    console.log("Orphan session detected. Synchronizing metadata...");
-                    try {
-                        const snapshot = await db.ref(`users/${user.uid}`).once('value');
-                        const userData = snapshot.val();
-                        
-                        if (userData) {
-                            sessionStorage.setItem('aqt_user_name', userData.name);
-                            sessionStorage.setItem('aqt_user_role', userData.role);
-                            
-                            const paths = {
-                                reader: 'reader/reader.html',
-                                billing: 'billing/billing.html',
-                                admin: 'admin/admin.html'
-                            };
-                            window.location.replace(paths[userData.role] || 'index.html');
-                        }
-                    } catch (e) {
-                        console.error("Recovery sync failed:", e);
-                    }
-                } else {
-                    // Cache exists, immediate jump to dashboard
-                    const paths = {
-                        reader: 'reader/reader.html',
-                        billing: 'billing/billing.html',
-                        admin: 'admin/admin.html'
-                    };
-                    window.location.replace(paths[cachedRole] || 'index.html');
-                }
+<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+<script type="module">
+import './js/utils.js';
+import { login } from './js/auth.js';
+import { setTheme, initTheme } from './js/utils.js';
+import { auth, db } from './js/firebase-init.js';
+
+initTheme();
+const saved = localStorage.getItem('aqt_theme') || 'dark';
+window.toggleDarkMode(saved);
+
+// ─── ROLE → PATH MAP ─────────────────────────────────────────────────────────
+const ROLE_PATHS = {
+    reader:    'reader/reader.html',
+    billing:   'billing/billing.html',
+    admin:     'admin/admin.html',
+    homeowner: 'homeowner/ho.html',
+};
+
+const routeToRole = (role) => {
+    const path = ROLE_PATHS[role];
+    if (path) {
+        window.location.replace(path);
+    } else {
+        // Unknown role — sign out and stay on login with an error
+        import('./js/auth.js').then(m => m.logout?.());
+        import('./js/utils.js').then(m => m.toast?.('Unknown role. Contact admin.', 'error'));
+    }
+};
+
+// ─── LOGIN FORM ───────────────────────────────────────────────────────────────
+const loginForm = document.getElementById('login-form');
+const loginBtn  = document.getElementById('login-btn');
+
+if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        loginBtn.disabled  = true;
+        const originalText = loginBtn.innerText;
+        loginBtn.innerText = 'VERIFYING...';
+        try {
+            await login(
+                document.getElementById('email').value,
+                document.getElementById('password').value
+            );
+        } catch (err) {
+            console.error('Login process error:', err);
+        } finally {
+            if (loginBtn) {
+                loginBtn.disabled  = false;
+                loginBtn.innerText = originalText;
             }
-        });
-    </script>
+        }
+    });
+}
+
+// ─── AUTO-LOGIN RECOVERY ──────────────────────────────────────────────────────
+// Handles two cases:
+//   A) Firebase session persists but sessionStorage was cleared → re-fetch role from DB
+//   B) sessionStorage cache intact → route immediately without a DB round-trip
+auth.onAuthStateChanged(async (user) => {
+    if (!user) return; // Not logged in — stay on login page
+
+    const cachedRole = sessionStorage.getItem('aqt_user_role');
+
+    if (!cachedRole) {
+        // Case A: orphan session — re-sync from DB
+        console.log('Orphan session detected. Synchronizing metadata...');
+        try {
+            const snapshot = await db.ref(`users/${user.uid}`).once('value');
+            const userData = snapshot.val();
+            if (userData) {
+                sessionStorage.setItem('aqt_user_name', userData.name);
+                sessionStorage.setItem('aqt_user_role', userData.role);
+                routeToRole(userData.role);
+            } else {
+                console.error('No user record found in /users for uid:', user.uid);
+                import('./js/utils.js').then(m => m.toast?.('Account not configured. Contact admin.', 'error'));
+            }
+        } catch (e) {
+            console.error('Recovery sync failed:', e);
+        }
+    } else {
+        // Case B: cache intact — route immediately
+        routeToRole(cachedRole);
+    }
+});
+</script>
 </body>
 </html>
