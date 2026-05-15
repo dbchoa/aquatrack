@@ -713,6 +713,8 @@ const renderLedger = () => {
     const container = document.getElementById('ledger-container');
     const skeleton  = document.getElementById('ledger-skeleton');
     const search    = document.getElementById('search-input').value.toLowerCase();
+    const cycle     = document.getElementById('filter-cycle').value;
+    const year      = document.getElementById('filter-year').value || new Date().getFullYear().toString();
 
     if (skeleton) skeleton.remove();
     container.innerHTML = '';
