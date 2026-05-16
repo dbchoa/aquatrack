@@ -632,6 +632,7 @@
 		    } else {
 		        streets.forEach(street => {
 		            const { total, unread } = streetMap[street];
+		            const read = total - unread;
 		            const done = unread === 0;
 		            const div = document.createElement('div');
 		            div.className = 'flex items-center justify-between p-3 rounded-xl border ' +
@@ -645,8 +646,9 @@
 		                </div>
 		                <div class="flex items-center gap-2">
 		                    ${done
-		                        ? '<span class="text-[9px] font-black text-emerald-500 uppercase tracking-wide">Complete</span>'
-		                        : `<span class="text-[10px] font-black text-white bg-amber-500 px-2 py-0.5 rounded-full">${unread}</span>
+		                        ? `<span class="text-[10px] font-black text-emerald-500">${total}</span>
+		                           <span class="text-[9px] text-emerald-500 font-bold">/ ${total}</span>`
+		                        : `<span class="text-[10px] font-black ${read === 0 ? 'text-slate-400' : 'text-amber-400'}">${read}</span>
 		                           <span class="text-[9px] text-slate-400 font-bold">/ ${total}</span>`
 		                    }
 		                </div>
