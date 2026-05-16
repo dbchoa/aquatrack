@@ -101,25 +101,29 @@
 			</div>
         </div>
         
-        <!-- Cycle card — behind the HUD, peeks out from the top -->
-        <div id="cycle-display" class="relative z-0 -mb-5 mx-1 rounded-[2rem] bg-slate-900/60 dark:bg-slate-900/80 border border-water/15 px-8 pt-4 pb-10"></div>
-
-        <!-- HUD card — sits on top, overlapping the cycle card -->
-        <div class="glass-card p-8 rounded-32 border-b-4 dark:border-b-4 border-water mb-8 bg-white/90 dark:bg-slate-900/50 shadow-2xl relative z-10 overflow-hidden">
-            <button onclick="openGlobalUnreadModal()" class="absolute top-6 right-6 w-7 h-7 rounded-2xl bg-water/10 flex items-center justify-center text-waterDark active:scale-90 transition-transform z-20">
-                <i class="bi bi-question-circle-fill text-lg"></i>
-            </button>
-            <div class="flex justify-between items-end relative z-10">
-                <div>
-                    <p class="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.3em] mb-1">Cycle Completion</p>
-                    <h3 id="display-progress-pct" class="text-5xl font-black tracking-tighter text-slate-900 dark:text-white stat-glow">--<span class="text-lg opacity-50 ml-1">%</span></h3>
-                </div>
-                <div class="text-right">
-                    <span id="display-counts" class="text-[10px] font-bold text-waterDark dark:text-water uppercase tracking-widest">Initialising HUD...</span>
-                </div>
+        <!-- Stacked card wrapper — cycle card peeks behind HUD card -->
+        <div class="relative mb-8">
+            <!-- Cycle card: same border-radius as HUD, sits behind via z-0, top portion visible -->
+            <div id="cycle-display"
+                 class="absolute inset-x-0 top-0 z-0 rounded-[2rem] border border-water/30 dark:border-water/20 bg-slate-900 dark:bg-[#0a1628] px-8 pt-4 pb-4">
             </div>
-            <div class="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full mt-8 overflow-hidden">
-                <div id="progress-bar" class="h-full bg-waterDark dark:bg-water shadow-[0_0_15px_#4facfe] transition-all duration-1000 ease-out" style="width: 0%"></div>
+            <!-- HUD card: pushed down so cycle card top peeks above it -->
+            <div class="glass-card p-8 rounded-32 border-b-4 dark:border-b-4 border-water bg-white/90 dark:bg-slate-900/50 shadow-2xl relative z-10 overflow-hidden mt-9">
+                <button onclick="openGlobalUnreadModal()" class="absolute top-6 right-6 w-7 h-7 rounded-2xl bg-water/10 flex items-center justify-center text-waterDark active:scale-90 transition-transform z-20">
+                    <i class="bi bi-question-circle-fill text-lg"></i>
+                </button>
+                <div class="flex justify-between items-end relative z-10">
+                    <div>
+                        <p class="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.3em] mb-1">Cycle Completion</p>
+                        <h3 id="display-progress-pct" class="text-5xl font-black tracking-tighter text-slate-900 dark:text-white stat-glow">--<span class="text-lg opacity-50 ml-1">%</span></h3>
+                    </div>
+                    <div class="text-right">
+                        <span id="display-counts" class="text-[10px] font-bold text-waterDark dark:text-water uppercase tracking-widest">Initialising HUD...</span>
+                    </div>
+                </div>
+                <div class="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full mt-8 overflow-hidden">
+                    <div id="progress-bar" class="h-full bg-waterDark dark:bg-water shadow-[0_0_15px_#4facfe] transition-all duration-1000 ease-out" style="width: 0%"></div>
+                </div>
             </div>
         </div>
 
@@ -329,21 +333,20 @@
 		    if (!el) return;
 		    const inSync = !serverBillingCycle || serverBillingCycle === deviceCycle;
 		    if (inSync) {
-		        // Normal: single row centered — only the top ~36px of this card peeks out
 		        el.innerHTML = `
 		            <div class="flex items-center justify-center gap-3">
 		                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Active Cycle</span>
-		                <span class="text-[12px] font-black text-waterDark dark:text-water tracking-widest">${deviceCycle}</span>
+		                <span class="text-[13px] font-black text-waterDark dark:text-water tracking-widest">${deviceCycle}</span>
 		            </div>
 		        `;
-		        el.className = 'relative z-0 -mb-5 mx-1 rounded-[2rem] bg-slate-900/60 dark:bg-slate-900/80 border border-water/15 px-8 pt-4 pb-10';
+		        el.classList.remove('border-amber-500/30');
+		        el.classList.add('border-water/30', 'dark:border-water/20');
 		    } else {
-		        // Mismatch: two rows — give a bit more peek height
 		        el.innerHTML = `
-		            <div class="flex flex-col items-center gap-1">
+		            <div class="flex flex-col items-center gap-0.5">
 		                <div class="flex items-center gap-2">
-		                    <i class="bi bi-exclamation-triangle-fill text-[10px] text-amber-500"></i>
-		                    <span class="text-[9px] font-black text-amber-500 uppercase tracking-widest">Cycle Mismatch</span>
+		                    <i class="bi bi-exclamation-triangle-fill text-[9px] text-amber-400"></i>
+		                    <span class="text-[9px] font-black text-amber-400 uppercase tracking-widest">Cycle Mismatch — Check device date</span>
 		                </div>
 		                <div class="flex items-center gap-4">
 		                    <span class="text-[9px] font-bold text-slate-400">Server <span class="text-white font-black">${serverBillingCycle}</span></span>
@@ -351,7 +354,8 @@
 		                </div>
 		            </div>
 		        `;
-		        el.className = 'relative z-0 -mb-7 mx-1 rounded-[2rem] bg-slate-900/60 dark:bg-slate-900/80 border border-amber-500/30 px-8 pt-4 pb-12';
+		        el.classList.remove('border-water/30', 'dark:border-water/20');
+		        el.classList.add('border-amber-500/30');
 		    }
 		};
 
