@@ -102,7 +102,7 @@
         </div>
         
         <!-- Cycle card — behind the HUD, peeks out from the top -->
-        <div id="cycle-display" class="relative z-0 -mb-6 mx-2 rounded-[2rem] bg-slate-800/80 dark:bg-slate-800/90 border border-water/20 shadow-lg px-8 pt-4 pb-10"></div>
+        <div id="cycle-display" class="relative z-0 -mb-5 mx-1 rounded-[2rem] bg-slate-900/60 dark:bg-slate-900/80 border border-water/15 px-8 pt-4 pb-10"></div>
 
         <!-- HUD card — sits on top, overlapping the cycle card -->
         <div class="glass-card p-8 rounded-32 border-b-4 dark:border-b-4 border-water mb-8 bg-white/90 dark:bg-slate-900/50 shadow-2xl relative z-10 overflow-hidden">
@@ -336,7 +336,7 @@
 		                <span class="text-[12px] font-black text-waterDark dark:text-water tracking-widest">${deviceCycle}</span>
 		            </div>
 		        `;
-		        el.className = 'relative z-0 -mb-6 mx-2 rounded-[2rem] bg-slate-800/80 dark:bg-slate-800/90 border border-water/20 shadow-lg px-8 pt-4 pb-10';
+		        el.className = 'relative z-0 -mb-5 mx-1 rounded-[2rem] bg-slate-900/60 dark:bg-slate-900/80 border border-water/15 px-8 pt-4 pb-10';
 		    } else {
 		        // Mismatch: two rows — give a bit more peek height
 		        el.innerHTML = `
@@ -351,7 +351,7 @@
 		                </div>
 		            </div>
 		        `;
-		        el.className = 'relative z-0 -mb-8 mx-2 rounded-[2rem] bg-amber-900/40 dark:bg-amber-900/50 border border-amber-500/30 shadow-lg px-8 pt-4 pb-12';
+		        el.className = 'relative z-0 -mb-7 mx-1 rounded-[2rem] bg-slate-900/60 dark:bg-slate-900/80 border border-amber-500/30 px-8 pt-4 pb-12';
 		    }
 		};
 
