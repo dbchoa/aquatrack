@@ -1389,7 +1389,7 @@ window.closeConfirmModal = () => {
 auth.onAuthStateChanged(async (user) => {
     if (!user) return window.location.replace('../index.html');
 
-    // ── ROLE GUARD ────────────────────────────────────────────────────────────
+    // ── ROLE GUARD! ────────────────────────────────────────────────────────────
     try {
         const userSnap = await db.ref(`users/${user.uid}`).once('value');
         const userData  = userSnap.val();
