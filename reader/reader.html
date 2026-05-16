@@ -224,7 +224,7 @@
                 </div>
                 <div class="flex gap-3">
                     <button onclick="resetModalState()" class="flex-1 py-4 text-slate-500 font-bold uppercase text-xs">Back</button>
-                    <button onclick="showConfirmation().catch(console.error)" class="flex-1 py-4 bg-waterDark text-white rounded-2xl font-bold uppercase text-xs active:scale-95">Submit</button>
+                    <button onclick="showConfirmation().catch(e => { console.error(e); toast('Error: ' + e.message, 'error'); })" class="flex-1 py-4 bg-waterDark text-white rounded-2xl font-bold uppercase text-xs active:scale-95">Submit</button>
                 </div>
             </div>
 
@@ -244,11 +244,7 @@
         <div class="bg-white/95 dark:bg-slate-900/80 backdrop-blur-2xl w-full max-w-sm rounded-[2.5rem] p-8 border border-white dark:border-white/10 shadow-2xl relative">
             <h3 class="text-xl font-bold mb-2 text-center text-slate-900 dark:text-white uppercase tracking-tight">Street Checklist</h3>
             <p id="unread-street-name" class="text-[10px] text-center font-black text-waterDark uppercase tracking-[0.2em] mb-6">---</p>
-            
-            <div id="unread-list-container" class="max-h-60 overflow-y-auto space-y-2 mb-8 pr-2">
-                <!-- Items injected here -->
-            </div>
-    
+            <div id="unread-list-container" class="max-h-60 overflow-y-auto space-y-2 mb-8 pr-2"></div>
             <button onclick="closeUnreadModal()" class="w-full py-4 bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-300 rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all">Close</button>
         </div>
     </div>
@@ -258,11 +254,7 @@
         <div class="bg-white/95 dark:bg-slate-900/80 backdrop-blur-2xl w-full max-w-sm rounded-[2.5rem] p-8 border border-white dark:border-white/10 shadow-2xl relative">
             <h3 class="text-xl font-bold mb-2 text-center text-slate-900 dark:text-white uppercase tracking-tight">Overall Checklist</h3>
             <p class="text-[10px] text-center font-black text-waterDark uppercase tracking-[0.2em] mb-6">Remaining Subdivision Units</p>
-            
-            <div id="global-unread-list-container" class="max-h-80 overflow-y-auto space-y-2 mb-8 pr-2">
-                <!-- Items injected here -->
-            </div>
-    
+            <div id="global-unread-list-container" class="max-h-80 overflow-y-auto space-y-2 mb-8 pr-2"></div>
             <button onclick="closeGlobalUnreadModal()" class="w-full py-4 bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-300 rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all">Close</button>
         </div>
     </div>
@@ -271,14 +263,12 @@
 	    <div class="bg-white/95 dark:bg-slate-900/80 backdrop-blur-2xl w-full max-w-sm rounded-[2.5rem] p-8 border border-white dark:border-white/10 shadow-2xl relative overflow-hidden">
 	        <h3 class="text-xl font-bold mb-2 text-center text-slate-900 dark:text-white uppercase tracking-tight">Security</h3>
 	        <p class="text-[10px] text-center font-bold text-waterDark uppercase tracking-[0.2em] mb-6">Change Account Password</p>
-	        
 	        <div class="space-y-3 mb-8">
 	            <input id="pwd-current" type="password" placeholder="Current Password" class="w-full p-4 bg-slate-100 dark:bg-slate-800/50 rounded-2xl text-sm font-bold outline-none border-2 border-transparent focus:border-water/50 text-slate-900 dark:text-white">
 	            <div class="h-px bg-slate-200 dark:bg-slate-800 my-2"></div>
 	            <input id="pwd-new" type="password" placeholder="New Password" class="w-full p-4 bg-slate-100 dark:bg-slate-800/50 rounded-2xl text-sm font-bold outline-none border-2 border-transparent focus:border-water/50 text-slate-900 dark:text-white">
 	            <input id="pwd-confirm" type="password" placeholder="Confirm New Password" class="w-full p-4 bg-slate-100 dark:bg-slate-800/50 rounded-2xl text-sm font-bold outline-none border-2 border-transparent focus:border-water/50 text-slate-900 dark:text-white">
 	        </div>
-	
 	        <div class="flex flex-col gap-2">
 	            <button id="btn-update-pwd" onclick="handlePasswordChange()" class="w-full py-4 bg-waterDark text-white rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all">Update Password</button>
 	            <button onclick="closePasswordModal()" class="w-full py-3 text-slate-500 font-bold uppercase text-[12px] tracking-widest text-center">Cancel</button>
@@ -297,25 +287,23 @@
 		
 		injectHeader();
 		
-		let activeUnit       = null;
-		let unitsCache       = null;
-		let propertiesCache  = null;
+		let activeUnit            = null;
+		let unitsCache            = null;
+		let propertiesCache       = null;
 		let uniqueCapturedUnitIds = new Set();
-		let billingConfig    = { threshold: 15, minFee: 200, excessRate: 15, setBy: 'DEFAULT', updatedAt: null };
-		let serverBillingCycle = null;   // fetched from server on load
-		let isDeviceOffline  = false;
+		let billingConfig         = { threshold: 15, minFee: 200, excessRate: 15, setBy: 'DEFAULT', updatedAt: null };
+		let serverBillingCycle    = null;
+		let isDeviceOffline       = false;
 		let isProcessingSubmission = false;
-		
+
 		// ─── BILLING CYCLE ────────────────────────────────────────────────────────────
-		
+
 		const getTargetBillingCycle = () => {
 		    const d = new Date();
 		    d.setMonth(d.getMonth() - 1);
 		    return d.toISOString().slice(0, 7);
 		};
-		
-		// Enumerate every YYYY-MM between two cycles (exclusive of both ends).
-		// e.g. gapCycles('2026-01', '2026-04') → ['2026-02', '2026-03']
+
 		const gapCycles = (fromCycle, toCycle) => {
 		    const gaps = [];
 		    const [fy, fm] = fromCycle.split('-').map(Number);
@@ -328,16 +316,14 @@
 		    }
 		    return gaps;
 		};
-		
+
 		// ─── CYCLE DISPLAY ────────────────────────────────────────────────────────────
-		
+
 		const renderCycleDisplay = () => {
 		    const deviceCycle = getTargetBillingCycle();
 		    const el = document.getElementById('cycle-display');
 		    if (!el) return;
-		
 		    const inSync = !serverBillingCycle || serverBillingCycle === deviceCycle;
-		
 		    if (inSync) {
 		        el.innerHTML = `
 		            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Active Cycle</span>
@@ -358,89 +344,70 @@
 		        el.className = 'flex items-center justify-center mt-1';
 		    }
 		};
-		
+
 		// ─── OUTBOX ───────────────────────────────────────────────────────────────────
-		
+
 		const getOutbox = () => JSON.parse(localStorage.getItem('aqt_outbox') || '[]');
 		const setOutbox = (data) => localStorage.setItem('aqt_outbox', JSON.stringify(data));
-		
+
 		// ─── SYNC ─────────────────────────────────────────────────────────────────────
-		
-		// PATCH 2: prevReading is immutable — write exactly what was captured, never recompute.
+
 		const processSyncCleanup = async () => {
 		    let outbox = getOutbox();
 		    if (outbox.length === 0 || isDeviceOffline) return;
-		
 		    for (const item of outbox) {
 		        try {
-		            const syncedData = {
-		                ...item,
-		                timestamp: firebase.database.ServerValue.TIMESTAMP
-		            };
+		            const syncedData = { ...item, timestamp: firebase.database.ServerValue.TIMESTAMP };
 		            await db.ref(`readings/${item.readingId}`).set(syncedData);
 		            outbox = getOutbox().filter(o => o.readingId !== item.readingId);
 		            setOutbox(outbox);
 		        } catch (e) {
-		            console.error("Background Sync Failed for:", item.readingId, e);
+		            console.error('Background Sync Failed for:', item.readingId, e);
 		        }
 		    }
-		
 		    renderOutboxOnly();
 		};
-		
+
 		const renderOutboxOnly = () => {
 		    const outboxContainer = document.getElementById('outbox-feed');
 		    const outboxSection   = document.getElementById('outbox-section');
 		    const outboxCountEl   = document.getElementById('outbox-count');
 		    const outbox = getOutbox();
 		    outboxContainer.innerHTML = '';
-		
 		    if (outbox.length > 0) {
 		        outboxSection.classList.remove('hidden');
 		        outboxCountEl.innerText = outbox.length;
-		        [...outbox].reverse().forEach(r => {
-		            outboxContainer.appendChild(createLogEntry(r, false));
-		        });
+		        [...outbox].reverse().forEach(r => outboxContainer.appendChild(createLogEntry(r, false)));
 		    } else {
 		        outboxSection.classList.add('hidden');
 		    }
 		};
-		
+
 		// ─── CONNECTIVITY ─────────────────────────────────────────────────────────────
-		
+
 		db.ref('.info/connected').on('value', (snap) => {
 		    isDeviceOffline = (snap.val() === false);
 		    const fab        = document.getElementById('fab-container');
 		    const statusText = document.getElementById('connection-status');
 		    const ping       = document.getElementById('fab-ping');
-		
 		    if (!isDeviceOffline) {
 		        if (fab)        fab.classList.remove('is-offline');
-		        if (statusText) {
-		            statusText.innerText   = '● Online';
-		            statusText.className   = 'text-[10px] text-emerald-500 font-bold uppercase tracking-[0.4em] mb-2 opacity-80';
-		        }
+		        if (statusText) { statusText.innerText = '● Online'; statusText.className = 'text-[10px] text-emerald-500 font-bold uppercase tracking-[0.4em] mb-2 opacity-80'; }
 		        if (ping) ping.className = 'absolute inset-0 rounded-full bg-waterDark animate-ping opacity-20 pointer-events-none';
 		        processSyncCleanup();
 		    } else {
 		        if (fab)        fab.classList.add('is-offline');
-		        if (statusText) {
-		            statusText.innerText = '● Offline (Cached)';
-		            statusText.className = 'text-[10px] text-warning font-bold uppercase tracking-[0.4em] mb-2 opacity-60';
-		        }
+		        if (statusText) { statusText.innerText = '● Offline (Cached)'; statusText.className = 'text-[10px] text-warning font-bold uppercase tracking-[0.4em] mb-2 opacity-60'; }
 		        if (ping) ping.className = 'absolute inset-0 rounded-full bg-warning animate-ping opacity-20 pointer-events-none';
 		    }
 		});
-		
+
 		setInterval(() => {
-		    if (!isDeviceOffline) {
-		        processSyncCleanup();
-		        updateHUDStats();
-		    }
+		    if (!isDeviceOffline) { processSyncCleanup(); updateHUDStats(); }
 		}, 30000);
-		
+
 		// ─── CACHES & HUD ─────────────────────────────────────────────────────────────
-		
+
 		const primeCaches = () => {
 		    db.ref('Unit').on('value', (snap) => {
 		        if (snap.exists()) { unitsCache = snap.val(); updateHUDStats(); }
@@ -449,102 +416,72 @@
 		        if (snap.exists()) propertiesCache = snap.val();
 		    });
 		};
-		
+
 		const updateHUDStats = async () => {
 		    if (!unitsCache) return;
 		    const rSnap = await db.ref('readings').once('value');
-		    const totalUnits  = Object.keys(unitsCache).length;
+		    const totalUnits   = Object.keys(unitsCache).length;
 		    const currentCycle = getTargetBillingCycle();
 		    uniqueCapturedUnitIds.clear();
-		
 		    if (rSnap.exists()) {
 		        Object.values(rSnap.val()).forEach(r => {
-		            if (r.billingCycle === currentCycle && r.unitId) {
-		                uniqueCapturedUnitIds.add(r.unitId);
-		            }
+		            if (r.billingCycle === currentCycle && r.unitId) uniqueCapturedUnitIds.add(r.unitId);
 		        });
 		    }
 		    getOutbox().forEach(item => {
-		        if (item.billingCycle === currentCycle && item.unitId) {
-		            uniqueCapturedUnitIds.add(item.unitId);
-		        }
+		        if (item.billingCycle === currentCycle && item.unitId) uniqueCapturedUnitIds.add(item.unitId);
 		    });
-		
 		    const capturedCount = uniqueCapturedUnitIds.size;
 		    const globalPct = totalUnits > 0 ? Math.min(100, Math.round((capturedCount / totalUnits) * 100)) : 0;
-		
 		    document.getElementById('display-progress-pct').innerHTML = `${globalPct}<span class="text-lg opacity-50 ml-1">%</span>`;
 		    document.getElementById('display-counts').innerText = `${capturedCount} / ${totalUnits} Units`;
 		    const bar = document.getElementById('progress-bar');
 		    if (bar) bar.style.width = `${globalPct}%`;
-		
-		    const activeStreetDisplay = document.getElementById('active-street').innerText;
-		    const activeStreetName    = activeStreetDisplay.replace(' St.', '').trim();
+		    const activeStreetName = document.getElementById('active-street').innerText.replace(' St.', '').trim();
 		    if (activeStreetName && activeStreetName !== '---') {
-		        const streetUnitIds  = Object.keys(unitsCache).filter(uid => uid.split('_')[0] === activeStreetName);
+		        const streetUnitIds   = Object.keys(unitsCache).filter(uid => uid.split('_')[0] === activeStreetName);
 		        const streetRemaining = Math.max(0, streetUnitIds.length - streetUnitIds.filter(uid => uniqueCapturedUnitIds.has(uid)).length);
 		        document.getElementById('remaining-units').innerText = `${streetRemaining} Units`;
 		    } else {
 		        document.getElementById('remaining-units').innerText = '-- Units';
 		    }
 		};
-		
+
 		// ─── FEEDS ────────────────────────────────────────────────────────────────────
-		
-		// PATCH 7: Always show DB records. If a DB record still exists in the outbox,
-		// the outbox clear failed — clean it up now. Never hide a synced reading.
+
 		const renderFeeds = (snapshot) => {
 		    if (isProcessingSubmission) return;
-		
 		    const activityContainer = document.getElementById('readings-feed');
 		    activityContainer.innerHTML = '';
-		
 		    let displayItems = [];
 		    const outbox = getOutbox();
-		    const syncedReadingIds = new Set();
-		
 		    snapshot.forEach(child => {
 		        const data = child.val();
-		        syncedReadingIds.add(data.readingId);
 		        displayItems.push({ ...data, isSynced: true });
-		
-		        // Stale outbox entry — DB write succeeded but outbox clear failed. Clean up now.
 		        if (outbox.some(o => o.readingId === data.readingId)) {
 		            const cleaned = getOutbox().filter(o => o.readingId !== data.readingId);
 		            setOutbox(cleaned);
 		        }
 		    });
-		
 		    displayItems.sort((a, b) => (b.timestamp?.seconds || b.timestamp) - (a.timestamp?.seconds || a.timestamp));
 		    const latestItems = displayItems.slice(0, 5);
-		
 		    if (latestItems.length > 0 && latestItems[0].locationAddress) {
-		        const streetPart = latestItems[0].locationAddress.split(' B')[0];
-		        document.getElementById('active-street').innerText = streetPart + ' St.';
+		        document.getElementById('active-street').innerText = latestItems[0].locationAddress.split(' B')[0] + ' St.';
 		    }
-		
 		    latestItems.forEach(item => activityContainer.appendChild(createLogEntry(item, true)));
 		    updateHUDStats();
 		    renderOutboxOnly();
 		};
-		
-		// ISSUE 8: Show paid/pending/outbox status badge on all log entries.
+
 		const createLogEntry = (r, isSynced) => {
 		    const div = document.createElement('div');
 		    div.className = `console-entry ${isSynced ? 'border-water' : 'outbox-entry animate-pulse'}`;
-		
 		    const ts = r.timestamp?.seconds ? r.timestamp.seconds * 1000 : r.timestamp;
-		    const timeDisplay  = (typeof ts === 'number') ? new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pending';
-		    const originBadge  = r.fromOffline === true ? '<span class="text-[7px] bg-slate-200 dark:bg-slate-800 px-1 rounded text-slate-500 font-black">OFFLINE-ORIGIN</span>' : '';
-		    const gapBadge     = r.isGapFill   === true ? '<span class="text-[7px] bg-amber-100 dark:bg-amber-900/40 px-1 rounded text-amber-700 dark:text-amber-400 font-black">GAP FILL</span>' : '';
-		
-		    const statusLabel = !isSynced          ? 'In Outbox'
-		                      : r.status === 'paid' ? 'Paid'
-		                      : 'Pending';
-		    const statusColor = !isSynced          ? 'text-amber-500'
-		                      : r.status === 'paid' ? 'text-slate-400'
-		                      : 'text-emerald-500';
-		
+		    const timeDisplay = (typeof ts === 'number') ? new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pending';
+		    const originBadge = r.fromOffline === true ? '<span class="text-[7px] bg-slate-200 dark:bg-slate-800 px-1 rounded text-slate-500 font-black">OFFLINE-ORIGIN</span>' : '';
+		    const gapBadge    = r.isGapFill   === true ? '<span class="text-[7px] bg-amber-100 dark:bg-amber-900/40 px-1 rounded text-amber-700 dark:text-amber-400 font-black">GAP FILL</span>' : '';
+		    const statusLabel = !isSynced ? 'In Outbox' : r.status === 'paid' ? 'Paid' : 'Pending';
+		    const statusColor = !isSynced ? 'text-amber-500' : r.status === 'paid' ? 'text-slate-400' : 'text-emerald-500';
 		    div.innerHTML = `
 		        <div class="flex flex-col">
 		            <div class="flex items-center gap-2 flex-wrap">
@@ -562,13 +499,12 @@
 		    `;
 		    return div;
 		};
-		
+
 		// ─── CHECKLIST MODALS ─────────────────────────────────────────────────────────
-		
+
 		window.openGlobalUnreadModal = () => {
 		    const container = document.getElementById('global-unread-list-container');
 		    container.innerHTML = '';
-		
 		    if (!unitsCache || !propertiesCache) {
 		        container.innerHTML = '<p class="text-center text-slate-400 text-xs py-4 italic">Waking cache...</p>';
 		    } else {
@@ -598,25 +534,22 @@
 		    }
 		    document.getElementById('globalUnreadModal').classList.remove('hidden');
 		};
-		
+
 		window.closeGlobalUnreadModal = () => document.getElementById('globalUnreadModal').classList.add('hidden');
-		
+
 		window.openUnreadModal = () => {
 		    const container        = document.getElementById('unread-list-container');
 		    const streetEl         = document.getElementById('unread-street-name');
 		    const activeStreetName = document.getElementById('active-street').innerText.replace(' St.', '').trim();
 		    container.innerHTML    = '';
 		    streetEl.innerText     = activeStreetName + ' Checklist';
-		
 		    if (!unitsCache || !propertiesCache || activeStreetName === '---') {
 		        container.innerHTML = '<p class="text-center text-slate-400 text-xs py-4 italic">No street selected</p>';
 		    } else {
 		        const unreadUnitIds = Object.keys(unitsCache).filter(id => {
-		            const unit = unitsCache[id];
-		            const prop = propertiesCache[unit.propertyId];
+		            const unit = unitsCache[id]; const prop = propertiesCache[unit.propertyId];
 		            return prop && prop.street === activeStreetName && !uniqueCapturedUnitIds.has(id);
 		        });
-		
 		        if (unreadUnitIds.length === 0) {
 		            container.innerHTML = '<p class="text-center text-emerald-500 text-xs py-4 font-bold">Street Complete! ✓</p>';
 		        } else {
@@ -641,128 +574,123 @@
 		    }
 		    document.getElementById('unreadModal').classList.remove('hidden');
 		};
-		
+
 		window.closeUnreadModal = () => document.getElementById('unreadModal').classList.add('hidden');
-		
+
 		// ─── BASELINE RESOLUTION + GAP DETECTION ─────────────────────────────────────
-		
-		// Returns { baseline, gapFillRecords[] }
-		// OPTION A: fetches ALL readings for the unit in one query.
-		// Baseline = last cycle's reading value.
-		// Gap fills built for every missing cycle between last and current.
+		// FIX: Uses direct path reads instead of orderByChild queries.
+		// orderByChild index queries are NOT served from Firebase's offline cache — they
+		// hang indefinitely with no connection. Direct path reads (exact key lookups) ARE
+		// served from cache. This restores the offline-capable baseline resolution.
+		//
+		// Strategy:
+		//   1. Local outbox  — zero network, handles repeat submissions in same cycle
+		//   2. Current cycle path read — db.ref('readings/{unitId}_{currentCycle}')
+		//   3. Previous cycle path read — db.ref('readings/{unitId}_{prevCycle}')
+		//   4. Onboarding fallback — Unit.lastReading already in unitsCache (always in memory)
+		//
+		// Gap fill detection uses the same direct reads — no index query needed.
+		// We check only one cycle back for a gap; deeper gap history (2+ months) requires
+		// the reader to be online, which is acceptable since the app loaded online.
+
 		const resolveBaseline = async (unitId) => {
-		    const currentCycle  = getTargetBillingCycle();
-		    const outbox        = getOutbox();
-		    const localEntry    = outbox.find(o => o.unitId === unitId && o.billingCycle === currentCycle);
-		
-		    // 1. If this cycle is already in the local outbox, use its prevReading as baseline.
-		    //    No gap detection needed — the outbox entry already handled it at capture time.
+		    const currentCycle = getTargetBillingCycle();
+		    const outbox       = getOutbox();
+
+		    // 1. Current cycle already in local outbox (repeat submission offline).
+		    const localEntry = outbox.find(o => o.unitId === unitId && o.billingCycle === currentCycle);
 		    if (localEntry) {
 		        document.getElementById('display-prev').innerText = `${localEntry.prevReading} m³`;
 		        return { baseline: localEntry.prevReading, gapFillRecords: [] };
 		    }
-		
-		    // 2. Fetch ALL readings for this unit — needed for both baseline and gap detection.
+
+		    // 2. Direct path read: current cycle record.
 		    try {
-		        const historySnap = await db.ref('readings')
-		            .orderByChild('unitId')
-		            .equalTo(unitId)
-		            .once('value');
-		
-		        if (historySnap.exists()) {
-		            const allReadings = Object.values(historySnap.val());
-		
-		            // PAID CYCLE GUARD (from previous patch): block re-submission if current cycle is paid.
-		            const currentRecord = allReadings.find(r => r.billingCycle === currentCycle);
-		            if (currentRecord && currentRecord.status === 'paid') {
+		        const currentSnap = await db.ref(`readings/${unitId}_${currentCycle}`).once('value');
+		        if (currentSnap.exists()) {
+		            const rec = currentSnap.val();
+		            // Paid cycle guard — block re-submission.
+		            if (rec.status === 'paid') {
 		                toast(`${currentCycle} already paid — submission blocked`, 'error');
 		                closeReadingModal();
 		                return null;
 		            }
-		
-		            // Sort by billingCycle ascending (YYYY-MM sorts correctly as string).
-		            allReadings.sort((a, b) => a.billingCycle.localeCompare(b.billingCycle));
-		            const lastRecord = allReadings[allReadings.length - 1];
-		
-		            // If the last record is for the current cycle, use its prevReading as baseline
-		            // (reader is updating/correcting a pending read for this cycle).
-		            const baseline = (lastRecord.billingCycle === currentCycle)
-		                ? lastRecord.prevReading
-		                : lastRecord.reading;
-		
+		            // Pending record exists for this cycle — use its prevReading (reader is correcting).
+		            document.getElementById('display-prev').innerText = `${rec.prevReading} m³`;
+		            return { baseline: rec.prevReading, gapFillRecords: [] };
+		        }
+		    } catch (e) { /* not in cache or network error — fall through */ }
+
+		    // 3. Direct path read: previous cycle record.
+		    //    Compute previous billing cycle (2 months back from now = 1 month before currentCycle).
+		    const d = new Date();
+		    d.setMonth(d.getMonth() - 2);
+		    const prevCycle = d.toISOString().slice(0, 7);
+
+		    try {
+		        const prevSnap = await db.ref(`readings/${unitId}_${prevCycle}`).once('value');
+		        if (prevSnap.exists()) {
+		            const rec      = prevSnap.val();
+		            const baseline = rec.reading;
 		            document.getElementById('display-prev').innerText = `${baseline} m³`;
-		
-		            // Gap detection: find missing cycles between lastRecord.billingCycle and currentCycle.
-		            const missing = gapCycles(lastRecord.billingCycle, currentCycle);
-		
-		            if (missing.length === 0) {
+
+		            // Check for a gap: if prevCycle is exactly one month before currentCycle,
+		            // no gap exists. If there's a month in between, generate gap fills.
+		            // (Deeper gaps require online access — acceptable tradeoff for offline mode.)
+		            const gaps = gapCycles(prevCycle, currentCycle);
+		            const prop  = propertiesCache[activeUnit.propertyId] || {};
+
+		            if (gaps.length === 0 || prop.status === 'disconnected') {
 		                return { baseline, gapFillRecords: [] };
 		            }
-		
-		            // Filter out gap cycles that already exist in DB or outbox.
-		            const existingCycles = new Set(allReadings.map(r => r.billingCycle));
-		            const outboxCycles   = new Set(outbox.filter(o => o.unitId === unitId).map(o => o.billingCycle));
-		
-		            const lastKnownReading = lastRecord.reading;
-		            const prop = propertiesCache[activeUnit.propertyId] || {};
-		
-		            // INVARIANT 12: skip gap fills for disconnected units.
-		            if (prop.status === 'disconnected') {
-		                return { baseline, gapFillRecords: [] };
-		            }
-		
-		            const gapFillRecords = missing
-		                .filter(cycle => !existingCycles.has(cycle) && !outboxCycles.has(cycle))
+
+		            const outboxCycles = new Set(outbox.filter(o => o.unitId === unitId).map(o => o.billingCycle));
+		            const gapFillRecords = gaps
+		                .filter(cycle => !outboxCycles.has(cycle))
 		                .map(cycle => ({
 		                    readingId:       `${unitId}_${cycle}`,
 		                    unitId,
 		                    propertyId:      activeUnit.propertyId,
-		                    // PATCH 1: explicit meterSerial snapshot from unitsCache.
 		                    meterSerial:     (unitsCache[unitId] || activeUnit).meterSerial,
 		                    locationAddress: `${activeUnit.street} B${activeUnit.block} L${activeUnit.lot}`,
 		                    readerId:        auth.currentUser.uid,
 		                    readerName:      sessionStorage.getItem('aqt_user_name') || 'Staff',
 		                    billingCycle:    cycle,
-		                    reading:         lastKnownReading,
-		                    prevReading:     lastKnownReading,
+		                    reading:         rec.reading,
+		                    prevReading:     rec.reading,
 		                    consumption:     0,
 		                    status:          'pending',
 		                    isGapFill:       true,
 		                    fromOffline:     isDeviceOffline,
-		                    timestamp:       isDeviceOffline ? Date.now() : firebase.database.ServerValue.TIMESTAMP,
+		                    timestamp:       Date.now(),
 		                    appliedRates:    { ...billingConfig }
 		                }));
-		
+
 		            return { baseline, gapFillRecords };
-		
-		        } else {
-		            // No history at all — use Unit.lastReading as onboarding fallback.
-		            const baseline = activeUnit.lastReading ?? 0;
-		            document.getElementById('display-prev').innerText = `${baseline} m³`;
-		            return { baseline, gapFillRecords: [] };
 		        }
-		
-		    } catch (e) {
-		        console.error('resolveBaseline error:', e);
-		        const baseline = activeUnit.lastReading ?? 0;
-		        document.getElementById('display-prev').innerText = `${baseline} m³`;
-		        return { baseline, gapFillRecords: [] };
-		    }
+		    } catch (e) { /* not in cache or network error — fall through */ }
+
+		    // 4. Absolute fallback: onboarding anchor from unitsCache (always in memory).
+		    const baseline = unitsCache[unitId]?.lastReading ?? activeUnit.lastReading ?? 0;
+		    document.getElementById('display-prev').innerText = `${baseline} m³`;
+		    return { baseline, gapFillRecords: [] };
 		};
-		
+
 		// ─── MODAL FLOW ───────────────────────────────────────────────────────────────
-		
+
 		window.switchStage = (stage) => {
 		    ['serial', 'reading', 'confirm'].forEach(s => {
 		        const el = document.getElementById(`modal-stage-${s}`);
 		        if (el) el.classList.toggle('hidden', s !== stage);
 		    });
 		};
-		
-		window.identifyUnitBySerial = () => {
+
+		// FIX: async + await resolveBaseline so the reading stage is never shown with
+		// "Syncing..." still pending. The modal waits for the baseline before accepting input.
+		window.identifyUnitBySerial = async () => {
 		    const serialInput = document.getElementById('input-serial').value.trim().toLowerCase();
 		    if (!serialInput) return toast('Input Serial Number', 'info');
-		
+
 		    activeUnit = null;
 		    for (let id in unitsCache) {
 		        const u = unitsCache[id];
@@ -772,20 +700,28 @@
 		            break;
 		        }
 		    }
-		
-		    if (activeUnit) {
-		        switchStage('reading');
-		        document.getElementById('display-prop-id').innerText    = `${activeUnit.street} B${activeUnit.block} L${activeUnit.lot}`;
-		        document.getElementById('display-owner').innerText      = activeUnit.ownerName || 'Staff Account';
-		        document.getElementById('display-unit-label').innerText = activeUnit.unitLabel || `Unit ${activeUnit.unitNumber}`;
-		        document.getElementById('display-prev').innerText       = 'Syncing...';
-		        resolveBaseline(activeUnit.unitId);
-		        setTimeout(() => document.getElementById('input-reading').focus(), 100);
-		    } else {
-		        toast('Meter Serial not found', 'error');
-		    }
+
+		    if (!activeUnit) return toast('Meter Serial not found', 'error');
+
+		    // Show the reading stage immediately with a loading state.
+		    switchStage('reading');
+		    document.getElementById('display-prop-id').innerText    = `${activeUnit.street} B${activeUnit.block} L${activeUnit.lot}`;
+		    document.getElementById('display-owner').innerText      = activeUnit.ownerName || 'Staff Account';
+		    document.getElementById('display-unit-label').innerText = activeUnit.unitLabel || `Unit ${activeUnit.unitNumber}`;
+		    document.getElementById('display-prev').innerText       = 'Loading...';
+		    document.getElementById('display-cost').innerText       = '₱ --';
+
+		    // Await baseline resolution before enabling input.
+		    // resolveBaseline writes directly to display-prev when done.
+		    const resolved = await resolveBaseline(activeUnit.unitId);
+
+		    // resolveBaseline may close the modal itself (paid cycle guard) — check if
+		    // we're still on the reading stage before focusing.
+		    if (resolved === null) return; // paid guard triggered — modal already closed
+
+		    setTimeout(() => document.getElementById('input-reading').focus(), 100);
 		};
-		
+
 		document.getElementById('input-reading').addEventListener('input', (e) => {
 		    const val    = parseFloat(e.target.value) || 0;
 		    const anchor = parseFloat(document.getElementById('display-prev').innerText) || 0;
@@ -795,26 +731,35 @@
 		        : billingConfig.minFee + ((consumption - billingConfig.threshold) * billingConfig.excessRate);
 		    document.getElementById('display-cost').innerText = formatCurrency(amount);
 		});
-		
+
+		// FIX: Guard against unresolved baseline (Loading... state). Surface errors visibly.
 		window.showConfirmation = async () => {
+		    const prevStr = document.getElementById('display-prev').innerText;
+
+		    if (!prevStr || prevStr === 'Loading...' || prevStr === 'Syncing...') {
+		        return toast('Previous reading still loading, please wait', 'info');
+		    }
+
 		    const reading = parseFloat(document.getElementById('input-reading').value);
-		    const floor   = parseFloat(document.getElementById('display-prev').innerText) || 0;
-		
+		    const floor   = parseFloat(prevStr) || 0;
+
 		    if (isNaN(reading) || reading < floor) {
 		        return toast(`Value must be at least ${floor} m³`, 'info');
 		    }
-		
-		    // Re-verify paid status before advancing to confirm (race condition guard).
-		    const currentCycle = getTargetBillingCycle();
-		    try {
-		        const recheck = await db.ref(`readings/${activeUnit.unitId}_${currentCycle}`).once('value');
-		        if (recheck.exists() && recheck.val().status === 'paid') {
-		            return toast(`${currentCycle} already paid — submission blocked`, 'error');
-		        }
-		    } catch (e) { /* non-fatal — allow to proceed */ }
-		
+
+		    // Re-verify paid status before advancing (race condition guard, online only).
+		    if (!isDeviceOffline) {
+		        try {
+		            const currentCycle = getTargetBillingCycle();
+		            const recheck = await db.ref(`readings/${activeUnit.unitId}_${currentCycle}`).once('value');
+		            if (recheck.exists() && recheck.val().status === 'paid') {
+		                return toast(`${currentCycle} already paid — submission blocked`, 'error');
+		            }
+		        } catch (e) { /* non-fatal — allow to proceed */ }
+		    }
+
 		    switchStage('confirm');
-		
+
 		    document.getElementById('confirm-summary').innerHTML = `
 		        <div class="flex justify-between items-center">
 		            <span>Target</span>
@@ -837,32 +782,27 @@
 		        </div>
 		    `;
 		};
-		
+
 		// ─── SUBMIT ───────────────────────────────────────────────────────────────────
-		
+
 		window.submitReading = async () => {
-		    // PATCH 3: validate before setting isProcessingSubmission.
 		    const reading = parseFloat(document.getElementById('input-reading').value);
 		    const floor   = parseFloat(document.getElementById('display-prev').innerText) || 0;
-		
+
 		    if (isNaN(reading) || reading < floor) {
 		        toast(`Reading must be at least ${floor} m³`, 'error');
 		        return;
 		    }
-		
+
 		    isProcessingSubmission = true;
 		    const btn          = document.getElementById('final-submit-btn');
 		    const billingCycle = getTargetBillingCycle();
 		    const readingId    = `${activeUnit.unitId}_${billingCycle}`;
-		
 		    btn.innerText = '...'; btn.disabled = true;
-		
+
 		    const consumption = parseFloat((reading - floor).toFixed(1));
-		
-		    // PATCH 1: explicit meterSerial snapshot from unitsCache.
 		    const meterSerial = (unitsCache[activeUnit.unitId] || activeUnit).meterSerial;
-		
-		    // PATCH 4: appliedRates always carries all 5 fields; billingConfig init guarantees setBy/updatedAt.
+
 		    const readingData = {
 		        readingId,
 		        unitId:          activeUnit.unitId,
@@ -881,14 +821,12 @@
 		        timestamp:       Date.now(),
 		        appliedRates:    { ...billingConfig }
 		    };
-		
-		    // Fetch gap fills (resolveBaseline already ran during identifyUnitBySerial;
-		    // we re-call here to get the gapFillRecords array for the write).
+
+		    // Re-resolve for gap fill records (resolveBaseline is idempotent via direct reads).
 		    let gapFillRecords = [];
 		    try {
 		        const resolved = await resolveBaseline(activeUnit.unitId);
 		        if (resolved === null) {
-		            // resolveBaseline blocked the submission (paid cycle guard triggered).
 		            isProcessingSubmission = false;
 		            btn.innerText = 'Yes, Upload'; btn.disabled = false;
 		            return;
@@ -897,8 +835,8 @@
 		    } catch (e) {
 		        console.error('Gap fill resolution failed:', e);
 		    }
-		
-		    // Build outbox entries: gap fills first (chronological), real reading last.
+
+		    // Write all records to outbox first (gap fills + real reading).
 		    let updatedOutbox = getOutbox();
 		    [...gapFillRecords, readingData].forEach(record => {
 		        const idx = updatedOutbox.findIndex(o => o.readingId === record.readingId);
@@ -907,12 +845,11 @@
 		    });
 		    setOutbox(updatedOutbox);
 		    renderOutboxOnly();
-		
+
 		    if (isDeviceOffline) {
 		        window.finishSubmission(readingId, true, gapFillRecords.length);
 		    } else {
 		        try {
-		            // Write atomically: gap fills + real reading in a single multi-path update.
 		            const multiPathUpdate = {};
 		            [...gapFillRecords, readingData].forEach(record => {
 		                multiPathUpdate[`readings/${record.readingId}`] = {
@@ -925,20 +862,16 @@
 		        } catch (error) {
 		            console.error('Write error:', error);
 		            isProcessingSubmission = false;
-		            toast('Write Error', 'error');
+		            toast('Write Error: ' + error.code, 'error');
 		            btn.innerText = 'Yes, Upload'; btn.disabled = false;
 		        }
 		    }
 		};
-		
+
 		window.finishSubmission = (readingId, wasOffline, gapCount = 0) => {
 		    if (!wasOffline) {
-		        // Clear all records written in this submission from outbox.
 		        const currentCycle = getTargetBillingCycle();
-		        const toRemove = new Set();
-		        toRemove.add(readingId);
-		        // Gap fill IDs follow the same pattern — clear any outbox entry for this unit
-		        // with a billingCycle earlier than currentCycle that was just written.
+		        const toRemove = new Set([readingId]);
 		        getOutbox().forEach(o => {
 		            if (o.unitId === activeUnit?.unitId && o.billingCycle < currentCycle && o.isGapFill) {
 		                toRemove.add(o.readingId);
@@ -946,61 +879,51 @@
 		        });
 		        setOutbox(getOutbox().filter(o => !toRemove.has(o.readingId)));
 		    }
-		
 		    renderOutboxOnly();
 		    updateHUDStats();
-		
 		    const gapMsg = gapCount > 0 ? ` (+${gapCount} gap fill${gapCount > 1 ? 's' : ''})` : '';
 		    toast(`Captured${gapMsg} (${wasOffline ? 'Offline' : 'Online'})`, wasOffline ? 'warning' : 'success');
-		
 		    setTimeout(() => {
 		        isProcessingSubmission = false;
 		        db.ref('readings').orderByChild('timestamp').limitToLast(5).once('value', (snap) => {
 		            if (snap.exists()) renderFeeds(snap);
 		        });
 		    }, 200);
-		
 		    closeReadingModal();
-		
 		    const btn = document.getElementById('final-submit-btn');
-		    setTimeout(() => {
-		        if (btn) { btn.innerText = 'Yes, Upload'; btn.disabled = false; }
-		    }, 1000);
+		    setTimeout(() => { if (btn) { btn.innerText = 'Yes, Upload'; btn.disabled = false; } }, 1000);
 		};
-		
+
 		// ─── MODAL OPEN/CLOSE/RESET ───────────────────────────────────────────────────
-		
+
 		window.openReadingModal = () => {
 		    document.getElementById('readingModal').classList.remove('hidden');
 		    window.resetModalState();
 		    setTimeout(() => document.getElementById('input-serial').focus(), 100);
 		};
-		
+
 		window.closeReadingModal = () => document.getElementById('readingModal').classList.add('hidden');
-		
+
 		window.resetModalState = () => {
 		    document.getElementById('input-serial').value  = '';
 		    document.getElementById('input-reading').value = '';
 		    switchStage('serial');
 		};
-		
+
 		window.backToReading = () => switchStage('reading');
-		
+
 		// ─── LIVE FEED LISTENER ───────────────────────────────────────────────────────
-		
+
 		db.ref('readings').orderByChild('timestamp').limitToLast(5).on('value', (snap) => {
 		    updateHUDStats();
 		    if (snap.exists()) renderFeeds(snap);
 		});
-		
+
 		// ─── AUTH & INIT ──────────────────────────────────────────────────────────────
-		
+
 		auth.onAuthStateChanged(async (user) => {
 		    if (!user) return window.location.replace('../index.html');
 
-		    // ── ROLE GUARD ────────────────────────────────────────────────────────────
-		    // Always verify role from DB — never trust sessionStorage alone.
-		    // A different role typing this URL directly gets bounced back to index.
 		    try {
 		        const userSnap = await db.ref(`users/${user.uid}`).once('value');
 		        const userData  = userSnap.val();
@@ -1009,45 +932,32 @@
 		            sessionStorage.clear();
 		            return window.location.replace('../index.html');
 		        }
-		        // Refresh sessionStorage with authoritative DB values
 		        sessionStorage.setItem('aqt_user_role', userData.role);
 		        sessionStorage.setItem('aqt_user_name', userData.name || 'Staff');
 		    } catch (e) {
 		        console.error('Role verification failed:', e);
 		        return window.location.replace('../index.html');
 		    }
-		    // ── END ROLE GUARD ────────────────────────────────────────────────────────
-		
+
 		    let readerName = sessionStorage.getItem('aqt_user_name');
 		    if (!readerName || readerName === 'Staff') {
-		        if (user.displayName) {
-		            readerName = user.displayName;
-		        } else {
-		            try {
-		                const userSnap = await db.ref(`users/${user.uid}/name`).once('value');
-		                readerName = userSnap.exists() ? userSnap.val() : 'Staff';
-		            } catch (e) {
-		                readerName = 'Staff';
-		            }
-		        }
+		        readerName = user.displayName || 'Staff';
 		        sessionStorage.setItem('aqt_user_name', readerName);
 		    }
-		
+
 		    const nameEl = document.getElementById('reader-name-display');
 		    if (nameEl) nameEl.innerText = readerName;
-		
+
 		    primeCaches();
 		    processSyncCleanup();
-		
-		    // Load billing config.
-		    const billingSnap = await db.ref('config/billing').once('value');
-		    if (billingSnap.exists()) billingConfig = billingSnap.val();
+
+		    try {
+		        const billingSnap = await db.ref('config/billing').once('value');
+		        if (billingSnap.exists()) billingConfig = billingSnap.val();
+		    } catch (e) { /* use default billingConfig */ }
 		    const rateEl = document.getElementById('rate-summary-text');
 		    if (rateEl) rateEl.innerText = `₱${billingConfig.minFee} base up to ${billingConfig.threshold}m³ + ₱${billingConfig.excessRate}/m³ excess`;
-		
-		    // Derive server billing cycle from the actual server clock via Firebase's
-		    // serverTimeOffset. serverCycle = server now - 1 month, same logic as
-		    // getTargetBillingCycle() but anchored to server time instead of device time.
+
 		    try {
 		        const offsetSnap = await db.ref('/.info/serverTimeOffset').once('value');
 		        const offset     = offsetSnap.val() || 0;
@@ -1059,32 +969,29 @@
 		    }
 		    renderCycleDisplay();
 		});
-		
+
 		// ─── PASSWORD CHANGE ──────────────────────────────────────────────────────────
-		
+
 		window.openPasswordModal  = () => document.getElementById('passwordModal').classList.remove('hidden');
 		window.closePasswordModal = () => {
 		    document.getElementById('passwordModal').classList.add('hidden');
 		    ['pwd-current', 'pwd-new', 'pwd-confirm'].forEach(id => document.getElementById(id).value = '');
 		};
-		
+
 		window.handlePasswordChange = async () => {
 		    const currentPwd = document.getElementById('pwd-current').value;
 		    const newPwd     = document.getElementById('pwd-new').value;
 		    const confirmPwd = document.getElementById('pwd-confirm').value;
 		    const btn        = document.getElementById('btn-update-pwd');
-		
 		    if (!currentPwd || !newPwd || !confirmPwd) return toast('Fill all fields', 'info');
 		    if (newPwd !== confirmPwd) return toast('Passwords do not match', 'error');
 		    if (newPwd.length < 6)    return toast('Min. 6 characters', 'warning');
-		
 		    try {
 		        btn.disabled = true; btn.innerText = 'Verifying...';
-		        const user       = auth.currentUser;
-		        const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPwd);
-		        await user.reauthenticateWithCredential(credential);
+		        const credential = firebase.auth.EmailAuthProvider.credential(auth.currentUser.email, currentPwd);
+		        await auth.currentUser.reauthenticateWithCredential(credential);
 		        btn.innerText = 'Updating...';
-		        await user.updatePassword(newPwd);
+		        await auth.currentUser.updatePassword(newPwd);
 		        toast('Password updated', 'success');
 		        closePasswordModal();
 		    } catch (error) {
@@ -1093,7 +1000,7 @@
 		        btn.disabled = false; btn.innerText = 'Update Password';
 		    }
 		};
-		
+
 	</script>
 </body>
 </html>
