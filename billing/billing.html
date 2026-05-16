@@ -1386,7 +1386,7 @@ window.closeConfirmModal = () => {
 
 // ─── AUTH & DATA LOAD ─────────────────────────────────────────────────────────
 
-auth.onAuthStateChanged(user => {
+auth.onAuthStateChanged(async (user) => {
     if (!user) return window.location.replace('../index.html');
 
     // ── ROLE GUARD ────────────────────────────────────────────────────────────
