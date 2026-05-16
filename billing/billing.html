@@ -174,6 +174,16 @@ main { height: 100vh; display: flex; flex-direction: column; }
 
 <main class="max-w-full h-screen flex flex-col overflow-hidden">
 
+    <!-- WELCOME BAR -->
+    <div class="flex-none flex items-center justify-between px-4 lg:px-6 py-2 bg-white dark:bg-slate-900 border-b border-water/10">
+        <div class="flex items-center gap-2">
+            <i class="bi bi-person-circle text-water text-sm"></i>
+            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Welcome,</span>
+            <span id="billing-staff-name" class="text-[9px] font-black text-waterDark dark:text-water uppercase tracking-widest">...</span>
+        </div>
+        <span class="text-[8px] font-bold text-slate-300 dark:text-slate-600 uppercase tracking-widest">Billing Command</span>
+    </div>
+
     <!-- KPI BAR — 4 columns -->
     <div class="flex-none grid grid-cols-4 gap-0 bg-white dark:bg-slate-900 border-b border-water/20">
 
@@ -197,7 +207,7 @@ main { height: 100vh; display: flex; flex-direction: column; }
             <p id="hud-ytd-sub" class="text-[8px] font-bold text-slate-400 mt-0.5">0% · -- / -- units</p>
         </button>
 
-        <!-- Pending Receivables — dynamic label, now a proper kpi-btn -->
+        <!-- Pending Receivables -->
         <button id="kpi-pending" onclick="setFilterStatus('pending')" class="kpi-btn p-3 lg:p-5 group text-left bg-amber-500/5">
             <p id="hud-pending-label" class="text-[8px] font-black text-slate-400 uppercase tracking-widest group-hover:text-amber-500 leading-tight">Cycle Pending</p>
             <h4 id="hud-pending" class="text-xl lg:text-2xl font-black text-amber-500 mt-1">₱ 0.00</h4>
@@ -208,28 +218,19 @@ main { height: 100vh; display: flex; flex-direction: column; }
     <!-- FILTER BAR -->
     <div class="flex-none p-3 lg:p-4 bg-white dark:bg-slate-900/50 border-b border-water/10 space-y-3">
 
-        <!-- Row 1: Ledger/Arrears → divider → Address/Serial/Name → divider → Export -->
+        <!-- Row 1 -->
         <div class="flex items-center gap-2 px-1">
-            <!-- View mode: Ledger / Arrears — first -->
             <div class="segmented-control flex-shrink-0">
                 <button onclick="setViewMode('ledger')"  id="btn-view-ledger"  class="segment-btn is-active px-3">Ledger</button>
                 <button onclick="setViewMode('arrears')" id="btn-view-arrears" class="segment-btn px-3">Arrears</button>
             </div>
-
-            <!-- Divider -->
             <div class="w-px h-5 bg-slate-200 dark:bg-slate-700 flex-shrink-0"></div>
-
-            <!-- Search mode: Address / Serial / Name -->
             <div class="segmented-control flex-shrink-0 w-56 lg:w-64">
                 <button onclick="setSearchMode('address')" id="mode-address" class="search-mode-btn segment-btn is-active">Address</button>
                 <button onclick="setSearchMode('serial')"  id="mode-serial"  class="search-mode-btn segment-btn">Serial</button>
                 <button onclick="setSearchMode('name')"    id="mode-name"    class="search-mode-btn segment-btn">Name</button>
             </div>
-
-            <!-- Divider -->
             <div class="w-px h-5 bg-slate-200 dark:bg-slate-700 flex-shrink-0"></div>
-
-            <!-- Export to Excel — beside the toggles -->
             <button onclick="handleExcelExport()" title="Export to Excel"
                 class="flex items-center gap-2 h-9 px-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 font-black uppercase text-[9px] tracking-widest active:scale-95 transition-all flex-shrink-0 hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
                 <i class="bi bi-file-earmark-spreadsheet-fill text-sm"></i>
@@ -237,7 +238,7 @@ main { height: 100vh; display: flex; flex-direction: column; }
             </button>
         </div>
 
-        <!-- Row 2: search input + time selector (time selector hidden in arrears) -->
+        <!-- Row 2 -->
         <div id="filter-row-controls" class="flex gap-3 items-center">
             <div class="flex-1 relative h-[44px] group">
                 <div class="absolute left-4 inset-y-0 flex items-center pointer-events-none">
@@ -246,7 +247,6 @@ main { height: 100vh; display: flex; flex-direction: column; }
                 <input id="search-input" type="text" placeholder="Search by address..."
                     class="w-full h-full pl-10 pr-4 bg-slate-100 dark:bg-slate-800 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-water/40 border-none transition-all">
             </div>
-            <!-- Time selector — hidden in arrears mode -->
             <div id="time-selector-wrapper" class="flex gap-3 items-center">
                 <div class="relative w-40 lg:w-48 h-[44px]">
                     <div id="wrapper-cycle" class="absolute inset-0">
@@ -272,10 +272,7 @@ main { height: 100vh; display: flex; flex-direction: column; }
 
     <!-- LEDGER + SIDEBAR -->
     <div class="flex-1 flex overflow-hidden">
-
-        <!-- LEDGER -->
         <div class="flex-1 overflow-y-auto p-3 lg:p-4 space-y-2 bg-slate-50 dark:bg-black/20" id="ledger-container">
-            <!-- Skeleton loader shown on initial load -->
             <div id="ledger-skeleton" class="space-y-2">
                 <div class="skeleton h-16 w-full"></div>
                 <div class="skeleton h-16 w-full"></div>
@@ -284,8 +281,6 @@ main { height: 100vh; display: flex; flex-direction: column; }
                 <div class="skeleton h-16 w-full opacity-40"></div>
             </div>
         </div>
-
-        <!-- DESKTOP SIDEBAR -->
         <div class="w-96 bg-white dark:bg-slate-900 border-l border-water/20 overflow-y-auto hidden lg:block" id="intel-sidebar">
             <div id="intel-empty" class="h-full flex flex-col items-center justify-center p-10 text-center opacity-20">
                 <i class="bi bi-lightning-charge text-6xl mb-4"></i>
@@ -344,8 +339,6 @@ main { height: 100vh; display: flex; flex-direction: column; }
                 </div>
             </div>
         </div>
-
-        <!-- FIX: lockout container — full-width, centered, flex column -->
         <div id="lockout-container" class="hidden w-full flex-col items-center justify-center mb-6">
             <div class="relative w-12 h-12">
                 <svg class="w-full h-full -rotate-90">
@@ -356,7 +349,6 @@ main { height: 100vh; display: flex; flex-direction: column; }
             </div>
             <p class="text-[8px] font-black text-slate-400 uppercase mt-2 tracking-[0.2em]">Safety Lock Active</p>
         </div>
-
         <div id="modal-actions" class="flex flex-col gap-2">
             <button id="btn-modal-confirm" class="w-full py-4 rounded-2xl font-black uppercase text-xs tracking-widest text-white transition-all active:scale-95"></button>
             <button onclick="closeConfirmModal()" class="w-full py-3 text-slate-400 font-bold uppercase text-[10px] tracking-widest text-center">Cancel</button>
@@ -379,13 +371,12 @@ let unitsMap            = {};
 let activeReading       = null;
 let currentFilterStatus = 'all';
 let timeMode            = 'cycle';
-let timeScopeOverride   = null;   // 'mtd' | 'ytd' | null — set by KPI cell clicks
+let timeScopeOverride   = null;
 let searchMode          = 'address';
-let viewMode            = 'ledger';   // 'ledger' | 'arrears'
+let viewMode            = 'ledger';
 let dataLoaded          = false;
-let orgConfig           = { name: 'AquaTrack', subname: '' };  // populated from config/org
+let orgConfig           = { name: 'AquaTrack', subname: '' };
 
-// Tracks which arrears groups are expanded: Set of propertyId strings
 const expandedArrears = new Set();
 
 // ─── BILLING CALCULATION ──────────────────────────────────────────────────────
@@ -407,9 +398,9 @@ window.setSearchMode = (mode) => {
         }
     });
     const configs = {
-        address: { p: 'Search by address...',       i: 'bi-geo-alt' },
-        serial:  { p: 'Search by meter serial...',  i: 'bi-hash' },
-        name:    { p: 'Search by resident name...',  i: 'bi-person-fill' }
+        address: { p: 'Search by address...',      i: 'bi-geo-alt' },
+        serial:  { p: 'Search by meter serial...', i: 'bi-hash' },
+        name:    { p: 'Search by resident name...', i: 'bi-person-fill' }
     };
     document.getElementById('search-input').placeholder = configs[mode].p;
     document.getElementById('search-icon').className    = `bi ${configs[mode].i} text-slate-400 group-focus-within:text-water transition-colors`;
@@ -420,7 +411,7 @@ window.setSearchMode = (mode) => {
 window.setTimeMode = (mode) => {
     timeMode = mode;
     timeScopeOverride = null;
-    kpiDateFilter     = null;   // clear KPI date filter when time mode changes manually
+    kpiDateFilter     = null;
     clearKpiActive();
     document.getElementById('wrapper-cycle').classList.toggle('hidden', mode !== 'cycle');
     document.getElementById('wrapper-year').classList.toggle('hidden', mode !== 'year');
@@ -432,31 +423,23 @@ window.setTimeMode = (mode) => {
     renderLedger();
 };
 
-// ─── VIEW MODE (LEDGER / ARREARS) ─────────────────────────────────────────────
+// ─── VIEW MODE ────────────────────────────────────────────────────────────────
 
 window.setViewMode = (mode) => {
     viewMode = mode;
-
     document.getElementById('btn-view-ledger').classList.toggle('is-active', mode === 'ledger');
     document.getElementById('btn-view-arrears').classList.toggle('is-active', mode === 'arrears');
-
-    // Time selector hidden in arrears — search row always visible
     document.getElementById('time-selector-wrapper').classList.toggle('hidden', mode === 'arrears');
-
     if (mode === 'arrears') {
         currentFilterStatus = 'all';
         kpiDateFilter = null;
         clearKpiActive();
         document.getElementById('search-input').value = '';
     }
-
     renderLedger();
 };
 
-// ─── KPI FILTER WITH ACTIVE STATE ─────────────────────────────────────────────
-// kpiDateFilter: null | 'today' | 'mtd' | 'ytd'
-// When set, ledger shows only paid records matching that paidDate scope.
-// Cleared when user clicks a different KPI cell, changes time mode, or searches.
+// ─── KPI FILTER ───────────────────────────────────────────────────────────────
 
 let kpiDateFilter = null;
 
@@ -468,28 +451,19 @@ const clearKpiActive = () => {
 };
 
 window.setFilterStatus = (status) => {
-    // 'status' here is only called for the Pending button now
     if (viewMode === 'arrears') return;
-
-    // If a kpiDateFilter is active, clicking pending clears it first
     kpiDateFilter = null;
     clearKpiActive();
-
     currentFilterStatus = (currentFilterStatus === status) ? 'all' : status;
-
     if (currentFilterStatus === 'pending') {
         document.getElementById('kpi-pending').classList.add('is-active', 'is-active-pending');
     }
-
     toast(`Filter: ${currentFilterStatus.toUpperCase()}`, 'info');
     renderLedger();
 };
 
 window.setKpiDateFilter = (scope) => {
-    // scope: 'today' | 'mtd' | 'ytd'
     if (viewMode === 'arrears') return;
-
-    // Toggle off if already active
     if (kpiDateFilter === scope) {
         kpiDateFilter = null;
         currentFilterStatus = 'all';
@@ -497,43 +471,33 @@ window.setKpiDateFilter = (scope) => {
         renderLedger();
         return;
     }
-
     kpiDateFilter = scope;
-    currentFilterStatus = 'all'; // kpiDateFilter takes over; clear status filter
+    currentFilterStatus = 'all';
     clearKpiActive();
-
-    const map = { today: 'kpi-paid', mtd: 'kpi-mtd', ytd: 'kpi-ytd' };
+    const map      = { today: 'kpi-paid', mtd: 'kpi-mtd', ytd: 'kpi-ytd' };
     const classMap = { today: 'is-active-paid', mtd: 'is-active-mtd', ytd: 'is-active-ytd' };
     document.getElementById(map[scope]).classList.add('is-active', classMap[scope]);
-
     renderLedger();
 };
 
 // ─── KPI UPDATE ───────────────────────────────────────────────────────────────
 
 const updateKPIs = () => {
-    // Derive date prefixes in LOCAL timezone so "Today" means today on the user's calendar,
-    // not UTC. paidDate is stored as UTC ISO string — convert to local date for comparison.
-    const pad         = n => String(n).padStart(2, '0');
-    const now         = new Date();
-    const today       = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-    const thisMonth   = `${now.getFullYear()}-${pad(now.getMonth()+1)}`;
-    const thisYear    = now.getFullYear().toString();
-
-    // Convert a stored UTC paidDate string to a local YYYY-MM-DD prefix for comparison
+    const pad        = n => String(n).padStart(2, '0');
+    const now        = new Date();
+    const today      = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+    const thisMonth  = `${now.getFullYear()}-${pad(now.getMonth()+1)}`;
+    const thisYear   = now.getFullYear().toString();
     const localDate  = (pd) => { const d = new Date(pd); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
     const localMonth = (pd) => { const d = new Date(pd); return `${d.getFullYear()}-${pad(d.getMonth()+1)}`; };
     const localYear  = (pd) => String(new Date(pd).getFullYear());
 
-    // ── Today
     const daily = allReadings
         .filter(r => r.status === 'paid' && r.paidDate && localDate(r.paidDate) === today)
         .reduce((acc, r) => acc + calculateAmount(r), 0);
     document.getElementById('hud-daily').innerText = formatCurrency(daily);
 
-    // ── MTD: collected via paidDate in current month
     const mtdReadings  = allReadings.filter(r => r.status === 'paid' && r.paidDate && localMonth(r.paidDate) === thisMonth);
-    // Billed in current month (billingCycle prefix)
     const mtdBilled    = allReadings.filter(r => r.billingCycle.startsWith(thisMonth));
     const mtdCollected = mtdReadings.reduce((s, r) => s + calculateAmount(r), 0);
     const mtdExpected  = mtdBilled.reduce((s, r) => s + calculateAmount(r), 0);
@@ -543,7 +507,6 @@ const updateKPIs = () => {
     document.getElementById('hud-mtd').innerText     = formatCurrency(mtdCollected);
     document.getElementById('hud-mtd-sub').innerText = `${mtdEff}% · ${mtdPaidCount} / ${mtdTotal} units`;
 
-    // ── YTD: collected via paidDate in current year
     const ytdReadings  = allReadings.filter(r => r.status === 'paid' && r.paidDate && localYear(r.paidDate) === thisYear);
     const ytdBilled    = allReadings.filter(r => r.billingCycle.startsWith(thisYear));
     const ytdCollected = ytdReadings.reduce((s, r) => s + calculateAmount(r), 0);
@@ -554,20 +517,18 @@ const updateKPIs = () => {
     document.getElementById('hud-ytd').innerText     = formatCurrency(ytdCollected);
     document.getElementById('hud-ytd-sub').innerText = `${ytdEff}% · ${ytdPaidCount} / ${ytdTotal} units`;
 
-    // ── Pending — scope tracks active time mode
     const cycle = document.getElementById('filter-cycle').value;
     const year  = document.getElementById('filter-year').value || thisYear;
-
-    let pendingScope, pendingLabel, pendingSubLabel;
+    let pendingScope, pendingLabel;
     if (timeMode === 'cycle') {
-        pendingScope    = allReadings.filter(r => r.billingCycle === cycle && r.status === 'pending');
-        pendingLabel    = `${cycle || 'Cycle'} Pending`;
+        pendingScope  = allReadings.filter(r => r.billingCycle === cycle && r.status === 'pending');
+        pendingLabel  = `${cycle || 'Cycle'} Pending`;
     } else if (timeScopeOverride === 'mtd') {
-        pendingScope    = allReadings.filter(r => r.billingCycle.startsWith(thisMonth) && r.status === 'pending');
-        pendingLabel    = 'MTD Pending';
+        pendingScope  = allReadings.filter(r => r.billingCycle.startsWith(thisMonth) && r.status === 'pending');
+        pendingLabel  = 'MTD Pending';
     } else {
-        pendingScope    = allReadings.filter(r => r.billingCycle.startsWith(year) && r.status === 'pending');
-        pendingLabel    = `${year} Pending`;
+        pendingScope  = allReadings.filter(r => r.billingCycle.startsWith(year) && r.status === 'pending');
+        pendingLabel  = `${year} Pending`;
     }
     const pendingTotal = pendingScope.reduce((s, r) => s + calculateAmount(r), 0);
     document.getElementById('hud-pending-label').innerText = pendingLabel;
@@ -582,10 +543,7 @@ const renderArrears = () => {
     const skeleton  = document.getElementById('ledger-skeleton');
     if (skeleton) skeleton.remove();
     container.innerHTML = '';
-
-    const search  = document.getElementById('search-input').value.toLowerCase();
-
-    // All pending readings, filtered by search
+    const search = document.getElementById('search-input').value.toLowerCase();
     const pending = allReadings.filter(r => {
         if (r.status !== 'pending') return false;
         if (!search) return true;
@@ -602,19 +560,16 @@ const renderArrears = () => {
                 <i class="bi bi-check-circle text-5xl mb-4 text-emerald-500"></i>
                 <p class="font-black uppercase tracking-tighter text-sm">No Arrears</p>
                 <p class="text-[10px] font-bold mt-1 text-slate-400">All units are fully settled</p>
-            </div>
-        `;
+            </div>`;
         return;
     }
 
-    // Group by propertyId
     const groups = {};
     pending.forEach(r => {
         if (!groups[r.propertyId]) groups[r.propertyId] = [];
         groups[r.propertyId].push(r);
     });
 
-    // Sort groups by total owed descending
     const sorted = Object.entries(groups).sort((a, b) => {
         const sumA = a[1].reduce((s, r) => s + calculateAmount(r), 0);
         const sumB = b[1].reduce((s, r) => s + calculateAmount(r), 0);
@@ -624,22 +579,17 @@ const renderArrears = () => {
     sorted.forEach(([propertyId, readings]) => {
         const total      = readings.reduce((s, r) => s + calculateAmount(r), 0);
         const cycleCount = readings.length;
-        // Get owner from any reading's unit
         const sampleUnit = unitsMap[readings[0].unitId] || {};
         const owner      = sampleUnit.ownerName || 'Resident';
         const isOpen     = expandedArrears.has(propertyId);
-
-        // Sort child cycles oldest-first
         const sortedCycles = [...readings].sort((a, b) => a.billingCycle.localeCompare(b.billingCycle));
-
-        const oldestCycle = sortedCycles[0]?.billingCycle || '';
-        const newestCycle = sortedCycles[sortedCycles.length - 1]?.billingCycle || '';
-        const cycleRange  = cycleCount === 1 ? oldestCycle : `${oldestCycle} – ${newestCycle}`;
+        const oldestCycle  = sortedCycles[0]?.billingCycle || '';
+        const newestCycle  = sortedCycles[sortedCycles.length - 1]?.billingCycle || '';
+        const cycleRange   = cycleCount === 1 ? oldestCycle : `${oldestCycle} – ${newestCycle}`;
 
         const group = document.createElement('div');
         group.className = 'arrears-group glass-card rounded-2xl overflow-hidden';
         group.innerHTML = `
-            <!-- Group header -->
             <div class="arrears-group-header flex items-center justify-between p-3 gap-3"
                  onclick="toggleArrearsGroup('${propertyId}')">
                 <div class="flex items-center gap-3 min-w-0">
@@ -662,8 +612,6 @@ const renderArrears = () => {
                     <i class="bi bi-chevron-${isOpen ? 'up' : 'down'} text-slate-400 text-xs transition-transform" id="chevron-${propertyId}"></i>
                 </div>
             </div>
-
-            <!-- Child cycles -->
             <div class="arrears-children ${isOpen ? 'is-open' : ''}" id="children-${propertyId}">
                 <div class="border-t border-slate-100 dark:border-slate-800 mx-3 mb-2"></div>
                 ${sortedCycles.map(r => {
@@ -688,18 +636,15 @@ const renderArrears = () => {
                                 </div>
                             </div>
                             <p class="text-sm font-black text-slate-900 dark:text-white flex-shrink-0">${formatCurrency(amt)}</p>
-                        </div>
-                    `;
+                        </div>`;
                 }).join('')}
                 <div class="h-2"></div>
-            </div>
-        `;
+            </div>`;
         container.appendChild(group);
     });
 
-    // Summary footer
-    const totalArrears    = pending.reduce((s, r) => s + calculateAmount(r), 0);
-    const uniqueOwners    = Object.keys(groups).length;
+    const totalArrears = pending.reduce((s, r) => s + calculateAmount(r), 0);
+    const uniqueOwners = Object.keys(groups).length;
     const footer = document.createElement('div');
     footer.className = 'mt-2 p-4 rounded-2xl bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-800/30 flex justify-between items-center';
     footer.innerHTML = `
@@ -707,18 +652,13 @@ const renderArrears = () => {
             <p class="text-[8px] font-black text-rose-500 uppercase tracking-widest">Total Arrears</p>
             <p class="text-xs font-bold text-slate-500 mt-0.5">${uniqueOwners} properties · ${pending.length} outstanding cycles</p>
         </div>
-        <p class="text-xl font-black text-rose-600">${formatCurrency(totalArrears)}</p>
-    `;
+        <p class="text-xl font-black text-rose-600">${formatCurrency(totalArrears)}</p>`;
     container.appendChild(footer);
 };
 
 window.toggleArrearsGroup = (propertyId) => {
-    if (expandedArrears.has(propertyId)) {
-        expandedArrears.delete(propertyId);
-    } else {
-        expandedArrears.add(propertyId);
-    }
-    // Re-render arrears to reflect new state
+    if (expandedArrears.has(propertyId)) expandedArrears.delete(propertyId);
+    else expandedArrears.add(propertyId);
     renderArrears();
 };
 
@@ -726,32 +666,22 @@ window.toggleArrearsGroup = (propertyId) => {
 
 const renderLedger = () => {
     if (!dataLoaded) return;
-
-    // Always update KPIs regardless of view
     updateKPIs();
-
-    // Delegate to arrears renderer if in that mode
-    if (viewMode === 'arrears') {
-        renderArrears();
-        return;
-    }
+    if (viewMode === 'arrears') { renderArrears(); return; }
 
     const container = document.getElementById('ledger-container');
     const skeleton  = document.getElementById('ledger-skeleton');
     const search    = document.getElementById('search-input').value.toLowerCase();
     const cycle     = document.getElementById('filter-cycle').value;
     const year      = document.getElementById('filter-year').value || new Date().getFullYear().toString();
-
     if (skeleton) skeleton.remove();
     container.innerHTML = '';
 
     const filtered = allReadings.filter(r => {
         const unit = unitsMap[r.unitId] || {};
-
-        // ── KPI date filter overrides normal time+status filter
         if (kpiDateFilter) {
-            const pad      = n => String(n).padStart(2, '0');
-            const now      = new Date();
+            const pad       = n => String(n).padStart(2, '0');
+            const now       = new Date();
             const todayLocal  = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
             const monthLocal  = `${now.getFullYear()}-${pad(now.getMonth()+1)}`;
             const yearLocal   = now.getFullYear().toString();
@@ -768,7 +698,6 @@ const renderLedger = () => {
             const matchesStatus = currentFilterStatus === 'all' || r.status === currentFilterStatus;
             if (!matchesTime || !matchesStatus) return false;
         }
-
         if (!search) return true;
         if (searchMode === 'address') return r.locationAddress.toLowerCase().includes(search);
         if (searchMode === 'serial')  return unit.meterSerial && unit.meterSerial.toString().toLowerCase().includes(search);
@@ -784,30 +713,23 @@ const renderLedger = () => {
                 <p class="text-[10px] font-bold mt-1 text-slate-400">
                     ${search ? 'Try a different search term' : 'No readings match the current filter'}
                 </p>
-            </div>
-        `;
+            </div>`;
         return;
     }
 
     filtered.forEach(r => {
-        const amount  = calculateAmount(r);
-        const isPaid  = r.status === 'paid';
-        const unit    = unitsMap[r.unitId] || {};
-        const owner   = unit.ownerName || 'Resident';
-
-        // Paid date — short format e.g. "May 6, 2026" in local timezone
-        // Filter is also local-timezone-aware so display and filter are consistent.
+        const amount        = calculateAmount(r);
+        const isPaid        = r.status === 'paid';
+        const unit          = unitsMap[r.unitId] || {};
+        const owner         = unit.ownerName || 'Resident';
         const paidDateShort = r.paidDate
             ? new Date(r.paidDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
             : null;
-
         const gapBadge = r.isGapFill
             ? `<span class="text-[7px] bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded font-black uppercase ml-1">Gap Fill</span>`
             : '';
-
-        const card = document.createElement('div');
-        // Pending cards get a subtle amber background that works in both modes
         const pendingBg = isPaid ? '' : 'bg-amber-50/80 dark:bg-amber-900/10 border-amber-200/60 dark:border-amber-800/30';
+        const card = document.createElement('div');
         card.className = `glass-card p-3 rounded-2xl flex items-center justify-between cursor-pointer hover:scale-[1.01] active:scale-95 transition-all ${pendingBg} ${activeReading?.readingId === r.readingId ? 'ring-2 ring-water' : ''}`;
         card.onclick = () => selectUnit(r);
         card.innerHTML = `
@@ -830,13 +752,10 @@ const renderLedger = () => {
                     ? `<p class="text-[8px] font-black text-emerald-500 dark:text-emerald-400 uppercase opacity-70">${paidDateShort || 'Paid'}</p>`
                     : `<p class="text-[8px] font-black text-amber-500 dark:text-amber-400 uppercase tracking-wide">Pending</p>`
                 }
-            </div>
-        `;
+            </div>`;
         container.appendChild(card);
     });
 };
-
-// ─── SIDEBAR CONTENT BUILDER ──────────────────────────────────────────────────
 
 // ─── SOA GENERATOR ───────────────────────────────────────────────────────────
 
@@ -847,44 +766,21 @@ window.generateSOA = () => {
     const owner  = unit.ownerName || 'Resident';
     const amount = calculateAmount(r);
     const isPaid = r.status === 'paid';
-
     const { threshold, minFee, excessRate } = r.appliedRates || { threshold: 15, minFee: 200, excessRate: 15 };
-    const consumption = Math.max(0, r.reading - r.prevReading);
-    const excessUnits = Math.max(0, consumption - threshold);
+    const consumption  = Math.max(0, r.reading - r.prevReading);
+    const excessUnits  = Math.max(0, consumption - threshold);
     const excessCharge = excessUnits * excessRate;
-
-    // Due date = last day of the month the reading was taken (billing cycle month + 1)
-    // e.g. billingCycle "2026-04" → reading taken in May → due end of May
-    const [yr, mo]   = r.billingCycle.split('-').map(Number);
-    const dueDate    = new Date(yr, mo + 1, 0); // day 0 of mo+2 = last day of mo+1
-    const dueDateStr = dueDate.toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' });
-
-    // Reading timestamp
-    const readingDate = r.timestamp
-        ? new Date(r.timestamp).toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' })
-        : '—';
-
-    // Paid date
-    const paidDateStr = r.paidDate
-        ? new Date(r.paidDate).toLocaleString([], { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-        : null;
-
-    const orgName    = orgConfig.name    || 'AquaTrack';
-    const orgSubname = orgConfig.subname || '';
-
-    const gapNote = r.isGapFill
-        ? `<div class="gap-note">⚠ Default record — no field reading was captured for this cycle. Minimum fee applies.</div>`
-        : '';
-
-    const statusBlock = isPaid
-        ? `<div class="status-block paid">
-               <span class="status-badge paid">PAID</span>
-               <span class="status-detail">Received: ${paidDateStr}</span>
-           </div>`
-        : `<div class="status-block pending">
-               <span class="status-badge pending">PAYMENT DUE</span>
-               <span class="status-detail">Please pay on or before ${dueDateStr}</span>
-           </div>`;
+    const [yr, mo]     = r.billingCycle.split('-').map(Number);
+    const dueDate      = new Date(yr, mo + 1, 0);
+    const dueDateStr   = dueDate.toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' });
+    const readingDate  = r.timestamp ? new Date(r.timestamp).toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' }) : '—';
+    const paidDateStr  = r.paidDate ? new Date(r.paidDate).toLocaleString([], { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : null;
+    const orgName      = orgConfig.name    || 'AquaTrack';
+    const orgSubname   = orgConfig.subname || '';
+    const gapNote      = r.isGapFill ? `<div class="gap-note">⚠ Default record — no field reading was captured for this cycle. Minimum fee applies.</div>` : '';
+    const statusBlock  = isPaid
+        ? `<div class="status-block paid"><span class="status-badge paid">PAID</span><span class="status-detail">Received: ${paidDateStr}</span></div>`
+        : `<div class="status-block pending"><span class="status-badge pending">PAYMENT DUE</span><span class="status-detail">Please pay on or before ${dueDateStr}</span></div>`;
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -893,145 +789,37 @@ window.generateSOA = () => {
 <title>SOA — ${owner} — ${r.billingCycle}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: 'Segoe UI', Arial, sans-serif;
-    background: #f8fafc;
-    color: #1e293b;
-    padding: 40px;
-    max-width: 720px;
-    margin: 0 auto;
-  }
-  .soa-wrapper {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-  }
-
-  /* HEADER */
-  .soa-header {
-    background: linear-gradient(135deg, #0072ff 0%, #4facfe 100%);
-    color: white;
-    padding: 28px 32px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-  }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc; color: #1e293b; padding: 40px; max-width: 720px; margin: 0 auto; }
+  .soa-wrapper { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+  .soa-header { background: linear-gradient(135deg, #0072ff 0%, #4facfe 100%); color: white; padding: 28px 32px; display: flex; align-items: center; gap: 20px; }
   .soa-logo svg { width: 48px; height: 48px; flex-shrink: 0; }
   .soa-org-name { font-size: 20px; font-weight: 900; letter-spacing: -0.5px; line-height: 1.1; }
   .soa-org-sub  { font-size: 11px; font-weight: 600; opacity: 0.8; margin-top: 3px; letter-spacing: 0.05em; text-transform: uppercase; }
-  .soa-doc-label {
-    margin-left: auto;
-    text-align: right;
-    font-size: 11px;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    opacity: 0.85;
-  }
+  .soa-doc-label { margin-left: auto; text-align: right; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; opacity: 0.85; }
   .soa-doc-label span { display: block; font-size: 22px; font-weight: 900; letter-spacing: -0.5px; opacity: 1; margin-top: 2px; }
-
-  /* BODY */
   .soa-body { padding: 28px 32px; }
-
-  /* SECTION */
   .soa-section { margin-bottom: 20px; }
-  .soa-section-title {
-    font-size: 8px;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 0.18em;
-    color: #94a3b8;
-    border-bottom: 1px solid #f1f5f9;
-    padding-bottom: 6px;
-    margin-bottom: 12px;
-  }
-  .soa-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    font-size: 12px;
-    padding: 3px 0;
-  }
+  .soa-section-title { font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.18em; color: #94a3b8; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; margin-bottom: 12px; }
+  .soa-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; padding: 3px 0; }
   .soa-row .label { color: #64748b; font-weight: 600; }
   .soa-row .value { font-weight: 800; text-align: right; }
-
-  /* TOTAL */
-  .soa-total-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 2px solid #e2e8f0;
-  }
+  .soa-total-row { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 2px solid #e2e8f0; }
   .soa-total-label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #475569; }
   .soa-total-amount { font-size: 28px; font-weight: 900; color: #0072ff; letter-spacing: -1px; }
-
-  /* STATUS */
-  .status-block {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 20px;
-    border-radius: 12px;
-    margin-bottom: 20px;
-  }
+  .status-block { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-radius: 12px; margin-bottom: 20px; }
   .status-block.paid    { background: #f0fdf4; border: 1.5px solid #bbf7d0; }
   .status-block.pending { background: #fffbeb; border: 1.5px solid #fde68a; }
-  .status-badge {
-    font-size: 9px;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    padding: 4px 10px;
-    border-radius: 6px;
-    flex-shrink: 0;
-  }
+  .status-badge { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; padding: 4px 10px; border-radius: 6px; flex-shrink: 0; }
   .status-badge.paid    { background: #dcfce7; color: #16a34a; }
   .status-badge.pending { background: #fef9c3; color: #b45309; }
   .status-detail { font-size: 11px; font-weight: 700; color: #475569; }
-
-  /* GAP NOTE */
-  .gap-note {
-    background: #fffbeb;
-    border: 1px solid #fde68a;
-    border-radius: 8px;
-    padding: 10px 14px;
-    font-size: 10px;
-    font-weight: 700;
-    color: #92400e;
-    margin-bottom: 20px;
-  }
-
-  /* DIVIDER */
-  .soa-divider { border: none; border-top: 1px solid #f1f5f9; margin: 16px 0; }
-
-  /* FOOTER */
-  .soa-footer {
-    background: #f8fafc;
-    border-top: 1px solid #e2e8f0;
-    padding: 16px 32px;
-    font-size: 9px;
-    color: #94a3b8;
-    font-weight: 600;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  @media print {
-    body { background: white; padding: 0; }
-    .soa-wrapper { border: none; box-shadow: none; border-radius: 0; }
-    @page { margin: 1.5cm; size: A4; }
-  }
+  .gap-note { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 14px; font-size: 10px; font-weight: 700; color: #92400e; margin-bottom: 20px; }
+  .soa-footer { background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 16px 32px; font-size: 9px; color: #94a3b8; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+  @media print { body { background: white; padding: 0; } .soa-wrapper { border: none; box-shadow: none; border-radius: 0; } @page { margin: 1.5cm; size: A4; } }
 </style>
 </head>
 <body>
 <div class="soa-wrapper">
-
-  <!-- HEADER -->
   <div class="soa-header">
     <div class="soa-logo">
       <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1044,19 +832,11 @@ window.generateSOA = () => {
       <div class="soa-org-name">${orgName}</div>
       ${orgSubname ? `<div class="soa-org-sub">${orgSubname}</div>` : ''}
     </div>
-    <div class="soa-doc-label">
-      Statement of Account
-      <span>${r.billingCycle}</span>
-    </div>
+    <div class="soa-doc-label">Statement of Account<span>${r.billingCycle}</span></div>
   </div>
-
-  <!-- BODY -->
   <div class="soa-body">
-
     ${gapNote}
     ${statusBlock}
-
-    <!-- ACCOUNT INFORMATION -->
     <div class="soa-section">
       <div class="soa-section-title">Account Information</div>
       <div class="soa-row"><span class="label">Homeowner</span><span class="value">${owner}</span></div>
@@ -1064,16 +844,12 @@ window.generateSOA = () => {
       <div class="soa-row"><span class="label">Unit</span><span class="value">${unit.unitLabel || 'Main House'}</span></div>
       <div class="soa-row"><span class="label">Meter Serial No.</span><span class="value">${r.meterSerial || unit.meterSerial || '—'}</span></div>
     </div>
-
-    <!-- BILLING PERIOD -->
     <div class="soa-section">
       <div class="soa-section-title">Billing Period</div>
       <div class="soa-row"><span class="label">Billing Cycle</span><span class="value">${r.billingCycle}</span></div>
       <div class="soa-row"><span class="label">Reading Date</span><span class="value">${readingDate}</span></div>
       <div class="soa-row"><span class="label">Read By</span><span class="value">${r.readerName || '—'}</span></div>
     </div>
-
-    <!-- CONSUMPTION -->
     <div class="soa-section">
       <div class="soa-section-title">Consumption Details</div>
       <div class="soa-row"><span class="label">Previous Reading</span><span class="value">${r.prevReading.toFixed(1)} m³</span></div>
@@ -1083,32 +859,20 @@ window.generateSOA = () => {
         <span class="value" style="color:#0072ff;">${consumption.toFixed(1)} m³</span>
       </div>
     </div>
-
-    <!-- BILL COMPUTATION -->
     <div class="soa-section">
       <div class="soa-section-title">Bill Computation</div>
-      <div class="soa-row">
-        <span class="label">Minimum Fee (≤${threshold} m³)</span>
-        <span class="value">${formatCurrency(minFee)}</span>
-      </div>
-      <div class="soa-row">
-        <span class="label">Excess (${excessUnits.toFixed(1)} m³ × ₱${excessRate})</span>
-        <span class="value">${formatCurrency(excessCharge)}</span>
-      </div>
+      <div class="soa-row"><span class="label">Minimum Fee (≤${threshold} m³)</span><span class="value">${formatCurrency(minFee)}</span></div>
+      <div class="soa-row"><span class="label">Excess (${excessUnits.toFixed(1)} m³ × ₱${excessRate})</span><span class="value">${formatCurrency(excessCharge)}</span></div>
       <div class="soa-total-row">
         <span class="soa-total-label">Total Due</span>
         <span class="soa-total-amount">${formatCurrency(amount)}</span>
       </div>
     </div>
-
-  </div><!-- /soa-body -->
-
-  <!-- FOOTER -->
+  </div>
   <div class="soa-footer">
     <span>This is a system-generated document · AquaTrack v2.2</span>
     <span>Generated: ${new Date().toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
   </div>
-
 </div>
 <${'script'}>window.onload = () => window.print();</${`script`}>
 </body>
@@ -1127,11 +891,9 @@ const buildSidebarHTML = (r) => {
     const isPaid  = r.status === 'paid';
     const unit    = unitsMap[r.unitId] || {};
     const owner   = unit.ownerName || 'Resident';
-
     const paidDateDisplay = r.paidDate
         ? new Date(r.paidDate).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
         : null;
-
     const gapNotice = r.isGapFill ? `
         <div class="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 mb-4 flex items-start gap-3">
             <i class="bi bi-exclamation-triangle-fill text-amber-500 mt-0.5 flex-shrink-0"></i>
@@ -1139,16 +901,13 @@ const buildSidebarHTML = (r) => {
                 <p class="text-[9px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-1">System-Generated Record</p>
                 <p class="text-[10px] font-bold text-slate-500 leading-relaxed">This is a gap fill record. No meter reading was captured — minimum fee applies for the missed cycle.</p>
             </div>
-        </div>
-    ` : '';
+        </div>` : '';
 
     return `
         <div class="animate-in fade-in slide-in-from-right-4 duration-300">
             <div class="mb-6">
-                <!-- Owner name — prominent, on top -->
                 <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Homeowner</p>
                 <h2 class="text-xl font-black uppercase tracking-tight leading-tight">${owner}</h2>
-                <!-- Address + unit/cycle below -->
                 <p class="text-xs font-bold text-slate-500 uppercase tracking-tight mt-2">${r.locationAddress}</p>
                 <p class="text-[10px] font-black text-waterDark uppercase tracking-[0.2em] mt-1">${unit.unitLabel || 'Standard Unit'} / Cycle ${r.billingCycle}</p>
             </div>
@@ -1180,20 +939,16 @@ const buildSidebarHTML = (r) => {
                 <i class="bi bi-printer-fill text-sm"></i>
                 Generate SOA
             </button>
-        </div>
-    `;
+        </div>`;
 };
 
-// ─── UNIT SELECTION — DESKTOP + MOBILE ───────────────────────────────────────
+// ─── UNIT SELECTION ───────────────────────────────────────────────────────────
 
-// Expose selectUnit globally so arrears child rows can call it with parsed object
 window.selectUnit = (r) => {
-    // r may arrive as a string from inline onclick attr — parse if needed
     if (typeof r === 'string') r = JSON.parse(r);
     activeReading = r;
     const html = buildSidebarHTML(r);
     const isDesktop = window.innerWidth >= 1024;
-
     if (isDesktop) {
         const sidebar = document.getElementById('intel-content');
         const empty   = document.getElementById('intel-empty');
@@ -1205,7 +960,6 @@ window.selectUnit = (r) => {
         document.getElementById('mobile-sheet').classList.add('is-open');
         document.getElementById('mobile-sheet-backdrop').classList.add('is-open');
     }
-
     renderLedger();
 };
 
@@ -1221,7 +975,6 @@ window.closeMobileSheet = () => {
 window.processPayment = async () => {
     if (!activeReading) return;
     const isSettling = activeReading.status !== 'paid';
-
     try {
         await db.ref(`readings/${activeReading.readingId}`).update({
             status:   isSettling ? 'paid' : 'pending',
@@ -1230,7 +983,6 @@ window.processPayment = async () => {
         toast(isSettling ? 'Payment recorded' : 'Status reset', 'success');
     } catch (e) {
         console.error('processPayment error:', e);
-        // Surface the actual Firebase error code so we can diagnose
         const msg = e?.code || e?.message || 'Unknown error';
         toast(`Error: ${msg}`, 'error');
     }
@@ -1242,7 +994,6 @@ window.toggleCycleDropdown = () => {
     const panel   = document.getElementById('cycle-options');
     const trigger = document.getElementById('cycle-trigger');
     const isOpen  = !panel.classList.contains('hidden');
-
     if (isOpen) {
         panel.classList.add('scale-95', 'opacity-0');
         setTimeout(() => panel.classList.add('hidden'), 200);
@@ -1266,8 +1017,7 @@ window.selectCycleOption = (cycle) => {
 window.handleExcelExport = () => {
     const cycle = document.getElementById('filter-cycle').value;
     const year  = document.getElementById('filter-year').value || new Date().getFullYear().toString();
-
-    const data = allReadings
+    const data  = allReadings
         .filter(r => (timeMode === 'cycle') ? r.billingCycle === cycle : r.billingCycle.startsWith(year))
         .map(r => ({
             Address:  r.locationAddress,
@@ -1282,7 +1032,6 @@ window.handleExcelExport = () => {
                 ? new Date(r.paidDate).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
                 : 'N/A'
         }));
-
     const label = timeMode === 'cycle' ? cycle : year;
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
@@ -1296,20 +1045,16 @@ let lockoutTimer = null;
 
 window.openConfirmModal = (isUndo = false) => {
     if (!activeReading) return;
-
-    // ── Arrears enforcement: earliest pending cycle must be paid first
     if (!isUndo) {
         const pendingForProperty = allReadings
             .filter(r => r.propertyId === activeReading.propertyId && r.status === 'pending')
             .sort((a, b) => a.billingCycle.localeCompare(b.billingCycle));
-
         if (pendingForProperty.length > 0 && pendingForProperty[0].readingId !== activeReading.readingId) {
             const earliest = pendingForProperty[0].billingCycle;
             toast(`Settle ${earliest} first before paying ${activeReading.billingCycle}`, 'error');
             return;
         }
     }
-
     const modal      = document.getElementById('confirmModal');
     const icon       = document.getElementById('modal-icon');
     const iconBox    = document.getElementById('modal-icon-container');
@@ -1320,16 +1065,13 @@ window.openConfirmModal = (isUndo = false) => {
     const actions    = document.getElementById('modal-actions');
     const unit       = unitsMap[activeReading.unitId] || {};
     const amount     = calculateAmount(activeReading);
-
     document.getElementById('conf-address').innerText = activeReading.locationAddress;
     document.getElementById('conf-owner').innerText   = unit.ownerName || 'Resident';
     document.getElementById('conf-label').innerText   = unit.unitLabel || 'Unit';
     document.getElementById('conf-usage').innerText   = `${(activeReading.reading - activeReading.prevReading).toFixed(1)} m³`;
     document.getElementById('conf-amount').innerText  = formatCurrency(amount);
     document.getElementById('conf-cycle').innerText   = `Cycle: ${activeReading.billingCycle}`;
-
     modal.classList.remove('hidden');
-
     if (isUndo) {
         document.getElementById('conf-cycle').className = 'text-[9px] font-black text-rose-500 mt-1 uppercase tracking-widest';
         iconBox.className    = 'w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-4 bg-amber-500/10 text-amber-500';
@@ -1340,7 +1082,7 @@ window.openConfirmModal = (isUndo = false) => {
         confirmBtn.className = 'w-full py-4 bg-amber-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-amber-500/20';
         actions.classList.add('hidden');
         lockout.classList.remove('hidden');
-        lockout.classList.add('flex');   // FIX: ensure flex is applied when shown
+        lockout.classList.add('flex');
         startLockoutCountdown();
     } else {
         document.getElementById('conf-cycle').className = 'text-[9px] font-black text-waterDark mt-1 uppercase tracking-widest';
@@ -1354,17 +1096,15 @@ window.openConfirmModal = (isUndo = false) => {
         lockout.classList.add('hidden');
         lockout.classList.remove('flex');
     }
-
     confirmBtn.onclick = () => { processPayment(); closeConfirmModal(); };
 };
 
 const startLockoutCountdown = () => {
-    let timeLeft = 50;
+    let timeLeft        = 50;
     const circle        = document.getElementById('countdown-circle');
     const text          = document.getElementById('countdown-text');
     const circumference = 2 * Math.PI * 20;
     if (lockoutTimer) clearInterval(lockoutTimer);
-
     lockoutTimer = setInterval(() => {
         timeLeft--;
         text.innerText = Math.ceil(timeLeft / 10);
@@ -1386,10 +1126,11 @@ window.closeConfirmModal = () => {
 
 // ─── AUTH & DATA LOAD ─────────────────────────────────────────────────────────
 
+// FIX: async (user) => so that await works inside the callback
 auth.onAuthStateChanged(async (user) => {
     if (!user) return window.location.replace('../index.html');
 
-    // ── ROLE GUARD! ────────────────────────────────────────────────────────────
+    // ── ROLE GUARD ────────────────────────────────────────────────────────────
     try {
         const userSnap = await db.ref(`users/${user.uid}`).once('value');
         const userData  = userSnap.val();
@@ -1404,20 +1145,19 @@ auth.onAuthStateChanged(async (user) => {
     }
     // ── END ROLE GUARD ────────────────────────────────────────────────────────
 
-    // Load org config for SOA header
+    // Set staff name in welcome bar
+    const nameEl = document.getElementById('billing-staff-name');
+    if (nameEl) nameEl.innerText = userData.name || user.displayName || 'Staff';
+
     db.ref('config/org').on('value', snap => {
         if (snap.exists()) {
             const val = snap.val();
-            orgConfig = {
-                name:    val.name    || 'AquaTrack',
-                subname: val.subname || ''
-            };
+            orgConfig = { name: val.name || 'AquaTrack', subname: val.subname || '' };
         }
     });
 
     db.ref('properties').on('value', pSnap => {
         const props = pSnap.val() || {};
-
         db.ref('Unit').on('value', uSnap => {
             if (!uSnap.exists()) return;
             const units = uSnap.val();
@@ -1452,7 +1192,6 @@ auth.onAuthStateChanged(async (user) => {
 
         renderLedger();
 
-        // Refresh sidebar if a unit is selected
         if (activeReading) {
             const updated = allReadings.find(r => r.readingId === activeReading.readingId);
             if (updated) selectUnit(updated);
