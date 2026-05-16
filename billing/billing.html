@@ -1389,6 +1389,21 @@ window.closeConfirmModal = () => {
 auth.onAuthStateChanged(user => {
     if (!user) return window.location.replace('../index.html');
 
+    // ── ROLE GUARD ────────────────────────────────────────────────────────────
+    try {
+        const userSnap = await db.ref(`users/${user.uid}`).once('value');
+        const userData  = userSnap.val();
+        if (!userData || userData.role !== 'billing') {
+            await auth.signOut();
+            sessionStorage.clear();
+            return window.location.replace('../index.html');
+        }
+    } catch (e) {
+        console.error('Role verification failed:', e);
+        return window.location.replace('../index.html');
+    }
+    // ── END ROLE GUARD ────────────────────────────────────────────────────────
+
     // Load org config for SOA header
     db.ref('config/org').on('value', snap => {
         if (snap.exists()) {
