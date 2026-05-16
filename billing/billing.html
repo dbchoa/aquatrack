@@ -1139,15 +1139,16 @@ auth.onAuthStateChanged(async (user) => {
             sessionStorage.clear();
             return window.location.replace('../index.html');
         }
+
+        // Set staff name in welcome bar — userData is in scope here
+        const nameEl = document.getElementById('billing-staff-name');
+        if (nameEl) nameEl.innerText = userData.name || user.displayName || 'Staff';
+
     } catch (e) {
         console.error('Role verification failed:', e);
         return window.location.replace('../index.html');
     }
     // ── END ROLE GUARD ────────────────────────────────────────────────────────
-
-    // Set staff name in welcome bar
-    const nameEl = document.getElementById('billing-staff-name');
-    if (nameEl) nameEl.innerText = userData.name || user.displayName || 'Staff';
 
     db.ref('config/org').on('value', snap => {
         if (snap.exists()) {
