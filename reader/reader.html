@@ -95,14 +95,17 @@
 			    <p class="text-[11px] font-bold text-waterDark dark:text-water uppercase tracking-widest">
 			        Hello, <span id="reader-name-display">...</span>
 			    </p>
-				<div id="cycle-display" class="flex items-center gap-3 justify-center mt-1"></div>
-			    <button onclick="openPasswordModal()" class="w-7 h-7 rounded-xl bg-water/10 flex items-center justify-center text-waterDark active:scale-90 transition-transform">
+				    <button onclick="openPasswordModal()" class="w-7 h-7 rounded-xl bg-water/10 flex items-center justify-center text-waterDark active:scale-90 transition-transform">
 			        <i class="bi bi-gear-fill text-lg"></i>
 			    </button>
 			</div>
         </div>
         
-        <div class="glass-card p-8 rounded-32 border-b-4 dark:border-b-4 border-water mb-8 bg-white/90 dark:bg-slate-900/50 shadow-2xl relative overflow-hidden">
+        <!-- Cycle card — behind the HUD, peeks out from the top -->
+        <div id="cycle-display" class="relative z-0 -mb-6 mx-2 rounded-[2rem] bg-slate-800/80 dark:bg-slate-800/90 border border-water/20 shadow-lg px-8 pt-4 pb-10"></div>
+
+        <!-- HUD card — sits on top, overlapping the cycle card -->
+        <div class="glass-card p-8 rounded-32 border-b-4 dark:border-b-4 border-water mb-8 bg-white/90 dark:bg-slate-900/50 shadow-2xl relative z-10 overflow-hidden">
             <button onclick="openGlobalUnreadModal()" class="absolute top-6 right-6 w-7 h-7 rounded-2xl bg-water/10 flex items-center justify-center text-waterDark active:scale-90 transition-transform z-20">
                 <i class="bi bi-question-circle-fill text-lg"></i>
             </button>
@@ -326,23 +329,29 @@
 		    if (!el) return;
 		    const inSync = !serverBillingCycle || serverBillingCycle === deviceCycle;
 		    if (inSync) {
+		        // Normal: single row centered — only the top ~36px of this card peeks out
 		        el.innerHTML = `
-		            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Active Cycle</span>
-		            <span class="text-[11px] font-black text-waterDark dark:text-water tracking-widest">${deviceCycle}</span>
-		        `;
-		        el.className = 'flex items-center gap-3 justify-center mt-1';
-		    } else {
-		        el.innerHTML = `
-		            <div class="flex flex-col items-center gap-1 px-4 py-2 rounded-2xl bg-amber-500/10 border border-amber-500/30 w-full max-w-xs">
-		                <span class="text-[9px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">⚠ Cycle Mismatch</span>
-		                <div class="flex gap-4 text-[10px] font-bold">
-		                    <span class="text-slate-500">Server: <span class="text-slate-900 dark:text-white">${serverBillingCycle}</span></span>
-		                    <span class="text-slate-500">Device: <span class="text-amber-600 dark:text-amber-400">${deviceCycle}</span></span>
-		                </div>
-		                <span class="text-[8px] text-amber-600 dark:text-amber-400 font-bold">Check device date before submitting</span>
+		            <div class="flex items-center justify-center gap-3">
+		                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Active Cycle</span>
+		                <span class="text-[12px] font-black text-waterDark dark:text-water tracking-widest">${deviceCycle}</span>
 		            </div>
 		        `;
-		        el.className = 'flex items-center justify-center mt-1';
+		        el.className = 'relative z-0 -mb-6 mx-2 rounded-[2rem] bg-slate-800/80 dark:bg-slate-800/90 border border-water/20 shadow-lg px-8 pt-4 pb-10';
+		    } else {
+		        // Mismatch: two rows — give a bit more peek height
+		        el.innerHTML = `
+		            <div class="flex flex-col items-center gap-1">
+		                <div class="flex items-center gap-2">
+		                    <i class="bi bi-exclamation-triangle-fill text-[10px] text-amber-500"></i>
+		                    <span class="text-[9px] font-black text-amber-500 uppercase tracking-widest">Cycle Mismatch</span>
+		                </div>
+		                <div class="flex items-center gap-4">
+		                    <span class="text-[9px] font-bold text-slate-400">Server <span class="text-white font-black">${serverBillingCycle}</span></span>
+		                    <span class="text-[9px] font-bold text-slate-400">Device <span class="text-amber-400 font-black">${deviceCycle}</span></span>
+		                </div>
+		            </div>
+		        `;
+		        el.className = 'relative z-0 -mb-8 mx-2 rounded-[2rem] bg-amber-900/40 dark:bg-amber-900/50 border border-amber-500/30 shadow-lg px-8 pt-4 pb-12';
 		    }
 		};
 
