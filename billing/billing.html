@@ -1033,6 +1033,8 @@ window.generateCollectionReport = () => {
                 <td>${r.locationAddress}</td>
                 <td>${unit.ownerName || 'Resident'}</td>
                 <td>${r.billingCycle}</td>
+                <td class="num">${r.prevReading.toFixed(1)}</td>
+                <td class="num">${r.reading.toFixed(1)}</td>
                 <td class="num">${(r.reading - r.prevReading).toFixed(1)}</td>
                 <td class="num">${formatCurrency(calculateAmount(r))}</td>
                 <td>${paidDateFmt}</td>
@@ -1050,6 +1052,8 @@ window.generateCollectionReport = () => {
                 <td>${r.locationAddress}${gapFlag}</td>
                 <td>${unit.ownerName || 'Resident'}</td>
                 <td>${r.billingCycle}</td>
+                <td class="num">${r.prevReading.toFixed(1)}</td>
+                <td class="num">${r.reading.toFixed(1)}</td>
                 <td class="num">${(r.reading - r.prevReading).toFixed(1)}</td>
                 <td class="num">${formatCurrency(calculateAmount(r))}</td>
                 <td>—</td>
@@ -1160,6 +1164,8 @@ ${paid.length > 0 ? `
     <table>
         <thead><tr>
             <th>Address</th><th>Owner</th><th>Cycle</th>
+            <th style="text-align:right">Prev (m³)</th>
+            <th style="text-align:right">Current (m³)</th>
             <th style="text-align:right">Usage (m³)</th>
             <th style="text-align:right">Amount</th>
             <th>Paid Date</th><th>Received By</th>
@@ -1167,7 +1173,7 @@ ${paid.length > 0 ? `
         <tbody>
             ${paidRows}
             <tr class="totals-row">
-                <td colspan="4">Total Collected</td>
+                <td colspan="6">Total Collected</td>
                 <td class="num">${formatCurrency(totalCollected)}</td>
                 <td colspan="2"></td>
             </tr>
@@ -1185,6 +1191,8 @@ ${pending.length > 0 ? `
     <table>
         <thead><tr>
             <th>Address</th><th>Owner</th><th>Cycle</th>
+            <th style="text-align:right">Prev (m³)</th>
+            <th style="text-align:right">Current (m³)</th>
             <th style="text-align:right">Usage (m³)</th>
             <th style="text-align:right">Amount</th>
             <th>Paid Date</th><th>Received By</th>
@@ -1192,7 +1200,7 @@ ${pending.length > 0 ? `
         <tbody>
             ${pendingRows}
             <tr class="totals-row">
-                <td colspan="4">Total Outstanding</td>
+                <td colspan="6">Total Outstanding</td>
                 <td class="num">${formatCurrency(totalPending)}</td>
                 <td colspan="2"></td>
             </tr>
