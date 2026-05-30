@@ -556,6 +556,9 @@
 		                            <span class="text-[10px] font-bold text-slate-500 truncate max-w-[150px]">${u.ownerName || 'Resident'}</span>
 		                            <span class="text-[9px] font-black bg-water/10 text-waterDark px-2 py-0.5 rounded-md uppercase">${u.unitLabel || 'Unit ' + u.unitNumber}</span>
 		                        </div>
+		                        <div class="mt-0.5">
+		                            <span class="text-[8px] font-black text-waterDark uppercase tracking-widest">SN: ${u.meterSerial || '—'}</span>
+		                        </div>
 		                    `;
 		                    container.appendChild(div);
 		                });
@@ -590,6 +593,7 @@
 		                    div.className = 'flex justify-between items-center p-3 bg-slate-100 dark:bg-slate-800/50 rounded-xl mb-1 border border-slate-200 dark:border-slate-700';
 		                    div.innerHTML = `
 		                        <div class="flex flex-col">
+		                            <span class="text-[8px] font-black text-waterDark uppercase tracking-widest">SN: ${u.meterSerial || '—'}</span>
 		                            <span class="text-xs font-black text-slate-900 dark:text-white uppercase">B${u.block} L${u.lot}</span>
 		                            <span class="text-[9px] font-bold text-slate-500 truncate max-w-[120px]">${u.ownerName || 'Resident'}</span>
 		                        </div>
@@ -615,6 +619,9 @@
 		        document.getElementById('streetOverviewModal').classList.remove('hidden');
 		        return;
 		    }
+
+		    // Ensure uniqueCapturedUnitIds is up to date before rendering
+		    updateHUDStats();
 
 		    // Build a map: streetName → { total, unread }
 		    const streetMap = {};
