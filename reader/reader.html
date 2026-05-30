@@ -589,12 +589,14 @@
 		                    const div = document.createElement('div');
 		                    div.className = 'flex justify-between items-center p-3 bg-slate-100 dark:bg-slate-800/50 rounded-xl mb-1 border border-slate-200 dark:border-slate-700';
 		                    div.innerHTML = `
-		                        <span class="text-base font-black text-waterDark dark:text-water tracking-widest">SN: ${u.meterSerial || '—'}</span>
-		                        <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
-		                            <span class="text-[10px] font-black text-slate-900 dark:text-white uppercase">B${u.block} L${u.lot}</span>
-		                            <span class="text-[10px] font-black bg-water/10 text-waterDark px-1.5 py-0.5 rounded uppercase">${u.unitLabel || 'Unit ' + u.unitNumber}</span>
+		                        <div class="flex items-center justify-between w-full">
+		                            <div class="flex flex-col min-w-0">
+		                                <span class="text-xl font-black text-waterDark dark:text-water tracking-widest leading-tight">SN: ${u.meterSerial || '—'}</span>
+		                                <span class="text-[10px] font-black text-slate-900 dark:text-white uppercase mt-0.5">B${u.block} L${u.lot}</span>
+		                                <span class="text-[9px] font-bold text-slate-500 truncate">${u.ownerName || 'Resident'}</span>
+		                            </div>
+		                            <span class="text-[9px] font-black bg-water/10 text-waterDark px-2 py-1 rounded-md uppercase flex-shrink-0 ml-2">${u.unitLabel || 'Unit ' + u.unitNumber}</span>
 		                        </div>
-		                        <span class="text-[9px] font-bold text-slate-500 mt-0.5 block">${u.ownerName || 'Resident'}</span>
 		                    `;
 		                    container.appendChild(div);
 		                });
