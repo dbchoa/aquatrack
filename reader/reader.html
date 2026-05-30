@@ -849,25 +849,19 @@
 		    switchStage('confirm');
 
 		    document.getElementById('confirm-summary').innerHTML = `
-		        <div class="flex justify-between items-center mb-3 pb-3 border-b border-slate-300 dark:border-slate-700">
-		            <div class="flex flex-col">
-		                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Meter Serial</span>
-		                <span class="text-2xl font-black text-waterDark dark:text-water stat-glow tracking-widest">SN: ${activeUnit.meterSerial}</span>
-		            </div>
-		            <div class="flex flex-col text-right">
-		                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Reading</span>
-		                <span class="text-2xl font-black text-waterDark dark:text-water stat-glow tracking-widest">${reading.toFixed(1)} <span class="text-sm opacity-60">m³</span></span>
-		            </div>
+		        <div class="mb-3">
+		            <p class="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-tight">${activeUnit.street} B${activeUnit.block} L${activeUnit.lot} · ${activeUnit.unitLabel || 'Unit ' + activeUnit.unitNumber}</p>
+		            <p class="text-[10px] font-bold text-slate-500 mt-0.5">${activeUnit.ownerName || 'Resident'}</p>
 		        </div>
-		        <div class="flex justify-between items-center">
-		            <span class="text-[10px] opacity-60">Address</span>
-		            <span class="font-black text-slate-900 dark:text-white uppercase text-right text-[11px]">
-		                ${activeUnit.street} B${activeUnit.block} L${activeUnit.lot} · ${activeUnit.unitLabel || 'Unit ' + activeUnit.unitNumber}
-		            </span>
-		        </div>
-		        <div class="flex justify-between text-[10px] opacity-60 mt-1">
-		            <span>Owner</span>
-		            <span class="font-bold">${activeUnit.ownerName || 'Resident'}</span>
+		        <div class="border-t border-slate-300 dark:border-slate-700 pt-3 space-y-2">
+		            <div class="flex justify-between items-center">
+		                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Meter Serial</span>
+		                <span class="text-xl font-black text-waterDark dark:text-water stat-glow tracking-widest">SN: ${activeUnit.meterSerial}</span>
+		            </div>
+		            <div class="flex justify-between items-center">
+		                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Reading</span>
+		                <span class="text-xl font-black text-waterDark dark:text-water stat-glow">${reading.toFixed(1)} <span class="text-sm opacity-60">m³</span></span>
+		            </div>
 		        </div>
 		    `;
 		};
