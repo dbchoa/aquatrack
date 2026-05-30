@@ -127,7 +127,7 @@
                 <button onclick="openStreetOverviewModal()" class="absolute top-4 right-4 w-7 h-7 rounded-xl bg-water/10 flex items-center justify-center text-waterDark active:scale-90 transition-transform z-20">
                     <i class="bi bi-question-circle-fill text-lg"></i>
                 </button>
-                <p class="text-[9px] font-black text-slate-500 dark:text-slate-200 uppercase tracking-widest mb-1">Current Street</p>
+                <p class="text-[9px] font-black text-slate-500 dark:text-slate-200 uppercase tracking-widest mb-1">Latest Street</p>
                 <h4 id="active-street" class="text-sm font-bold text-waterDark dark:text-water leading-tight">---</h4>
             </div>
             <div class="glass-card p-6 rounded-xl shadow-sm border-water/40 dark:border-water/40 relative overflow-hidden">
@@ -200,7 +200,7 @@
             <div id="modal-stage-serial" class="text-center">
                 <h3 class="text-xl font-bold mb-6 text-slate-900 dark:text-white uppercase">Identify Unit</h3>
                 <p class="text-[10px] font-black text-waterDark uppercase tracking-widest mb-4">Search by Meter Serial</p>
-                <input id="input-serial" type="text" placeholder="METER-SN" class="w-full p-6 bg-slate-200/50 dark:bg-slate-800/50 rounded-3xl text-2xl font-black outline-none text-slate-900 dark:text-white text-center tracking-widest mb-6 border-2 border-transparent focus:border-water">
+                <input id="input-serial" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="000" class="w-full p-6 bg-slate-200/50 dark:bg-slate-800/50 rounded-3xl text-2xl font-black outline-none text-slate-900 dark:text-white text-center tracking-widest mb-6 border-2 border-transparent focus:border-water">
                 <div class="flex flex-col gap-2">
                     <button onclick="identifyUnitBySerial()" class="w-full py-4 bg-waterDark text-white rounded-2xl font-black uppercase text-xs">Identify Unit</button>
                     <button onclick="closeReadingModal()" class="w-full py-2 text-slate-500 font-bold uppercase text-[12px]">Cancel</button>
@@ -776,7 +776,7 @@
 		};
 
 		window.identifyUnitBySerial = () => {
-		    const serialInput = document.getElementById('input-serial').value.trim().toLowerCase();
+		    const serialInput = document.getElementById('input-serial').value.trim().replace(/\D/g, '');
 		    if (!serialInput) return toast('Input Serial Number', 'info');
 
 		    activeUnit = null;
