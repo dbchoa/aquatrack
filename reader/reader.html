@@ -506,11 +506,16 @@
 		    const gapBadge    = r.isGapFill   === true ? '<span class="text-[7px] bg-amber-100 dark:bg-amber-900/40 px-1 rounded text-amber-700 dark:text-amber-400 font-black">GAP FILL</span>' : '';
 		    const statusLabel = !isSynced ? 'In Outbox' : r.status === 'paid' ? 'Paid' : 'Pending';
 		    const statusColor = !isSynced ? 'text-amber-500' : r.status === 'paid' ? 'text-slate-400' : 'text-emerald-500';
+		    const unitLabel = (unitsCache && unitsCache[r.unitId]?.unitLabel) || '';
 		    div.innerHTML = `
 		        <div class="flex flex-col">
 		            <div class="flex items-center gap-2 flex-wrap">
-		                <span class="text-[10px] font-black uppercase text-slate-900 dark:text-white">${r.locationAddress}</span>
+		                <span class="text-[9px] font-black text-slate-400 uppercase">SN: ${r.meterSerial || '—'}</span>
 		                ${originBadge}${gapBadge}
+		            </div>
+		            <div class="flex items-center gap-1 flex-wrap">
+		                <span class="text-[10px] font-black uppercase text-slate-900 dark:text-white">${r.locationAddress}</span>
+		                ${unitLabel ? `<span class="text-[8px] font-black bg-water/10 text-waterDark px-1.5 py-0.5 rounded uppercase">${unitLabel}</span>` : ''}
 		            </div>
 		            <span class="text-[9px] text-slate-500 font-bold">${timeDisplay}</span>
 		        </div>
