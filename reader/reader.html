@@ -849,8 +849,15 @@
 		    switchStage('confirm');
 
 		    document.getElementById('confirm-summary').innerHTML = `
-		        <div class="text-center mb-3 pb-3 border-b border-slate-300 dark:border-slate-700">
-		            <p class="text-2xl font-black text-waterDark dark:text-water stat-glow tracking-widest">SN: ${activeUnit.meterSerial}</p>
+		        <div class="flex justify-between items-center mb-3 pb-3 border-b border-slate-300 dark:border-slate-700">
+		            <div class="flex flex-col">
+		                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Meter Serial</span>
+		                <span class="text-2xl font-black text-waterDark dark:text-water stat-glow tracking-widest">SN: ${activeUnit.meterSerial}</span>
+		            </div>
+		            <div class="flex flex-col text-right">
+		                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Reading</span>
+		                <span class="text-2xl font-black text-waterDark dark:text-water stat-glow tracking-widest">${reading.toFixed(1)} <span class="text-sm opacity-60">m³</span></span>
+		            </div>
 		        </div>
 		        <div class="flex justify-between items-center">
 		            <span class="text-[10px] opacity-60">Address</span>
@@ -861,10 +868,6 @@
 		        <div class="flex justify-between text-[10px] opacity-60 mt-1">
 		            <span>Owner</span>
 		            <span class="font-bold">${activeUnit.ownerName || 'Resident'}</span>
-		        </div>
-		        <div class="border-t border-slate-300 dark:border-slate-700 mt-2 pt-2 flex justify-between text-sm">
-		            <span class="font-bold">Captured Reading</span>
-		            <span class="text-waterDark dark:text-water font-black">${reading.toFixed(1)} m³</span>
 		        </div>
 		    `;
 		};
