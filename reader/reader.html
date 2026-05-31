@@ -804,7 +804,7 @@
 		    if (!activeUnit) return toast('Meter Serial not found', 'error');
 
 		    switchStage('reading');
-		    document.getElementById('display-serial').innerText     = `SN: ${activeUnit.meterSerial}`;
+		    document.getElementById('display-serial').innerText     = `METER SERIAL: ${activeUnit.meterSerial}`;
 		    document.getElementById('display-prop-id').innerText    = `${activeUnit.street} B${activeUnit.block} L${activeUnit.lot}`;
 		    document.getElementById('display-owner').innerText      = activeUnit.ownerName || 'Staff Account';
 		    document.getElementById('display-unit-label').innerText = activeUnit.unitLabel || `Unit ${activeUnit.unitNumber}`;
